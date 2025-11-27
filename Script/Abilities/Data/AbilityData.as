@@ -2,6 +2,9 @@ class UAbilityData : UPrimaryDataAsset
 {
     UPROPERTY()
     FAbilityDetails Details;
+
+    UPROPERTY()
+    TSubclassOf<UAbility> AbilityClass;
 };
 
 USTRUCT()
@@ -10,8 +13,11 @@ struct FAbilityDetails
     UPROPERTY()
     FText Name;
     
-    UPROPERTY()
+    UPROPERTY(Meta=(MultiLine))
     FText Description;
+
+    UPROPERTY(Meta=(MultiLine))
+    FText Effect;
 
     UPROPERTY()
     UTexture2D Icon;
@@ -21,6 +27,9 @@ struct FAbilityDetails
     
     UPROPERTY()
     FCostType Cost;
+
+    UPROPERTY()
+    bool RequiresFishing; // maybe: OnlyWhileFishing, and add an Irregardless option? - I.e., can be used while fishing or not
 };
 
 struct FCooldownType

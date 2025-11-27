@@ -1,10 +1,48 @@
 class AFishCharacter : AFishEntity
 {
+	UFUNCTION(BlueprintOverride)
+	void BeginPlay()
+	{
+		auto InputComponent = UInputComponent::Get(this);
+
+		InputComponent.BindKey(EKeys::AnyKey, EInputEvent::IE_Pressed, FInputActionHandlerDynamicSignature(this, n"AnyKey"));
+
+		BP_BeginPlay();
+	}
+
+	UFUNCTION(BlueprintEvent, DisplayName = "Begin Play")
+	void BP_BeginPlay() { }
+
+	UFUNCTION()
+	void AnyKey(FKey PressedKey)
+	{
+		TArray<FKey> AllowedKeys;
+        AllowedKeys.Add(EKeys::One);
+        AllowedKeys.Add(EKeys::Two);
+        AllowedKeys.Add(EKeys::Three);
+        AllowedKeys.Add(EKeys::Four);
+        AllowedKeys.Add(EKeys::Five);
+        AllowedKeys.Add(EKeys::Six);
+        AllowedKeys.Add(EKeys::Seven);
+        AllowedKeys.Add(EKeys::Eight);
+        AllowedKeys.Add(EKeys::Nine);
+        AllowedKeys.Add(EKeys::Zero);
+
+        if (AllowedKeys.Contains(PressedKey))
+        {
+            int SlotIndex = AllowedKeys.FindIndex(PressedKey);
+            HotbarSlotPressed(SlotIndex);
+            Print("Hotbar slot " + SlotIndex + " pressed.");
+        }
+	}
+
+    UFUNCTION(BlueprintEvent)
+    void HotbarSlotPressed(int SlotIndex) { }
     
 };
 
 UFUNCTION(BlueprintPure)
 AFishCharacter GetFishCharacterBase(int PlayerIndex = 0)
 {
-    return Cast<AFishCharacter>(Gameplay::GetPlayerCharacter(PlayerIndex));
+	return Cast<AFishCharacter>(Gameplay::GetPlayerCharacter(PlayerIndex));
 }
