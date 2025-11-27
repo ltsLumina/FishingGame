@@ -1,26 +1,14 @@
-event void FOnInvokeEvent(UAbilityData Ability);
-
 class UAbilityHandlerComponent : UActorComponent
 {
-    /* Events */
+	UFUNCTION(NotBlueprintCallable)
+	void InvokeAbility(UAbilityData Ability)
+	{
+		//Print("Ability invoked: " + Ability.GetName());
 
-    UPROPERTY()
-    FOnInvokeEvent OnInvoke;
+		BP_InvokeAbility(Ability);
+	}
 
-    UFUNCTION(BlueprintOverride)
-    void BeginPlay()
-    {
-        OnInvoke.AddUFunction(this, n"InvokeAbility");
-    }
-
-    UFUNCTION(NotBlueprintCallable)
-    void InvokeAbility(UAbilityData Ability)
-    {
-        Print("Ability invoked: " + Ability.GetName());
-
-        BP_InvokeAbility(Ability);
-    }
-
-    UFUNCTION(BlueprintEvent, DisplayName = "Invoke Ability")
-void BP_InvokeAbility(UAbilityData AbilityData) { }
+	UFUNCTION(BlueprintEvent, DisplayName = "Invoke Ability")
+	void BP_InvokeAbility(UAbilityData AbilityData)
+	{}
 };

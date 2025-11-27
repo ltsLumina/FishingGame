@@ -1,5 +1,8 @@
 class AFishCharacter : AFishEntity
 {
+    UPROPERTY()
+    UAbilityHandlerComponent AbilityHandler;
+
 	UFUNCTION(BlueprintOverride)
 	void BeginPlay()
 	{
@@ -31,8 +34,22 @@ class AFishCharacter : AFishEntity
         if (AllowedKeys.Contains(PressedKey))
         {
             int SlotIndex = AllowedKeys.FindIndex(PressedKey);
+            TArray<UUserWidget> Widgets;
+            Widget::GetAllWidgetsOfClass(Widgets, UHotbar, false);
+            if (Widgets.Num() == 0)
+                return;
+
+            UHotbar Hotbar = Cast<UHotbar>(Widgets[0]);
+            if (Hotbar == nullptr)
+                return;
+
+            auto Slot = Cast<UHotbarSlot>(Hotbar.HotbarGrid.GetChildAt(SlotIndex));
+            if (Slot == nullptr)
+                return;
+
+            Slot.Invoke();
+            
             HotbarSlotPressed(SlotIndex);
-            Print("Hotbar slot " + SlotIndex + " pressed.");
         }
 	}
 

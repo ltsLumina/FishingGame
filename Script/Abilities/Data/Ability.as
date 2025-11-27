@@ -9,33 +9,51 @@ class UAbility : UObject
 	{
 		Print("Executing ability: " + AbilityData.Details.Name.ToString() + " by " + Instigator.GetName());
 	}
-
-    /**
-     * Attempts to commit the ability by checking and deducting costs.
-     * @param AbilityData The data of the ability being used.
-     * @param Instigator The character using the ability.
-     * @param RequiresFishing Whether the ability requires the player to be fishing.
-     * @return True if the ability was successfully committed; false otherwise.
-     */
-	UFUNCTION()
-	bool CommitAbility(UAbilityData AbilityData, AFishCharacter Instigator, bool RequiresFishing = true)
-	{
-        if (RequiresFishing)
+    
+    UFUNCTION()
+    void EndAbility()
+    {
+        if (HasCommited)
         {
-            UFishingStateComponent FishingState = UFishingStateComponent::Get(Instigator);
-            if (!FishingState.IsFishing)
-            {
-                PrintWarning("Ability " + AbilityData.Details.Name.ToString() + " requires fishing state.");
-                return false;
-            }
+            HasCommited = false;
         }
+        else
+        {
+            PrintError("Ability ended without being committed!\nMake sure to call CommitAbility() in your ability implementation blueprint!", 30.0f);
+        }
+    }
+
+    bool HasCommited;
+
+	/**
+	 * Attempts to commit the ability by checking and deducting costs.
+     * This function must be called within the ability execution to successfully use the ability, failure to do so will result in an error.
+	 * @param AbilityData The data of the ability being used.
+	 * @param Instigator The character using the ability.
+	 * @param RequiresFishing Whether the ability requires the player to be fishing.
+	 * @return True if the ability was successfully committed; false otherwise.
+	 */
+	UFUNCTION()
+	bool CommitAbility(UAbilityData AbilityData, AFishCharacter Instigator)
+	{
+		if (AbilityData.Details.RequiresFishing)
+		{
+			UFishingStateComponent FishingState = UFishingStateComponent::Get(Instigator);
+			if (!FishingState.IsFishing)
+			{
+				PrintWarning("Ability " + AbilityData.Details.Name.ToString() + " requires fishing state.", 2.5f);
+				return false;
+			}
+		}
 
 		auto Params = UParameterBar::Get(Instigator);
 
 		auto CostType = AbilityData.Details.Cost.Type;
 
 		if (CostType == ECostType::None)
-			return true;
+        {
+
+        }
 
 		if (CostType == ECostType::MP)
 		{
@@ -45,17 +63,29 @@ class UAbility : UObject
 				return false;
 			}
 
-            Params.MP -= AbilityData.Details.Cost.Amount;
-            return true;
+			Params.MP -= AbilityData.Details.Cost.Amount;
 		}
 
-        if (CostType == ECostType::ThaliaksFavor)
-        {
-            // Placeholder for Thaliak's Favor cost check
-            PrintWarning("Thaliak's Favor cost type not implemented yet.");
-            return true;
-        }
+		if (CostType == ECostType::ThaliaksFavor)
+		{
+			// Placeholder for Thaliak's Favor cost check
+			PrintWarning("Thaliak's Favor cost type not implemented yet.");
+		}
 
-		return false;
+        // If all checks passed, invoke the ability and its cooldown, and trigger global cooldown
+
+        TArray<UUserWidget> Widgets;
+		Widget::GetAllWidgetsOfClass(Widgets, UHotbar, false);
+		if (Widgets.Num() == 0)
+			return false;
+
+		UHotbar Hotbar = Cast<UHotbar>(Widgets[0]);
+		if (Hotbar == nullptr)
+			return false;
+
+		Hotbar.GlobalCooldown();
+
+        HasCommited = true;
+		return true;
 	}
 };

@@ -53,13 +53,12 @@ class UFishingStateComponent : UActorComponent
 
 		if (BiteTimer > 0)
 		{
-			Print("Hook timer: " + BiteTimer, 0.1f, FLinearColor::Green);
+			//Print("Hook timer: " + BiteTimer, 0.1f, FLinearColor::Green);
 
 			BiteTimer -= DeltaSeconds;
 			if (BiteTimer <= 0)
 			{
-				// Hook proc logic here
-				Print("Hook proc! You have " + ReelTime + " seconds to catch the fish!", 2.5f);
+				//Print("Hook proc! You have " + ReelTime + " seconds to catch the fish!", 2.5f);
 				BiteTimer = 0;
 
                 // Only runs once when the hook proc happens.
@@ -89,7 +88,8 @@ class UFishingStateComponent : UActorComponent
 		CurrentFish = CurrentCatchableFish[Math::RandRange(0, CurrentCatchableFish.Num() - 1)].GetDefaultObject();
 		BiteTimer = CurrentFish.BiteTime; // Fishing actually begins here (Tick will count down to hook proc)
         
-        BiteTimer *= BiteTimerModifier;
+		if (BiteTimerModifier != 1.0f)
+        	BiteTimer *= BiteTimerModifier;
 
 		BP_StartFishing();
 	}
