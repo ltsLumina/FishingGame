@@ -1,10 +1,6 @@
 class AFishCharacter : AFishEntity
 {
-    UFUNCTION(BlueprintOverride)
-    void BeginPlay()
-    {
-
-    }
+    
 };
 
 UFUNCTION(BlueprintPure)
