@@ -1,7 +1,12 @@
+event void FOnSelectBait(UBait Bait);
+
 class UFishingStateComponent : UActorComponent
 {
 	UPROPERTY(Category = "Fishing | State", VisibleAnywhere)
 	bool IsFishing;
+
+	UPROPERTY(VisibleAnywhere)
+	UBait CurrentBait;
 
 	/**
 	 * Current time elapsed on the hook timer.
@@ -31,15 +36,40 @@ class UFishingStateComponent : UActorComponent
 	/* Area */
 
 	UPROPERTY(Category = "Fishing | Area", VisibleAnywhere)
-	FText CurrentFishingHoleName;
+	AFishingHole CurrentFishingHole;
 
+	/**
+	 * Considers the fishing hole the player is currently in, and the bait they are using, to determine which fish can be caught.	
+	 */
 	UPROPERTY(Category = "Fishing | Area", VisibleAnywhere)
 	TArray<TSubclassOf<AFish>> CurrentCatchableFish;
+
+	void UpdateCatchableFish()
+	{
+		CurrentCatchableFish.Empty();
+
+		if (CurrentFishingHole == nullptr)
+			return;
+
+		for (TSubclassOf<AFish> FishClass : CurrentFishingHole.CatchableFish)
+		{
+			auto FishDefault = FishClass.GetDefaultObject();
+			if (CurrentBait != nullptr && !FishDefault.RequiredBaits.Contains(CurrentBait))
+				continue;
+
+			CurrentCatchableFish.Add(FishClass);
+		}
+	}
 
     /* Effects */
 
     UPROPERTY()
     float BiteTimerModifier = 1.0f;
+
+	/* Events */
+
+	UPROPERTY()
+	FOnSelectBait OnSelectBait;
 
 	/* End */
 
@@ -72,25 +102,52 @@ class UFishingStateComponent : UActorComponent
 		FishOnHook = System::IsTimerActiveHandle(MissedTimerHandle);
 	}
 
+	/**
+	 * AKA "Cast"
+	 */
 	UFUNCTION()
 	void StartFishing()
 	{
+		if (CurrentFishingHole == nullptr)
+		{
+			PrintWarning("You are not in a fishing area!", 1.5f);
+			return;
+		}
+
 		if (IsFishing)
 		{
-			PrintWarning("You are already fishing!");
-            StopFishing();
+			PrintWarning("You are already fishing!", 1.5f);
+			StopFishing();
 			return;
 		}
 
 		IsFishing = true;
 
-		// Determine the fish that will bite when fishing starts
-		CurrentFish = CurrentCatchableFish[Math::RandRange(0, CurrentCatchableFish.Num() - 1)].GetDefaultObject();
-		BiteTimer = CurrentFish.BiteTime; // Fishing actually begins here (Tick will count down to hook proc)
-        
-		if (BiteTimerModifier != 1.0f)
-        	BiteTimer *= BiteTimerModifier;
+		// TODO: Default to 3 seconds. If no fish are available, it automatically fails after this time.
+		float NewBiteTimer = MAX_uint16;
 
+		if (CurrentBait == nullptr)
+		{
+			PrintWarning("You must equip bait to fish!", 1.5f);
+		}
+		else if (CurrentCatchableFish.Num() == 0)
+		{
+			PrintWarning("There are no fish to catch here with your current bait!", 1.5f);
+
+			// TODO: make it like xiv
+			//System::SetTimer(this, n"NoFishAvailable", NewBiteTimer, false);
+		}
+		else
+		{
+			// Determine the fish that will bite when fishing starts
+			CurrentFish = CurrentCatchableFish[Math::RandRange(0, CurrentCatchableFish.Num() - 1)].GetDefaultObject();
+			NewBiteTimer = CurrentFish.BiteTime;
+
+			if (BiteTimerModifier != 1.0f)
+				NewBiteTimer *= BiteTimerModifier;
+		}
+
+		BiteTimer = NewBiteTimer;
 		BP_StartFishing();
 	}
 
@@ -127,21 +184,23 @@ class UFishingStateComponent : UActorComponent
 			return;
 		}
 
-		Print(f"You caught a {CurrentFish.GetName()}!");
 		FVector SpawnLocation = GetOwner().GetActorLocation() + GetOwner().GetActorForwardVector() * 100;
 		SpawnFish_Server(CurrentFish.GetClass(), SpawnLocation);
 
 		StopFishing();
-
+		
 		BP_Hook(CurrentFish);
-		CurrentFish = nullptr;
 	}
 
 	UFUNCTION(NotBlueprintCallable, Server)
-	void SpawnFish_Server(TSubclassOf<AFish> FishClass, FVector SpawnLocation)
+	AFish SpawnFish_Server(TSubclassOf<AFish> FishClass, FVector SpawnLocation)
 	{
 		auto Fish = SpawnActor(FishClass, SpawnLocation);
 		Fish.SetLifeSpan(3);
+
+		Fish.OnCaught(Cast<AFishCharacter>(GetOwner()));
+
+		return Fish;
 	}
 
 	UFUNCTION(BlueprintEvent, DisplayName = "Hook Fish")
@@ -158,6 +217,15 @@ class UFishingStateComponent : UActorComponent
 
 		BP_Missed(CurrentFish);
 		CurrentFish = nullptr;
+	}
+
+	UFUNCTION(NotBlueprintCallable)
+	void NoFishAvailable()
+	{
+		Print("There are no fish to catch here with your current bait!");
+		IsFishing = false;
+
+		BiteTimer = 0;
 	}
 
 	UFUNCTION(BlueprintEvent, DisplayName = "Missed Fish")

@@ -11,7 +11,7 @@ class UHotbarSlot : UUserWidget
 
     float CooldownPercent;
 
-    UFUNCTION(BlueprintEvent)
+    UFUNCTION(NotBlueprintCallable)
     void Invoke()
     {
         if (OnCooldown)
@@ -19,7 +19,12 @@ class UHotbarSlot : UUserWidget
 
         auto AbilityHandler = UAbilityHandlerComponent::Get(GetOwningPlayerPawn());
         AbilityHandler.InvokeAbility(AbilityData);
+
+        BP_Invoke();
     }
+
+    UFUNCTION(BlueprintEvent, DisplayName = "Invoke")
+    void BP_Invoke() { }
     
 
     UFUNCTION(BlueprintOverride)
@@ -40,6 +45,8 @@ class UHotbarSlot : UUserWidget
     UFUNCTION(BlueprintOverride)
     void Tick(FGeometry MyGeometry, float InDeltaTime)
     {
+        BP_Tick(MyGeometry, InDeltaTime);
+
         if (!OnCooldown)
             return;
 
@@ -52,6 +59,9 @@ class UHotbarSlot : UUserWidget
             OnCooldown = false;
         }
     }
+
+    UFUNCTION(BlueprintEvent, DisplayName = "Tick")
+    void BP_Tick(FGeometry MyGeometry, float InDeltaTime) { }
 
     UFUNCTION()
     void StartCooldown()
