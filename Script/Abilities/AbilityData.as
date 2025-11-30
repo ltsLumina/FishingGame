@@ -1,6 +1,6 @@
 namespace Ability
 {
-	const float GLOBAL_COOLDOWN_DURATION = 1.5f;
+	const float GLOBAL_COOLDOWN_DURATION = 1.0f;
 }
 
 class UAbilityData : UPrimaryDataAsset
@@ -20,25 +20,26 @@ class UAbilityData : UPrimaryDataAsset
 	 * Examples include being near water or being in a fishing state.
 	 */
 	UPROPERTY(Category = "Logic", EditInline, Instanced)
-	TArray<TSubclassOf<UAbilityCondition>> Conditions;
+	TArray<UAbilityCondition> Conditions;
 
 	UFUNCTION(BlueprintPure)
-    bool CanUse(AFishCharacter User)
-    {
-        for (TSubclassOf<UAbilityCondition> ConditionClass : Conditions)
+	bool CanUse(AFishCharacter User)
+	{
+		for (UAbilityCondition Condition : Conditions) 
 		{
-			if (ConditionClass == nullptr)
+			if (!Condition.IsA(UAbilityCondition)) 
+			{
 				continue;
-
-			UAbilityCondition Condition = ConditionClass.GetDefaultObject();
-			if (!Condition.IsSatisfied(User))
+			}
+			if (!Condition.IsSatisfied(User)) 
 			{
 				return false;
 			}
+			
 		}
 
 		return true;
-    }
+	}
 };
 
 USTRUCT()

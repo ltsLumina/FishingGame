@@ -110,20 +110,20 @@ class UHotbarSlot : UUserWidget
 	{
 		if (AbilityData != nullptr)
 		{
-			TArray<TSubclassOf<UAbilityCondition>> IllegalConditions = TArray<TSubclassOf<UAbilityCondition>>();
+			TArray<UAbilityCondition> IllegalConditions;
 
-			for (TSubclassOf<UAbilityCondition> Condition : AbilityData.Conditions)
+			for (int i = AbilityData.Conditions.Num() - 1; i >= 0; i--)
 			{
+				UAbilityCondition Condition = AbilityData.Conditions[i];
 				if (Condition == nullptr)
 				{
-					IllegalConditions.Add(Condition);
-					continue;
-				}
-			}
+					IllegalConditions.Add(AbilityData.Conditions[i]);
+					AbilityData.Conditions.RemoveAt(i);
 
-			for (TSubclassOf<UAbilityCondition> Condition : IllegalConditions)
-			{
-				AbilityData.Conditions.Remove(Condition);
+					FString msgPart1 = f"Removed null ability condition from ability: {AbilityData.Details.Name.ToString()}";
+					FString msgPart2 = "Make sure not to leave empty condition slots in the ability data asset.";
+					PrintWarning(f"{msgPart1}\n{msgPart2}", 10.0f, FLinearColor(1.00, 0.5, 0.00));
+				}
 			}
 		}
 	}

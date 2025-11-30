@@ -9,7 +9,10 @@ class UFishingStateComponent : UActorComponent
 	bool IsFishing;
 
 	UFUNCTION(BlueprintPure)
-	bool GetIsFishing() { return CurrentState == EFishingState::Fishing; }
+	bool GetIsFishing()
+	{
+		return CurrentState == EFishingState::Fishing;
+	}
 
 	UPROPERTY(VisibleAnywhere)
 	UBait CurrentBait;
@@ -22,10 +25,18 @@ class UFishingStateComponent : UActorComponent
 	float BiteTimer = 0;
 
 	/**
+	 * This modifier affects the time it takes for a fish to bite when fishing starts.
+	 * Expects a float multiplier in decimal form (e.g., 0.9 for a 10% reduction, or 1.2 for a 20% increase).
+	 * Now keyed by name so you can identify each modifier (e.g. "QuickCast" = 0.9).
+	 */
+	UPROPERTY(Category = "Fishing | State", VisibleAnywhere)
+	TMap<FName, float> BiteTimeModifiers;
+
+	/**
 	 * The amount of time the player has to hook a fish once it bites (in seconds).
 	 */
 	UPROPERTY(Category = "Fishing | State", Meta = (Units = "s"))
-	float ReelTime = 2.5f;
+	float TimeToReelIn = 2.5f;
 
 	/**
 	 * The fish that is currently hooked.
@@ -68,11 +79,6 @@ class UFishingStateComponent : UActorComponent
 		}
 	}
 
-	/* Effects */
-
-	UPROPERTY()
-	float BiteTimerModifier = 1.0f;
-
 	/* Events */
 
 	UPROPERTY()
@@ -82,7 +88,7 @@ class UFishingStateComponent : UActorComponent
 
 	FTimerHandle MissedTimerHandle;
 
-	UPROPERTY()
+	UPROPERTY(NotVisible)
 	UFishingHoleComponent DefaultFishingHole;
 
 	UFUNCTION(BlueprintOverride)
@@ -94,32 +100,44 @@ class UFishingStateComponent : UActorComponent
 		DefaultFishingHole.CatchableFish.Add(AJunk);
 
 		CurrentFishingHole = DefaultFishingHole;
+
+		BP_BeginPlay();
 	}
 
+	UFUNCTION(BlueprintEvent, DisplayName = "Begin Play")
+	void BP_BeginPlay()
+	{}
+
 	UFUNCTION(BlueprintOverride)
-    void Tick(float DeltaSeconds)
-    {
-        if (!GetIsFishing())
-            return;
+	void Tick(float DeltaSeconds)
+	{
+		BP_Tick(DeltaSeconds);
 
-        if (BiteTimer > 0)
-        {
-            BiteTimer -= DeltaSeconds;
-            if (BiteTimer <= 0)
-            {
+		if (!GetIsFishing())
+			return;
+
+		if (BiteTimer > 0)
+		{
+			BiteTimer -= DeltaSeconds;
+			if (BiteTimer <= 0)
+			{
 				CurrentState = EFishingState::FishOnHook;
-                BiteTimer = 0;
+				BiteTimer = 0;
 
-                // Only runs once when the hook proc happens.
-                if (!System::IsTimerActiveHandle(MissedTimerHandle))
-                    BP_FishOnHook();
+				// Only runs once when the hook proc happens.
+				if (!System::IsTimerActiveHandle(MissedTimerHandle))
+					BP_FishOnHook();
 
-                MissedTimerHandle = System::SetTimer(this, n"Missed", ReelTime, false);
-            }
-        }
+				MissedTimerHandle = System::SetTimer(this, n"Missed", TimeToReelIn, false);
+			}
+		}
 
-        FishOnHook = System::IsTimerActiveHandle(MissedTimerHandle);
-    }
+		FishOnHook = System::IsTimerActiveHandle(MissedTimerHandle);
+	}
+
+	UFUNCTION(BlueprintEvent, DisplayName = "Tick")
+	void BP_Tick(float DeltaSeconds)
+	{}
 
 	/**
 	 * AKA "Cast"
@@ -142,19 +160,18 @@ class UFishingStateComponent : UActorComponent
 
 		CurrentState = EFishingState::Fishing;
 
-		// TODO: Default to 3 seconds. If no fish are available, it automatically fails after this time.
-		float NewBiteTimer = MAX_uint16;
+		// If no fish are available, it automatically fails after this time.
+		float NewBiteTimer = 3;
 
 		if (CurrentBait == nullptr)
 		{
 			PrintWarning("You must equip bait to fish!", 1.5f);
+			System::SetTimer(this, n"NoFishAvailable", 3, false);
 		}
 		else if (CurrentCatchableFish.Num() == 0)
 		{
 			PrintWarning("There are no fish to catch here with your current bait!", 1.5f);
-
-			// TODO: make it like xiv
-			// System::SetTimer(this, n"NoFishAvailable", NewBiteTimer, false);
+			System::SetTimer(this, n"NoFishAvailable", 3, false);
 		}
 		else
 		{
@@ -162,8 +179,26 @@ class UFishingStateComponent : UActorComponent
 			CurrentFish = CurrentCatchableFish[Math::RandRange(0, CurrentCatchableFish.Num() - 1)].GetDefaultObject();
 			NewBiteTimer = CurrentFish.BiteTime;
 
-			if (BiteTimerModifier != 1.0f)
-				NewBiteTimer *= BiteTimerModifier;
+			for (auto Pair : BiteTimeModifiers)
+            {
+                float Modifier = Pair.Value;
+                FName ModifierKey = Pair.Key;
+
+                if (Modifier <= 0)
+                {
+                    PrintError(f"Bite time modifier ({ModifierKey.PlainNameString}) values must be greater than 0");
+                    continue;
+                }
+
+                if (Modifier > 2.0f) // arbitrary upper limit to prevent extreme values
+                {
+                    PrintError(f"Bite time modifier ({ModifierKey.PlainNameString}) values must be 2.0 or less");
+                    continue;
+                }
+
+                NewBiteTimer *= Modifier;
+                Print(f"Bite time modified by {Modifier}x (\"{ModifierKey}\")");
+            }
 		}
 
 		BiteTimer = NewBiteTimer;
@@ -177,7 +212,7 @@ class UFishingStateComponent : UActorComponent
 
 		CurrentFish = nullptr;
 		BiteTimer = 0;
-		BiteTimerModifier = 1.0f;
+		BiteTimeModifiers.Empty();
 
 		System::ClearAndInvalidateTimerHandle(MissedTimerHandle);
 
@@ -194,7 +229,7 @@ class UFishingStateComponent : UActorComponent
 			return;
 		}
 
-		CurrentState = EFishingState::ReelingIn; // only true while the animation plays
+		CurrentState = EFishingState::ReelingIn;  // only true while the animation plays
 		CurrentState = EFishingState::CaughtFish; // will be set by animation notify in the future
 
 		FVector SpawnLocation = GetOwner().GetActorLocation() + GetOwner().GetActorForwardVector() * 100;
@@ -224,21 +259,15 @@ class UFishingStateComponent : UActorComponent
 	void Missed()
 	{
 		Print("You failed to catch the fish...");
-		CurrentState = EFishingState::NotFishing;
-
-		BiteTimer = 0;
-
 		BP_Missed(CurrentFish);
-		CurrentFish = nullptr;
+		StopFishing();
 	}
 
 	UFUNCTION(NotBlueprintCallable)
 	void NoFishAvailable()
 	{
 		Print("There are no fish to catch here with your current bait!");
-		CurrentState = EFishingState::NotFishing;
-
-		BiteTimer = 0;
+		StopFishing();
 	}
 
 	UFUNCTION(BlueprintEvent, DisplayName = "Missed Fish")
@@ -265,9 +294,24 @@ class UFishingStateComponent : UActorComponent
 
 enum EFishingState
 {
+	/**
+	 * The player is not fishing.
+	 */
 	NotFishing,
+	/**
+	 * The player is waiting for a fish to bite.
+	 */
 	Fishing,
+	/**
+	 * A fish has bitten the hook, and the player must reel it in within a time limit.
+	 */
 	FishOnHook,
+	/**
+	 * The player is reeling in a caught fish (animation-driven)
+	 */
 	ReelingIn,
+	/**
+	 * The player has successfully caught a fish (also animation-driven)
+	 */
 	CaughtFish
 }

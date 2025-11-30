@@ -24,6 +24,18 @@ class UFishingHoleComponent : UActorComponent
 			PrintError(f"Fishing Hole {HoleName} has no catchable fish set!");
 			return;
 		}
+
+		for (int i = 0; i < CatchableFish.Num(); i++)
+		{
+			if (CatchableFish[i] == nullptr)
+			{
+#if EDITOR
+				PrintError(f"Fishing Hole {HoleName} ({GetOwner().GetActorLabel()}) has null entries in its catchable fish list!");
+#endif
+				CatchableFish.RemoveAt(i);
+				return;
+			}
+		}
 	}
 
 	UFUNCTION()

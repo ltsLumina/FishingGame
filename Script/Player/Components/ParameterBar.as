@@ -1,36 +1,68 @@
 class UParameterBar : UActorComponent
 {
-    UPROPERTY(Category = "Parameter Bar", VisibleAnywhere)
-    float MP = 500;
+	UPROPERTY(Category = "Parameter Bar", VisibleAnywhere)
+	float MP = 500;
 
-    UPROPERTY(Category = "Parameter Bar", VisibleAnywhere)
-    float MaxMP = 500;
+	UPROPERTY(Category = "Parameter Bar", VisibleAnywhere)
+	float MaxMP = 500;
 
-    UPROPERTY(Category = "Parameter Bar", EditAnywhere)
-    float RegenerationRate = 5.0f;
+	UPROPERTY(Category = "Parameter Bar", EditAnywhere)
+	float RegenerationRate = 5.0f;
 
-    UPROPERTY(Category = "Parameter Bar", VisibleAnywhere, Meta=(Units="s"))
-    FTimespan TimeTillFullMP;
+	UPROPERTY(Category = "Parameter Bar", VisibleAnywhere, Meta = (Units = "s"))
+	FTimespan TimeTillFullMP;
 
-    UFishingStateComponent FishingState;
+	UFishingStateComponent FishingState;
 
-    UFUNCTION(BlueprintOverride)
-    void BeginPlay()
-    {
-        MP = MaxMP;
+	UFUNCTION(BlueprintOverride)
+	void BeginPlay()
+	{
+		MP = MaxMP;
 
-        FishingState = UFishingStateComponent::Get(GetOwner());
-    }
+		FishingState = UFishingStateComponent::Get(GetOwner());
+	}
+
+    /**
+     * The amount of stored MP regeneration accumulated while fishing.
+     * This regeneration is only applied to the actual MP pool when the player stops fishing.
+     */
+    float StoredMP;
 
     UFUNCTION(BlueprintOverride)
     void Tick(float DeltaSeconds)
     {
-        if (MP >= MaxMP)
+        if (FishingState == nullptr)
             return;
 
-        MP = Math::Min(MP + DeltaSeconds * RegenerationRate, MaxMP);
+        TArray<EFishingState> PausedStates; // States during which MP regeneration is paused
+        PausedStates.Add(EFishingState::Fishing);
+        PausedStates.Add(EFishingState::FishOnHook);
+        bool IsFishing = PausedStates.Contains(FishingState.CurrentState);
 
-        float TimeToFullSeconds = (MaxMP - MP) / RegenerationRate;
+        // While fishing: accumulate regeneration into StoredMP (don't apply to MP yet).
+        if (IsFishing)
+        {
+            float FreeSpace = Math::Max(0.0f, MaxMP - MP - StoredMP);
+            if (FreeSpace > 0.0f)
+                StoredMP = Math::Min(StoredMP + DeltaSeconds * RegenerationRate, StoredMP + FreeSpace);
+        }
+        else
+        {
+            // If we were storing regen while fishing, grant it now.
+            if (StoredMP > 0.0f)
+            {
+                MP = Math::Min(MP + StoredMP, MaxMP);
+                StoredMP = 0.0f;
+            }
+
+            // Normal regeneration when not fishing.
+            if (MP < MaxMP)
+                MP = Math::Min(MP + DeltaSeconds * RegenerationRate, MaxMP);
+        }
+
+        // Update time till full based on current effective MP (including stored regen).
+        float EffectiveMP = Math::Min(MP + StoredMP, MaxMP);
+        float TimeToFullSeconds = (MaxMP - EffectiveMP) / RegenerationRate;
         TimeTillFullMP = FTimespan::FromSeconds(TimeToFullSeconds);
     }
 };
