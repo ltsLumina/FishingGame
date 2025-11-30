@@ -1,72 +1,127 @@
 class UHotbarSlot : UUserWidget
 {
-    UPROPERTY(BindWidget)
-    UButton CastButton;
+	UPROPERTY(BindWidget)
+	UButton CastButton;
 
-    UPROPERTY(BindWidget)
-    UProgressBar CooldownBar;
+	UPROPERTY(BindWidget)
+	UProgressBar CooldownBar;
 
-    UPROPERTY()
-    UAbilityData AbilityData;
+	UPROPERTY()
+	UAbilityData AbilityData;
 
-    float CooldownPercent;
+	bool OnCooldown;
+	float CooldownPercent;
 
-    UFUNCTION(NotBlueprintCallable)
-    void Invoke()
-    {
-        if (OnCooldown)
-            return;
+	UFUNCTION(NotBlueprintCallable)
+	void Invoke()
+	{
+		if (OnCooldown)
+			return;
 
-        auto AbilityHandler = UAbilityHandlerComponent::Get(GetOwningPlayerPawn());
-        AbilityHandler.InvokeAbility(AbilityData);
+		auto AbilityHandler = UAbilityHandlerComponent::Get(GetOwningPlayerPawn());
+		AbilityHandler.InvokeAbility(AbilityData);
 
-        BP_Invoke();
-    }
+		BP_Invoke();
+	}
 
-    UFUNCTION(BlueprintEvent, DisplayName = "Invoke")
-    void BP_Invoke() { }
-    
+	UFUNCTION(BlueprintEvent, DisplayName = "Invoke")
+	void BP_Invoke()
+	{}
 
-    UFUNCTION(BlueprintOverride)
-    void Construct()
-    {
-        CooldownPercent = 1.0f;
+	UFUNCTION(BlueprintOverride)
+	void Construct()
+	{
+		ValidateConditions();
 
-        CastButton.OnClicked.AddUFunction(this, n"Invoke");
+		OnCooldown = false;
+		CooldownPercent = 1.0f;
 
-        BP_Construct();
-    }
+		CastButton.OnClicked.AddUFunction(this, n"Invoke");
 
-    UFUNCTION(BlueprintEvent, DisplayName = "Construct")
-    void BP_Construct() { }
+		BP_Construct();
+	}
 
-    bool OnCooldown;
+	UFUNCTION(BlueprintEvent, DisplayName = "Construct")
+	void BP_Construct()
+	{}
 
-    UFUNCTION(BlueprintOverride)
-    void Tick(FGeometry MyGeometry, float InDeltaTime)
-    {
-        BP_Tick(MyGeometry, InDeltaTime);
+	UFUNCTION(BlueprintOverride)
+	void Tick(FGeometry MyGeometry, float InDeltaTime)
+	{
+		BP_Tick(MyGeometry, InDeltaTime);
 
-        if (!OnCooldown)
-            return;
+		if (AbilityData != nullptr)
+		{
+            AFishCharacter Character = GetFishCharacterBase();
 
-        CooldownPercent = Math::FInterpConstantTo(CooldownPercent, 0, InDeltaTime, 1);
-        CooldownBar.SetPercent(CooldownPercent);
+			bool CanUse = AbilityData.CanUse(Character);
 
-        if (CooldownPercent <= 0.01f || Math::IsNearlyZero(CooldownPercent))
-        {
-            CooldownPercent = 1.0f;
-            OnCooldown = false;
-        }
-    }
+			auto StatusComp = UParameterBar::Get(Character);
+			bool HasMP = StatusComp.MP >= AbilityData.Details.Cost.Amount;
 
-    UFUNCTION(BlueprintEvent, DisplayName = "Tick")
-    void BP_Tick(FGeometry MyGeometry, float InDeltaTime) { }
+            bool LevelRequirementMet = false;
+			auto PlayerState = Cast<AFishPlayerState>(Character.PlayerState);
+            if (PlayerState != nullptr)
+			{
+                LevelRequirementMet = PlayerState.ExperienceLevel >= AbilityData.Details.UnlockLevel;
+            }
 
-    UFUNCTION()
-    void StartCooldown()
-    {
-        OnCooldown = true;
-        CooldownPercent = 1.0f;
-    }
+			CastButton.SetIsEnabled(CanUse && HasMP && LevelRequirementMet);
+		}
+
+		if (OnCooldown)
+		{
+			float Duration = AbilityData.Details.Cooldown.Duration;
+
+			if (Duration > 0.0f)
+			{
+				float Speed = 1.0f / Duration;
+				CooldownPercent = Math::FInterpConstantTo(CooldownPercent, 0.0f, InDeltaTime, Speed);
+			}
+			else
+			{
+				CooldownPercent = 0.0f;
+			}
+
+			CooldownBar.SetPercent(CooldownPercent);
+
+			if (CooldownPercent <= 0.01f || Math::IsNearlyZero(CooldownPercent))
+			{
+				OnCooldown = false;
+			}
+		}
+	}
+
+	UFUNCTION(BlueprintEvent, DisplayName = "Tick")
+	void BP_Tick(FGeometry MyGeometry, float InDeltaTime)
+	{}
+
+	void ValidateConditions()
+	{
+		if (AbilityData != nullptr)
+		{
+			TArray<TSubclassOf<UAbilityCondition>> IllegalConditions = TArray<TSubclassOf<UAbilityCondition>>();
+
+			for (TSubclassOf<UAbilityCondition> Condition : AbilityData.Conditions)
+			{
+				if (Condition == nullptr)
+				{
+					IllegalConditions.Add(Condition);
+					continue;
+				}
+			}
+
+			for (TSubclassOf<UAbilityCondition> Condition : IllegalConditions)
+			{
+				AbilityData.Conditions.Remove(Condition);
+			}
+		}
+	}
+
+	UFUNCTION()
+	void StartCooldown()
+	{
+		OnCooldown = true;
+		CooldownPercent = 1.0f;
+	}
 }

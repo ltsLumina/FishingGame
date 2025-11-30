@@ -6,7 +6,7 @@ class AFishCharacter : AFishEntity
 	 UFUNCTION(BlueprintOverride)
     void BeginPlay()
     {
-
+        
 
         BP_BeginPlay();
     }

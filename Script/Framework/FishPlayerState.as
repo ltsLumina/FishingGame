@@ -1,11 +1,11 @@
 class AFishPlayerState : APlayerState
 {
-    UPROPERTY() // temp for testing
-    int TotalFishCaught;
+    UPROPERTY(Category = "Stats", Replicated, DisplayName = "Level")
+    int ExperienceLevel = 1;
 
-	UFUNCTION(BlueprintOverride)
-	void BeginPlay()
+	UFUNCTION(Server, DisplayName = "Level Up")
+	void LevelUp_Server()
 	{
-        
+		ExperienceLevel++;
 	}
 };

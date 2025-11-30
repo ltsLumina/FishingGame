@@ -11,6 +11,7 @@ class UFishingStateComponent : UActorComponent
 	/**
 	 * Current time elapsed on the hook timer.
 	 */
+	// replicated so clients can read other players' timers
 	UPROPERTY(Category = "Fishing | State", Meta = (Units = "s"), VisibleAnywhere)
 	float BiteTimer = 0;
 
@@ -39,7 +40,7 @@ class UFishingStateComponent : UActorComponent
 	AFishingHole CurrentFishingHole;
 
 	/**
-	 * Considers the fishing hole the player is currently in, and the bait they are using, to determine which fish can be caught.	
+	 * Considers the fishing hole the player is currently in, and the bait they are using, to determine which fish can be caught.
 	 */
 	UPROPERTY(Category = "Fishing | Area", VisibleAnywhere)
 	TArray<TSubclassOf<AFish>> CurrentCatchableFish;
@@ -61,10 +62,10 @@ class UFishingStateComponent : UActorComponent
 		}
 	}
 
-    /* Effects */
+	/* Effects */
 
-    UPROPERTY()
-    float BiteTimerModifier = 1.0f;
+	UPROPERTY()
+	float BiteTimerModifier = 1.0f;
 
 	/* Events */
 
@@ -76,31 +77,28 @@ class UFishingStateComponent : UActorComponent
 	FTimerHandle MissedTimerHandle;
 
 	UFUNCTION(BlueprintOverride)
-	void Tick(float DeltaSeconds)
-	{
-		if (!IsFishing)
-			return;
+    void Tick(float DeltaSeconds)
+    {
+        if (!IsFishing)
+            return;
 
-		if (BiteTimer > 0)
-		{
-			//Print("Hook timer: " + BiteTimer, 0.1f, FLinearColor::Green);
-
-			BiteTimer -= DeltaSeconds;
-			if (BiteTimer <= 0)
-			{
-				//Print("Hook proc! You have " + ReelTime + " seconds to catch the fish!", 2.5f);
-				BiteTimer = 0;
+        if (BiteTimer > 0)
+        {
+            BiteTimer -= DeltaSeconds;
+            if (BiteTimer <= 0)
+            {
+                BiteTimer = 0;
 
                 // Only runs once when the hook proc happens.
-				if (!System::IsTimerActiveHandle(MissedTimerHandle))
+                if (!System::IsTimerActiveHandle(MissedTimerHandle))
                     BP_FishOnHook();
 
-				MissedTimerHandle = System::SetTimer(this, n"Missed", ReelTime, false);
-			}
-		}
+                MissedTimerHandle = System::SetTimer(this, n"Missed", ReelTime, false);
+            }
+        }
 
-		FishOnHook = System::IsTimerActiveHandle(MissedTimerHandle);
-	}
+        FishOnHook = System::IsTimerActiveHandle(MissedTimerHandle);
+    }
 
 	/**
 	 * AKA "Cast"
@@ -135,7 +133,7 @@ class UFishingStateComponent : UActorComponent
 			PrintWarning("There are no fish to catch here with your current bait!", 1.5f);
 
 			// TODO: make it like xiv
-			//System::SetTimer(this, n"NoFishAvailable", NewBiteTimer, false);
+			// System::SetTimer(this, n"NoFishAvailable", NewBiteTimer, false);
 		}
 		else
 		{
@@ -161,7 +159,7 @@ class UFishingStateComponent : UActorComponent
 
 		CurrentFish = nullptr;
 		BiteTimer = 0;
-        BiteTimerModifier = 1.0f;
+		BiteTimerModifier = 1.0f;
 
 		System::ClearAndInvalidateTimerHandle(MissedTimerHandle);
 
@@ -188,7 +186,7 @@ class UFishingStateComponent : UActorComponent
 		SpawnFish_Server(CurrentFish.GetClass(), SpawnLocation);
 
 		StopFishing();
-		
+
 		BP_Hook(CurrentFish);
 	}
 
@@ -242,9 +240,9 @@ class UFishingStateComponent : UActorComponent
 	{
 	}
 
-    /**
-     * Called when a fish bites the hook.
-     */
+	/**
+	 * Called when a fish bites the hook.
+	 */
 	UFUNCTION(BlueprintEvent, DisplayName = "Fish On Hook")
 	void BP_FishOnHook()
 	{}

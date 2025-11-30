@@ -1,9 +1,6 @@
 UCLASS(Abstract)
 class UAbility : UObject
 {
-	UPROPERTY()
-	int UnlockLevel = 1;
-
 	UFUNCTION(BlueprintEvent)
 	void Execute(UAbilityData AbilityData, AFishCharacter Instigator, UFishingStateComponent FishingState)
 	{
@@ -30,20 +27,15 @@ class UAbility : UObject
      * This function must be called within the ability execution to successfully use the ability, failure to do so will result in an error.
 	 * @param AbilityData The data of the ability being used.
 	 * @param Instigator The character using the ability.
-	 * @param RequiresFishing Whether the ability requires the player to be fishing.
 	 * @return True if the ability was successfully committed; false otherwise.
 	 */
 	UFUNCTION()
 	bool CommitAbility(UAbilityData AbilityData, AFishCharacter Instigator)
 	{
-		if (AbilityData.Details.RequiresFishing)
+		if (!AbilityData.CanUse(Instigator))
 		{
-			UFishingStateComponent FishingState = UFishingStateComponent::Get(Instigator);
-			if (!FishingState.IsFishing)
-			{
-				PrintWarning("Ability " + AbilityData.Details.Name.ToString() + " requires fishing state.", 2.5f);
-				return false;
-			}
+			PrintWarning("Ability conditions not met for: " + AbilityData.Details.Name.ToString());
+			return false;
 		}
 
 		auto Params = UParameterBar::Get(Instigator);
@@ -83,7 +75,14 @@ class UAbility : UObject
 		if (Hotbar == nullptr)
 			return false;
 
-		Hotbar.GlobalCooldown();
+		if (AbilityData.Details.Cooldown.Type == ECooldownType::GCD)
+		{
+			Hotbar.GlobalCooldown();
+		}
+		else if (AbilityData.Details.Cooldown.Type == ECooldownType::oGCD)
+		{
+			Hotbar.OffGlobalCooldown(AbilityData);
+		}
 
         HasCommited = true;
 		return true;
