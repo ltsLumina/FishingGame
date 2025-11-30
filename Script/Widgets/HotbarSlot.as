@@ -15,7 +15,7 @@ class UHotbarSlot : UUserWidget
 	UFUNCTION(NotBlueprintCallable)
 	void Invoke()
 	{
-		if (OnCooldown)
+		if (OnCooldown || !CanUse())
 			return;
 
 		auto AbilityHandler = UAbilityHandlerComponent::Get(GetOwningPlayerPawn());
@@ -50,24 +50,7 @@ class UHotbarSlot : UUserWidget
 	{
 		BP_Tick(MyGeometry, InDeltaTime);
 
-		if (AbilityData != nullptr)
-		{
-            AFishCharacter Character = GetFishCharacterBase();
-
-			bool CanUse = AbilityData.CanUse(Character);
-
-			auto StatusComp = UParameterBar::Get(Character);
-			bool HasMP = StatusComp.MP >= AbilityData.Details.Cost.Amount;
-
-            bool LevelRequirementMet = false;
-			auto PlayerState = Cast<AFishPlayerState>(Character.PlayerState);
-            if (PlayerState != nullptr)
-			{
-                LevelRequirementMet = PlayerState.ExperienceLevel >= AbilityData.Details.UnlockLevel;
-            }
-
-			CastButton.SetIsEnabled(CanUse && HasMP && LevelRequirementMet);
-		}
+		CastButton.SetIsEnabled(CanUse());
 
 		if (OnCooldown)
 		{
@@ -95,6 +78,33 @@ class UHotbarSlot : UUserWidget
 	UFUNCTION(BlueprintEvent, DisplayName = "Tick")
 	void BP_Tick(FGeometry MyGeometry, float InDeltaTime)
 	{}
+
+	/**
+	 * Checks if the ability can be used.
+	 * Does not account for the cooldown state.
+	 */
+	UFUNCTION(BlueprintPure)
+	bool CanUse()
+	{
+		if (AbilityData == nullptr)
+			return false;
+
+		AFishCharacter Character = GetFishCharacterBase();
+
+		bool CanUse = AbilityData.CanUse(Character);
+
+		auto StatusComp = UParameterBar::Get(Character);
+		bool HasMP = StatusComp.MP >= AbilityData.Details.Cost.Amount;
+
+		bool LevelRequirementMet = false;
+		auto PlayerState = Cast<AFishPlayerState>(Character.PlayerState);
+		if (PlayerState != nullptr)
+		{
+			LevelRequirementMet = PlayerState.ExperienceLevel >= AbilityData.Details.UnlockLevel;
+		}
+
+		return CanUse && HasMP && LevelRequirementMet;
+	}
 
 	void ValidateConditions()
 	{

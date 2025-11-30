@@ -1,0 +1,4 @@
+class AJunk : AFish
+{
+    
+};

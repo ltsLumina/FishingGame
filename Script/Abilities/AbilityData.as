@@ -19,24 +19,26 @@ class UAbilityData : UPrimaryDataAsset
 	 * Each condition is represented by a subclass of UAbilityCondition.
 	 * Examples include being near water or being in a fishing state.
 	 */
-	UPROPERTY(Category = "Logic")
+	UPROPERTY(Category = "Logic", EditInline, Instanced)
 	TArray<TSubclassOf<UAbilityCondition>> Conditions;
 
 	UFUNCTION(BlueprintPure)
-	bool CanUse(AFishCharacter User)
-	{
-		for (auto CondClass : Conditions)
+    bool CanUse(AFishCharacter User)
+    {
+        for (TSubclassOf<UAbilityCondition> ConditionClass : Conditions)
 		{
-			if (!CondClass.IsValid())
+			if (ConditionClass == nullptr)
 				continue;
-			UAbilityCondition CDO = CondClass.GetDefaultObject();
-			if (!CDO.IsSatisfied(User))
+
+			UAbilityCondition Condition = ConditionClass.GetDefaultObject();
+			if (!Condition.IsSatisfied(User))
 			{
 				return false;
 			}
 		}
+
 		return true;
-	}
+    }
 };
 
 USTRUCT()
