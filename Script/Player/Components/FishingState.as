@@ -82,6 +82,7 @@ class UFishingStateComponent : UActorComponent
 
 	FTimerHandle MissedTimerHandle;
 
+	UPROPERTY()
 	UFishingHoleComponent DefaultFishingHole;
 
 	UFUNCTION(BlueprintOverride)
@@ -98,7 +99,7 @@ class UFishingStateComponent : UActorComponent
 	UFUNCTION(BlueprintOverride)
     void Tick(float DeltaSeconds)
     {
-        if (!IsFishing)
+        if (!GetIsFishing())
             return;
 
         if (BiteTimer > 0)
@@ -172,9 +173,6 @@ class UFishingStateComponent : UActorComponent
 	UFUNCTION()
 	void StopFishing()
 	{
-		if (!GetIsFishing())
-			return;
-
 		CurrentState = EFishingState::NotFishing;
 
 		CurrentFish = nullptr;
@@ -189,12 +187,6 @@ class UFishingStateComponent : UActorComponent
 	UFUNCTION()
 	void Hook()
 	{
-		if (!GetIsFishing())
-		{
-			PrintWarning("You are not fishing!");
-			return;
-		}
-
 		if (!FishOnHook)
 		{
 			Print("Hooked too soon! You missed the fish.");
