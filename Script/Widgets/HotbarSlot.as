@@ -100,7 +100,7 @@ class UHotbarSlot : UUserWidget
 		auto PlayerState = Cast<AFishPlayerState>(Character.PlayerState);
 		if (PlayerState != nullptr)
 		{
-			LevelRequirementMet = PlayerState.ExperienceLevel >= AbilityData.Details.UnlockLevel;
+			LevelRequirementMet = PlayerState.Stats.ExperienceLevel >= AbilityData.Details.UnlockLevel;
 		}
 
 		return CanUse && HasMP && LevelRequirementMet;

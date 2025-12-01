@@ -14,6 +14,8 @@ class AFishCharacter : AFishEntity
 	void BP_BeginPlay()
 	{}
 
+	int ExperienceLevel;
+
 	UFUNCTION(BlueprintOverride)
 	void Tick(float DeltaSeconds)
 	{
@@ -25,7 +27,9 @@ class AFishCharacter : AFishEntity
         NiceName = String::LeftChop(NiceName, 4); // Remove " (0)" 
 
 		FText CurrentFish = FishingState.CurrentFish != nullptr ? FishingState.CurrentFish.FishName : FText::FromString("None");
-		int ExperienceLevel = Cast<AFishPlayerState>(PlayerState).ExperienceLevel;
+		
+		if (PlayerState != nullptr)
+			ExperienceLevel = Cast<AFishPlayerState>(PlayerState).Stats.ExperienceLevel;
 		float BiteTimer = FishingState.BiteTimer;
 		FText FishingHole = FishingState.CurrentFishingHole.HoleName;
 

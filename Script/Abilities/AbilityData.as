@@ -27,8 +27,9 @@ class UAbilityData : UPrimaryDataAsset
 	{
 		for (UAbilityCondition Condition : Conditions) 
 		{
-			if (!Condition.IsA(UAbilityCondition)) 
+			if (Condition == nullptr) 
 			{
+				throw(f"Ability {AbilityClass.DefaultObject.GetName()} has a null AbilityCondition!");
 				continue;
 			}
 			if (!Condition.IsSatisfied(User)) 

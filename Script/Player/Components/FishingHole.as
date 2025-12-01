@@ -16,6 +16,12 @@ class UFishingHoleComponent : UActorComponent
 		System::SetTimerForNextTick(this, "ValidateCatchableFish");
 	}
 
+	UFUNCTION(BlueprintOverride)
+	void Tick(float DeltaSeconds)
+	{
+		Print(f"{HoleName} Catchable Fish Count: {CatchableFish.Num()}", 0.01f);
+	}
+
 	UFUNCTION(NotBlueprintCallable)
 	void ValidateCatchableFish()
 	{

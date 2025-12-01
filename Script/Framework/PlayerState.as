@@ -5,14 +5,17 @@ class AFishPlayerState : APlayerState
 	UPROPERTY(Category = "Events")
 	FOnLevelUp OnLevelUp;
 
-    UPROPERTY(Category = "Stats", Replicated, DisplayName = "Level")
-    int ExperienceLevel = 1;
+	UPROPERTY(Category = "Stats", Replicated)
+	FStats Stats;
+
+	UPROPERTY(Category = "Quest", Replicated)
+	UQuest CurrentQuest;
 
 	UFUNCTION(Server, DisplayName = "Level Up")
 	void LevelUp_Server()
 	{
-		ExperienceLevel++;
-		OnLevelUp.Broadcast(ExperienceLevel);
+		Stats.ExperienceLevel++;
+		OnLevelUp.Broadcast(Stats.ExperienceLevel);
 	}
 
 	UFUNCTION(BlueprintOverride)
@@ -33,3 +36,12 @@ class AFishPlayerState : APlayerState
 		}
 	}
 };
+
+struct FStats
+{
+	UPROPERTY(Category = "Stats", Replicated, DisplayName = "Level")
+	int ExperienceLevel = 1;
+
+	UPROPERTY(Category = "Stats", Replicated, DisplayName = "Gathering Points")
+	int Gathering = 100;
+}

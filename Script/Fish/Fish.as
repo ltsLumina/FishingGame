@@ -1,6 +1,9 @@
 UCLASS(Abstract)
 class AFish : AActor
 {
+    UPROPERTY(DefaultComponent, RootComponent)
+    UStaticMeshComponent Mesh;
+
     UPROPERTY(Category = "Fish | Info", DisplayName = "Name")
     FText FishName = FText::FromString("Default Fish");
 
@@ -11,22 +14,33 @@ class AFish : AActor
     TArray<UBait> RequiredBaits;
 
     /**
-     * Recommended fishing level to catch this fish.
+     * Time it takes for this fish to bite (in seconds).
      */
-    UPROPERTY(Category = "Fish | Info")
-    int RecommendedFishingLevel = 1;
+    UPROPERTY(Category = "Fish | Info", Meta=(Units="s"))
+    float BiteTime = 5;
+
+    UPROPERTY(Category = "Fish | Info", Meta=(UIMin="0.0", UIMax="100.0", Delta="0.5", Units="%"))
+    float EscapeChance = 5.0f;
+
+    /**
+     * Recommended player level to catch this fish.
+     * Does not restrict catching; purely informational.
+     */
+    UPROPERTY(Category = "Fish | Info", Meta=(UIMin="1", UIMax="100", Delta="1"))
+    int RecommendedLevel = 1;
 
     /**
      * Which area types this fish can be found in.
+     * Only cosmetic.
      */
     UPROPERTY(Category = "Fish | Info")
     EFishType FishType = EFishType::Freshwater;
 
-    /**
-     * Rarity of this fish.
-     */
     UPROPERTY(Category = "Fish | Info")
     EFishRarity Rarity = EFishRarity::Basic;
+
+    UPROPERTY(Category = "Fish | Info", EditInline, Instanced)
+    TArray<UFishCondition> Conditions;
 
     /**
      * Sell price to vendors.
@@ -52,19 +66,7 @@ class AFish : AActor
     UPROPERTY(Category = "Fish | Physical", Meta=(Units="cm"))
     FVector2D SizeSpan = FVector2D(5.0f, 15.0f);
 
-
-
-    /**
-     * Time it takes for this fish to bite (in seconds).
-     */
-    UPROPERTY(Category = "Fish | Catch")
-    float BiteTime = 5;
-
-    UFUNCTION(BlueprintOverride)
-    void ConstructionScript()
-    {
-        SetReplicates(true);
-    }
+    default Replicates = true;
 
     UFUNCTION(BlueprintOverride)
     void BeginPlay()
@@ -96,13 +98,14 @@ class AFish : AActor
     {
 		FString SizeInformation = IsTiny ? "Tiny" : (IsLarge ? "Large" : "Normal");
 		FString HookInformation = f"{GetName()} \nSize: {Size} cm \nWeight: {Weight} kg \nType: {FishType} \nRarity: {Rarity} \nSize Category: {SizeInformation}";
-		Print(f"{Catcher.ActorNameOrLabel} ({Catcher.PlayerState.PlayerId}) caught a {HookInformation}", 3.5f, FLinearColor::DPink);
+		Print(f"{Catcher.ActorNameOrLabel} caught a {HookInformation}", 3.5f, FLinearColor::DPink);
     }
 
     UFUNCTION(BlueprintEvent, DisplayName = "Reeled In")
     void BP_OnCaught(AFishCharacter Catcher) { }
 };
 
+UENUM(Meta = (Bitflags, UseEnumValuesAsMaskValuesInEditor = "true"))
 enum EFishType
 {
     Freshwater,
@@ -119,5 +122,9 @@ enum EFishRarity
     Dungeon,
     Tomestone,
     Relic,
-    Legendary // quest-only
+    /**
+     * Legendary fish are obtained through quests only.
+     */
+    UMETA(DisplayName="Legendary (Quest)")
+    Legendary
 }

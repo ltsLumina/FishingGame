@@ -75,6 +75,21 @@ class UFishingStateComponent : UActorComponent
 			if (CurrentBait != nullptr && !FishDefault.RequiredBaits.Contains(CurrentBait))
 				continue;
 
+			for (UFishCondition Condition : FishDefault.Conditions) 
+			{
+				if (Condition == nullptr) 
+				{
+					throw(f"Fish {FishClass.DefaultObject.GetName()} has a null FishCondition!");
+					continue;
+				}
+				if (!Condition.IsSatisfied(Cast<AFishCharacter>(GetOwner()), Gameplay::GetActorOfClass(ATimeManager), Gameplay::GetActorOfClass(AWeatherManager)))
+				{
+					PrintWarning(f"{Condition.Name} not satisfied for fish: " + FishClass.DefaultObject.ActorNameOrLabel, 0.01f);
+					return;
+				}
+				
+			}
+
 			CurrentCatchableFish.Add(FishClass);
 		}
 	}
@@ -125,8 +140,8 @@ class UFishingStateComponent : UActorComponent
 				BiteTimer = 0;
 
 				// Only runs once when the hook proc happens.
-				if (!System::IsTimerActiveHandle(MissedTimerHandle))
-					BP_FishOnHook();
+				if (!System::IsTimerActiveHandle(MissedTimerHandle) && CurrentFish != nullptr)
+					BP_FishOnHook(); // Shows the Hook Notification in Blueprints.
 
 				MissedTimerHandle = System::SetTimer(this, n"Missed", TimeToReelIn, false);
 			}
@@ -142,7 +157,7 @@ class UFishingStateComponent : UActorComponent
 	/**
 	 * AKA "Cast"
 	 */
-	UFUNCTION()
+	UFUNCTION(Category = "Fishing", CallInEditor)
 	void StartFishing()
 	{
 		if (CurrentFishingHole == nullptr)
@@ -165,13 +180,13 @@ class UFishingStateComponent : UActorComponent
 
 		if (CurrentBait == nullptr)
 		{
-			PrintWarning("You must equip bait to fish!", 1.5f);
-			System::SetTimer(this, n"NoFishAvailable", 3, false);
+			PrintWarning("Fishing without any bait!", 1.5f);
+			System::SetTimer(this, n"StopFishing", 3, false);
 		}
 		else if (CurrentCatchableFish.Num() == 0)
 		{
-			PrintWarning("There are no fish to catch here with your current bait!", 1.5f);
-			System::SetTimer(this, n"NoFishAvailable", 3, false);
+			PrintWarning("There are no fish to catch here! (Bait and/or Conditions Failed!)", 2.5f);
+			System::SetTimer(this, n"StopFishing", 3, false);
 		}
 		else
 		{
@@ -180,32 +195,32 @@ class UFishingStateComponent : UActorComponent
 			NewBiteTimer = CurrentFish.BiteTime;
 
 			for (auto Pair : BiteTimeModifiers)
-            {
-                float Modifier = Pair.Value;
-                FName ModifierKey = Pair.Key;
+			{
+				float Modifier = Pair.Value;
+				FName ModifierKey = Pair.Key;
 
-                if (Modifier <= 0)
-                {
-                    PrintError(f"Bite time modifier ({ModifierKey.PlainNameString}) values must be greater than 0");
-                    continue;
-                }
+				if (Modifier <= 0)
+				{
+					PrintError(f"Bite time modifier ({ModifierKey.PlainNameString}) values must be greater than 0");
+					continue;
+				}
 
-                if (Modifier > 2.0f) // arbitrary upper limit to prevent extreme values
-                {
-                    PrintError(f"Bite time modifier ({ModifierKey.PlainNameString}) values must be 2.0 or less");
-                    continue;
-                }
+				if (Modifier > 2.0f) // arbitrary upper limit to prevent extreme values
+				{
+					PrintError(f"Bite time modifier ({ModifierKey.PlainNameString}) values must be 2.0 or less");
+					continue;
+				}
 
-                NewBiteTimer *= Modifier;
-                Print(f"Bite time modified by {Modifier}x (\"{ModifierKey}\")");
-            }
+				NewBiteTimer *= Modifier;
+				Print(f"Bite time modified by {Modifier}x (\"{ModifierKey}\")");
+			}
 		}
 
 		BiteTimer = NewBiteTimer;
 		BP_StartFishing();
 	}
 
-	UFUNCTION()
+	UFUNCTION(Category = "Fishing", CallInEditor)
 	void StopFishing()
 	{
 		CurrentState = EFishingState::NotFishing;
@@ -219,21 +234,33 @@ class UFishingStateComponent : UActorComponent
 		BP_StopFishing();
 	}
 
-	UFUNCTION()
+	UFUNCTION(Category = "Fishing", CallInEditor)
 	void Hook()
 	{
-		if (!FishOnHook)
+		if (CurrentState == EFishingState::Fishing)
 		{
-			Print("Hooked too soon! You missed the fish.");
-			StopFishing();
+			Print("Hooked too soon!", 2.5f, FLinearColor::Yellow);
+			Missed();
+			return;
+		}
+
+		// Chance to escape
+		float EscapeRoll = Math::RandRange(0.0f, 100.0f);
+		if (EscapeRoll < CurrentFish.EscapeChance)
+		{
+			Print("The fish escaped your hook!", 2.5f, FLinearColor::Yellow);
+			Missed();
 			return;
 		}
 
 		CurrentState = EFishingState::ReelingIn;  // only true while the animation plays
 		CurrentState = EFishingState::CaughtFish; // will be set by animation notify in the future
 
-		FVector SpawnLocation = GetOwner().GetActorLocation() + GetOwner().GetActorForwardVector() * 100;
-		SpawnFish_Server(CurrentFish.GetClass(), SpawnLocation);
+		if (CurrentFish != nullptr)
+		{
+			FVector SpawnLocation = GetOwner().GetActorLocation() + GetOwner().GetActorForwardVector() * 100;
+			SpawnFish_Server(CurrentFish.GetClass(), SpawnLocation);
+		}
 
 		StopFishing();
 
@@ -258,15 +285,8 @@ class UFishingStateComponent : UActorComponent
 	UFUNCTION(NotBlueprintCallable)
 	void Missed()
 	{
-		Print("You failed to catch the fish...");
+		Print("The fish got away!", 2.5f, FLinearColor::Yellow);
 		BP_Missed(CurrentFish);
-		StopFishing();
-	}
-
-	UFUNCTION(NotBlueprintCallable)
-	void NoFishAvailable()
-	{
-		Print("There are no fish to catch here with your current bait!");
 		StopFishing();
 	}
 
