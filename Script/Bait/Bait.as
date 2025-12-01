@@ -1,6 +1,6 @@
 class UBait : UPrimaryDataAsset
 {
-    UPROPERTY()
+    UPROPERTY(DisplayName = "Name")
     FText BaitName;
     default BaitName = FText::FromName(Class.GetName());
 

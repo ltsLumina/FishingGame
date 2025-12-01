@@ -1,7 +1,7 @@
 UCLASS(Abstract)
 class AFish : AActor
 {
-    UPROPERTY(Category = "Fish | Info")
+    UPROPERTY(Category = "Fish | Info", DisplayName = "Name")
     FText FishName = FText::FromString("Default Fish");
 
     UPROPERTY(Category = "Fish | Info", Meta=(MultiLine))
