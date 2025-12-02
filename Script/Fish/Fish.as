@@ -1,3 +1,29 @@
+namespace Fish
+{
+    float GetCatchRate(AFish Fish)
+    {
+        EFishRarity Rarity = Fish.Rarity;
+
+        switch (Rarity)
+        {
+            case EFishRarity::Basic:
+                return 1.0f;
+            case EFishRarity::Aetherial:
+                return 0.75f;
+            case EFishRarity::Dungeon:
+                return 0.5f;
+            case EFishRarity::Tomestone:
+                return 0.3f;
+            case EFishRarity::Relic:
+                return 0.15f;
+            case EFishRarity::Legendary:
+                return Fish.RarityWeight / 100.0f;
+            default:
+                return 1.0f;
+        }
+    }
+}
+
 UCLASS(Abstract)
 class AFish : AActor
 {
@@ -38,6 +64,9 @@ class AFish : AActor
 
     UPROPERTY(Category = "Fish | Info")
     EFishRarity Rarity = EFishRarity::Basic;
+
+    UPROPERTY(Category = "Fish | Info", Meta=(UIMin="0.0", UIMax="100.0", Delta="0.5", Units="%", EditCondition ="Rarity == EFishRarity::Legendary", EditConditionHides))
+    float RarityWeight = 100.0f;
 
     UPROPERTY(Category = "Fish | Info", EditInline, Instanced)
     TArray<UFishCondition> Conditions;
@@ -105,7 +134,6 @@ class AFish : AActor
     void BP_OnCaught(AFishCharacter Catcher) { }
 };
 
-UENUM(Meta = (Bitflags, UseEnumValuesAsMaskValuesInEditor = "true"))
 enum EFishType
 {
     Freshwater,
@@ -117,13 +145,29 @@ enum EFishType
 
 enum EFishRarity
 {
+    /**
+     * 100% catch rate weight.
+     */
     Basic,
+    /**
+     * 75% catch rate weight
+     */
     Aetherial,
+    /**
+     * 50% catch rate weight.
+     */
     Dungeon,
+    /**
+     * 30% catch rate weight.
+     */
     Tomestone,
+    /**
+     * 15% catch rate weight.
+     */
     Relic,
     /**
      * Legendary fish are obtained through quests only.
+     * 5% catch rate weight.
      */
     UMETA(DisplayName="Legendary (Quest)")
     Legendary

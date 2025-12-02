@@ -19,7 +19,7 @@ class UFishingHoleComponent : UActorComponent
 	UFUNCTION(BlueprintOverride)
 	void Tick(float DeltaSeconds)
 	{
-		Print(f"{HoleName} Catchable Fish Count: {CatchableFish.Num()}", 0.01f);
+		
 	}
 
 	UFUNCTION(NotBlueprintCallable)

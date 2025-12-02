@@ -53,11 +53,11 @@ class UFishingStateComponent : UActorComponent
 
 	/* Area */
 
-	UPROPERTY(Category = "Fishing | Area", VisibleAnywhere)
+	UPROPERTY(Category = "Fishing | Area", NotVisible, ToolTip = "The fishing hole the player is currently in.")
 	UFishingHoleComponent CurrentFishingHole;
 
 	/**
-	 * Considers the fishing hole the player is currently in, and the bait they are using, to determine which fish can be caught.
+	 * Considers a wide range of factors (bait, conditions, etc.) to determine which fish can currently be caught.
 	 */
 	UPROPERTY(Category = "Fishing | Area", VisibleAnywhere)
 	TArray<TSubclassOf<AFish>> CurrentCatchableFish;
@@ -75,9 +75,9 @@ class UFishingStateComponent : UActorComponent
 			if (CurrentBait != nullptr && !FishDefault.RequiredBaits.Contains(CurrentBait))
 				continue;
 
-			for (UFishCondition Condition : FishDefault.Conditions) 
+			for (UFishCondition Condition : FishDefault.Conditions)
 			{
-				if (Condition == nullptr) 
+				if (Condition == nullptr)
 				{
 					throw(f"Fish {FishClass.DefaultObject.GetName()} has a null FishCondition!");
 					continue;
@@ -87,7 +87,6 @@ class UFishingStateComponent : UActorComponent
 					PrintWarning(f"{Condition.Name} not satisfied for fish: " + FishClass.DefaultObject.ActorNameOrLabel, 0.01f);
 					return;
 				}
-				
 			}
 
 			CurrentCatchableFish.Add(FishClass);
@@ -109,11 +108,11 @@ class UFishingStateComponent : UActorComponent
 	UFUNCTION(BlueprintOverride)
 	void BeginPlay()
 	{
-		// Initialize CurrentFishingHole to avoid null checks later
 		DefaultFishingHole = UFishingHoleComponent::Create(GetOwner());
-		DefaultFishingHole.HoleName = FText::FromString("None");
+		DefaultFishingHole.HoleName = FText::FromString("Default");
 		DefaultFishingHole.CatchableFish.Add(AJunk);
 
+		// We have to set the reference to SOMETHING, otherwise everything that depends on it for information breaks, especially in multiplayer :P
 		CurrentFishingHole = DefaultFishingHole;
 
 		BP_BeginPlay();
@@ -190,8 +189,7 @@ class UFishingStateComponent : UActorComponent
 		}
 		else
 		{
-			// Determine the fish that will bite when fishing starts
-			CurrentFish = CurrentCatchableFish[Math::RandRange(0, CurrentCatchableFish.Num() - 1)].GetDefaultObject();
+			CurrentFish = SelectFishWeighted();
 			NewBiteTimer = CurrentFish.BiteTime;
 
 			for (auto Pair : BiteTimeModifiers)
@@ -265,6 +263,53 @@ class UFishingStateComponent : UActorComponent
 		StopFishing();
 
 		BP_Hook(CurrentFish);
+	}
+
+	/**
+	 * Selects a fish to be caught using weighted random selection based on fish rarity.
+	 */
+	AFish SelectFishWeighted()
+	{
+		AFish ResultFish = nullptr;
+
+		// Determine the fish that will bite when fishing starts
+		// Weighted random selection using AFish::GetCatchRate(Rarity) -> 0..1
+		float TotalWeight = 0.0f;
+		for (TSubclassOf<AFish> FishClass : CurrentCatchableFish)
+		{
+			auto FishDef = FishClass.GetDefaultObject();
+			float Weight = Fish::GetCatchRate(FishDef);
+			if (Weight < 0.0f)
+				Weight = 0.0f;
+			TotalWeight += Weight;
+		}
+
+		// Fallback to uniform random if something went wrong or all weights are zero
+		if (TotalWeight <= 0.0f)
+		{
+			CurrentFish = CurrentCatchableFish[Math::RandRange(0, CurrentCatchableFish.Num() - 1)].GetDefaultObject();
+			Print("All fish have zero catch rate weights; selecting uniformly at random.", 2.5f, FLinearColor::Yellow);
+		}
+		else
+		{
+			float Roll = Math::RandRange(0.0f, TotalWeight);
+			float Accum = 0.0f;
+			for (TSubclassOf<AFish> FishClass : CurrentCatchableFish)
+			{
+				auto FishDef = FishClass.GetDefaultObject();
+				float Weight = Fish::GetCatchRate(FishDef);
+				if (Weight < 0.0f)
+					Weight = 0.0f;
+				Accum += Weight;
+				if (Roll <= Accum)
+				{
+					ResultFish = FishDef;
+					return ResultFish;
+				}
+			}
+		}
+
+		return ResultFish;
 	}
 
 	UFUNCTION(NotBlueprintCallable, Server)
