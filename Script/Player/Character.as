@@ -1,11 +1,20 @@
 class AFishCharacter : AFishEntity
 {
-	UPROPERTY()
+	UPROPERTY(Category = "Components", NotVisible, BlueprintHidden)
 	UAbilityHandlerComponent AbilityHandler;
+
+	UPROPERTY(Category = "Components", NotVisible, BlueprintHidden)
+	UInventoryComponent InventoryComponent;
+
+	UPROPERTY(Category = "Components", NotVisible, BlueprintHidden)
+	UFishingStateComponent FishingState;
 
 	UFUNCTION(BlueprintOverride)
 	void BeginPlay()
 	{
+		AbilityHandler = UAbilityHandlerComponent::Get(this); // using BP child so I need to get it here.
+		InventoryComponent = UInventoryComponent::Get(this); // using BP child so I need to get it here.
+		FishingState = UFishingStateComponent::Get(this); // using BP child so I need to get it here.
 
 		BP_BeginPlay();
 	}
@@ -14,20 +23,18 @@ class AFishCharacter : AFishEntity
 	void BP_BeginPlay()
 	{}
 
+	FText InfoText;
 	int ExperienceLevel;
 
 	UFUNCTION(BlueprintOverride)
 	void Tick(float DeltaSeconds)
 	{
-		UFishingStateComponent FishingState = UFishingStateComponent::Get(this);
-		FText InfoText;
-
 		EFishingState State = FishingState.CurrentState;
-        FString NiceName = String::RightChop(f"{State}", 15); // Remove "FishingState::"
-        NiceName = String::LeftChop(NiceName, 4); // Remove " (0)" 
+		FString NiceName = String::RightChop(f"{State}", 15); // Remove "FishingState::"
+		NiceName = String::LeftChop(NiceName, 4);			   // Remove " (0)"
 
 		FText CurrentFish = FishingState.CurrentFish != nullptr ? FishingState.CurrentFish.FishName : FText::FromString("None");
-		
+
 		if (PlayerState != nullptr)
 			ExperienceLevel = Cast<AFishPlayerState>(PlayerState).Stats.ExperienceLevel;
 		float BiteTimer = FishingState.BiteTimer;
@@ -52,6 +59,18 @@ class AFishCharacter : AFishEntity
 #endif
 	}
 
+	UFUNCTION(Client, NotBlueprintCallable)
+    void AddFish_Client(FFishInfo FishInfo)
+    {
+        if (InventoryComponent == nullptr)
+            InventoryComponent = UInventoryComponent::Get(this);
+
+        if (InventoryComponent != nullptr)
+        {
+            InventoryComponent.AddItem(FishInfo);
+        }
+    }
+
 	UFUNCTION(BlueprintEvent)
 	void HotbarSlotPressed(int SlotIndex)
 	{}
@@ -63,6 +82,7 @@ AFishCharacter GetFishCharacterBase(int PlayerIndex = 0)
 	return Cast<AFishCharacter>(Gameplay::GetPlayerCharacter(PlayerIndex));
 }
 
+UFUNCTION(BlueprintPure, Category = "Math", Meta = (CompactNodeTitle = "Round", Keywords = "round,decimal,places"))
 float RoundTo(float Value, int DecimalPlaces)
 {
 	float Multiplier = Math::Pow(10.0f, DecimalPlaces);
@@ -72,12 +92,12 @@ float RoundTo(float Value, int DecimalPlaces)
 /**
  * Whether the game is currently running in the editor.
  */
-UFUNCTION(BlueprintPure, Category = "Editor", Meta=(CompactNodeTitle="Editor", Keywords="editor,pc,platform"))
+UFUNCTION(BlueprintPure, Category = "Editor", Meta = (CompactNodeTitle = "Editor", Keywords = "editor,pc,platform"))
 bool IsEditor()
 {
 #if EDITOR
-    return true;
+	return true;
 #else
-    return false;
+	return false;
 #endif
 }

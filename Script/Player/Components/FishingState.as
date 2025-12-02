@@ -84,7 +84,7 @@ class UFishingStateComponent : UActorComponent
 				}
 				if (!Condition.IsSatisfied(Cast<AFishCharacter>(GetOwner()), Gameplay::GetActorOfClass(ATimeManager), Gameplay::GetActorOfClass(AWeatherManager)))
 				{
-					PrintWarning(f"{Condition.Name} not satisfied for fish: " + FishClass.DefaultObject.ActorNameOrLabel, 0.01f);
+					PrintWarning(f"{Condition.Name} not satisfied for fish: {FishClass.DefaultObject.ActorNameOrLabel}", 0.005f);
 					return;
 				}
 			}
@@ -109,8 +109,8 @@ class UFishingStateComponent : UActorComponent
 	void BeginPlay()
 	{
 		DefaultFishingHole = UFishingHoleComponent::Create(GetOwner());
-		DefaultFishingHole.HoleName = FText::FromString("Default");
-		DefaultFishingHole.CatchableFish.Add(AJunk);
+		DefaultFishingHole.HoleName = FText::FromString("Default Fishing Hole");
+		DefaultFishingHole.CatchableFish.Add(AFish);
 
 		// We have to set the reference to SOMETHING, otherwise everything that depends on it for information breaks, especially in multiplayer :P
 		CurrentFishingHole = DefaultFishingHole;
@@ -180,12 +180,12 @@ class UFishingStateComponent : UActorComponent
 		if (CurrentBait == nullptr)
 		{
 			PrintWarning("Fishing without any bait!", 1.5f);
-			System::SetTimer(this, n"StopFishing", 3, false);
+			MissedTimerHandle = System::SetTimer(this, n"StopFishing", 3, false);
 		}
 		else if (CurrentCatchableFish.Num() == 0)
 		{
 			PrintWarning("There are no fish to catch here! (Bait and/or Conditions Failed!)", 2.5f);
-			System::SetTimer(this, n"StopFishing", 3, false);
+			MissedTimerHandle = System::SetTimer(this, n"StopFishing", 3, false);
 		}
 		else
 		{
@@ -242,9 +242,10 @@ class UFishingStateComponent : UActorComponent
 			return;
 		}
 
-		// Chance to escape
-		float EscapeRoll = Math::RandRange(0.0f, 100.0f);
-		if (EscapeRoll < CurrentFish.EscapeChance)
+		// Chance to escape - uses "Catch Rate 0-100"
+		float CatchRoll = Math::RandRange(0.0f, 100.0f);
+		float CatchRate = CurrentFish.CatchRate;
+		if (CatchRoll > CatchRate)
 		{
 			Print("The fish escaped your hook!", 2.5f, FLinearColor::Yellow);
 			Missed();
@@ -278,7 +279,7 @@ class UFishingStateComponent : UActorComponent
 		for (TSubclassOf<AFish> FishClass : CurrentCatchableFish)
 		{
 			auto FishDef = FishClass.GetDefaultObject();
-			float Weight = Fish::GetCatchRate(FishDef);
+			float Weight = Fish::GetRarityWeight(FishDef);
 			if (Weight < 0.0f)
 				Weight = 0.0f;
 			TotalWeight += Weight;
@@ -297,7 +298,7 @@ class UFishingStateComponent : UActorComponent
 			for (TSubclassOf<AFish> FishClass : CurrentCatchableFish)
 			{
 				auto FishDef = FishClass.GetDefaultObject();
-				float Weight = Fish::GetCatchRate(FishDef);
+				float Weight = Fish::GetRarityWeight(FishDef);
 				if (Weight < 0.0f)
 					Weight = 0.0f;
 				Accum += Weight;
@@ -313,15 +314,27 @@ class UFishingStateComponent : UActorComponent
 	}
 
 	UFUNCTION(NotBlueprintCallable, Server)
-	AFish SpawnFish_Server(TSubclassOf<AFish> FishClass, FVector SpawnLocation)
-	{
-		auto Fish = SpawnActor(FishClass, SpawnLocation);
-		Fish.SetLifeSpan(3);
+    AFish SpawnFish_Server(TSubclassOf<AFish> FishClass, FVector SpawnLocation)
+    {
+        auto Fish = SpawnActor(FishClass, SpawnLocation);
+        Fish.SetLifeSpan(3);
 
-		Fish.OnCaught(Cast<AFishCharacter>(GetOwner()));
+        Fish.OnCaught(Cast<AFishCharacter>(GetOwner()));
 
-		return Fish;
-	}
+        // Send the fish info to the owning client so they add it locally
+        auto OwnerChar = Cast<AFishCharacter>(GetOwner());
+        if (OwnerChar != nullptr)
+        {
+            OwnerChar.AddFish_Client(Fish.FishInfo);
+        }
+        else
+        {
+            // Fallback: server-side add if owner not found
+            GetFishCharacterBase().InventoryComponent.AddItem(Fish.FishInfo);
+        }
+
+        return Fish;
+    }
 
 	UFUNCTION(BlueprintEvent, DisplayName = "Hook Fish")
 	void BP_Hook(AFish CaughtFish)

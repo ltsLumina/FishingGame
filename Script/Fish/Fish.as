@@ -1,25 +1,25 @@
 namespace Fish
 {
-    float GetCatchRate(AFish Fish)
+    float GetRarityWeight(AFish Fish)
     {
         EFishRarity Rarity = Fish.Rarity;
 
         switch (Rarity)
         {
             case EFishRarity::Basic:
-                return 1.0f;
+                return 100.0f;
             case EFishRarity::Aetherial:
-                return 0.75f;
+                return 75.0f;
             case EFishRarity::Dungeon:
-                return 0.5f;
+                return 50.0f;
             case EFishRarity::Tomestone:
-                return 0.3f;
+                return 30.0f;
             case EFishRarity::Relic:
-                return 0.15f;
+                return 15.0f;
             case EFishRarity::Legendary:
-                return Fish.RarityWeight / 100.0f;
+                return Fish.RarityWeight;
             default:
-                return 1.0f;
+                return 100.0f;
         }
     }
 }
@@ -30,11 +30,17 @@ class AFish : AActor
     UPROPERTY(DefaultComponent, RootComponent)
     UStaticMeshComponent Mesh;
 
+    /**
+     * The inventory data for this fish.
+     */
+    UPROPERTY(Category = "Fish | Info", NotVisible)
+    FFishInfo FishInfo;
+
     UPROPERTY(Category = "Fish | Info", DisplayName = "Name")
     FText FishName = FText::FromString("Default Fish");
 
     UPROPERTY(Category = "Fish | Info", Meta=(MultiLine))
-    FText Description = FText::FromString("A generic fish. Nothing special about it.");
+    FText Description = FText::FromString("A generic fish. \nNothing special about it.");
 
     UPROPERTY(Category = "Fish | Info")
     TArray<UBait> RequiredBaits;
@@ -45,8 +51,12 @@ class AFish : AActor
     UPROPERTY(Category = "Fish | Info", Meta=(Units="s"))
     float BiteTime = 5;
 
+    /**
+     * Chance to catch this (0-100).
+     * If the catch fails, the fish escapes.
+     */
     UPROPERTY(Category = "Fish | Info", Meta=(UIMin="0.0", UIMax="100.0", Delta="0.5", Units="%"))
-    float EscapeChance = 5.0f;
+    float CatchRate = 95.0f;
 
     /**
      * Recommended player level to catch this fish.
@@ -77,6 +87,12 @@ class AFish : AActor
     UPROPERTY(Category = "Fish | Shop")
     int VendorValue = 1;
 
+    /**
+     * Size span of the fish (min and max size in cm).
+     */
+    UPROPERTY(Category = "Fish | Physical", Meta=(Units="cm"))
+    FVector2D SizeSpan = FVector2D(5.0f, 15.0f);
+
     UPROPERTY(Category = "Fish | Physical", Meta=(Units="cm"), VisibleAnywhere)
     float Size = 10.0f;
 
@@ -88,12 +104,6 @@ class AFish : AActor
 
     UPROPERTY(Category = "Fish | Physical", NotVisible)
     bool IsLarge;
-
-    /**
-     * Size span of the fish (min and max size in cm).
-     */
-    UPROPERTY(Category = "Fish | Physical", Meta=(Units="cm"))
-    FVector2D SizeSpan = FVector2D(5.0f, 15.0f);
 
     default Replicates = true;
 
@@ -121,6 +131,8 @@ class AFish : AActor
         // considered Tiny if in lowest 25% of the span, Large if in highest 25%
         IsTiny = Normalized < 0.25f;
         IsLarge = Normalized > 0.75f;
+
+        FishInfo = FFishInfo(this);
     }
 
     void OnCaught(AFishCharacter Catcher)

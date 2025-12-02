@@ -18,6 +18,12 @@ class ATimeManager : AActor
     default GameTime.Hour = 7;
     default GameTime.Minute = 0;
 
+	/**
+	 * runs on clients when GameTime changes on the server
+	 */
+	UFUNCTION(NotBlueprintCallable)
+    void OnRep_GameTime() { UpdateSunRotation(); }
+
 	UPROPERTY(Category = "Time")
 	ETimeOfDay TimeOfDay;
 
@@ -41,8 +47,15 @@ class ATimeManager : AActor
 	 * Global time dilation factor affecting the speed of time progression.
 	 * 1.0 = normal speed, <1.0 = slower, >1.0 = faster.
 	 */
-	UPROPERTY(Category = "Time", Meta = (UIMin = "0.1", UIMax = "50.0", Delta = "1"))
+	UPROPERTY(Category = "Time", Meta = (UIMin = "0.1", UIMax = "100.0", Delta = "1"))
 	float TimeDilation = 1.0f;
+
+	/**
+	 * The ratio of real-world seconds to in-game seconds.
+	 * E.g., if TimeScale is 60, then 1 real second = 60 in-game seconds.
+	 */
+	UPROPERTY(Category = "Time", VisibleInstanceOnly, Meta = (Units = "s"))
+	float RealSecondToGameSecond;
 
 	/**
 	 * Current in-game time represented as a FTimespan for easier calculations.
@@ -50,8 +63,8 @@ class ATimeManager : AActor
     UPROPERTY(NotVisible, Replicated)
 	FTimespan CurrentTime;
 
-	UPROPERTY(Category = "Time", EditAnywhere)
 	ADirectionalLight SunActor;
+	AStaticMeshActor SkySphereActor;
 
     default Replicates = true;
     default bReplicates = true;
@@ -64,6 +77,13 @@ class ATimeManager : AActor
         TArray<AActor> Actors;
         Gameplay::GetAllActorsWithTag( n"Sun", Actors);
         SunActor = Cast<ADirectionalLight>(Actors[0]);
+
+		Actors.Empty();
+
+		Gameplay::GetAllActorsWithTag(n"SkySphere", Actors);
+		SkySphereActor = Cast<AStaticMeshActor>(Actors[0]);
+
+		Actors.Empty();
 
         CurrentTime = FTimespan::FromHours(GameTime.Hour) + FTimespan::FromMinutes(GameTime.Minute);
     }
@@ -89,6 +109,8 @@ class ATimeManager : AActor
         GameTime.Minute = CurrentTime.GetMinutes() % 60;
         GameTime.Second = CurrentTime.GetSeconds() % 60;
         GameTime.TimeOfDay = GetTimeOfDay(GameTime.Hour);
+
+		RealSecondToGameSecond = TimeScale * TimeDilation;
 
         UpdateSunRotation();
     }
@@ -132,6 +154,10 @@ class ATimeManager : AActor
         // Apply rotation. Keep the same roll/yaw setup as before.
         FRotator newRot = FRotator(-pitchDegrees, 0.0f, 180.0f);
         SunActor.SetActorRotation(newRot);
+
+		auto Component = SkySphereActor.StaticMeshComponent;
+		Component.SetScalarParameterValueOnMaterials(n"Glow Crank", fractionOfDay);
+		Component.SetScalarParameterValueOnMaterials(n"Opacity", 1.0f - Math::Abs(1 - fractionOfDay) * 2.0f);
     }
 
 	UFUNCTION(CallInEditor, DisplayName = "Next Time of Day")
@@ -172,13 +198,6 @@ class ATimeManager : AActor
 
 		UpdateSunRotation();
 	}
-
-    UFUNCTION()
-    void OnRep_GameTime()
-    {
-        // runs on clients when GameTime changes on the server
-        UpdateSunRotation();
-    }
 };
 
 struct FGameTime
@@ -191,6 +210,23 @@ struct FGameTime
 	int32 Second;
 	UPROPERTY(Replicated)
 	ETimeOfDay TimeOfDay;
+}
+
+struct FShortGameTime
+{
+	UPROPERTY(Meta=(UIMin="0", UIMax="23", Delta="1"))
+	int32 Hour;
+	UPROPERTY(Meta=(UIMin="0", UIMax="59", Delta="5", ClampMax="59"))
+	int32 Minute;
+}
+
+struct FGameTimeSpan
+{
+	UPROPERTY()
+	FShortGameTime StartTime;
+
+	UPROPERTY()
+	FShortGameTime EndTime;
 }
 
 enum ETimeOfDay
