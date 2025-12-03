@@ -58,12 +58,17 @@ class AFish : AActor
     UPROPERTY(Category = "Fish | Info", Meta=(UIMin="0.0", UIMax="100.0", Delta="0.5", Units="%"))
     float CatchRate = 95.0f;
 
+    float CurrentCatchRate;
+
     /**
      * Recommended player level to catch this fish.
      * Does not restrict catching; purely informational.
      */
     UPROPERTY(Category = "Fish | Info", Meta=(UIMin="1", UIMax="100", Delta="1"))
     int RecommendedLevel = 1;
+
+    UPROPERTY(Category = "Fish | Info", Meta=(UIMin="0", UIMax="1000", Delta="1"))
+    int MinimumGathering = 0;
 
     /**
      * Which area types this fish can be found in.

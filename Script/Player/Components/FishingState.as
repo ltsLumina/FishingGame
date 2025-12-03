@@ -242,10 +242,13 @@ class UFishingStateComponent : UActorComponent
 			return;
 		}
 
-		// Chance to escape - uses "Catch Rate 0-100"
+		float PlayerGathering = GetFishPlayerStateBase().Stats.Gathering;
+		float GatheringDiff = Math::Max(0.0f, PlayerGathering - CurrentFish.MinimumGathering);
+		float CurrentCatchRate = Math::Clamp(CurrentFish.CatchRate + GatheringDiff * 0.5f, 0.0f, 100.0f);
+
+		// Chance to escape - uses Catch Rate 0-100
 		float CatchRoll = Math::RandRange(0.0f, 100.0f);
-		float CatchRate = CurrentFish.CatchRate;
-		if (CatchRoll > CatchRate)
+		if (CatchRoll > CurrentCatchRate)
 		{
 			Print("The fish escaped your hook!", 2.5f, FLinearColor::Yellow);
 			Missed();

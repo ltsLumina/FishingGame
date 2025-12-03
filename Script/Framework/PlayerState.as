@@ -9,6 +9,9 @@ class AFishPlayerState : APlayerState
 	UCurveFloat ExperienceCurve;
 
 	UPROPERTY(Category = "Stats")
+	int Gil;
+
+	UPROPERTY(Category = "Stats")
 	FStats Stats;
 
 	UPROPERTY(Category = "Quest")

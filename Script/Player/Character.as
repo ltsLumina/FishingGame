@@ -66,9 +66,8 @@ class AFishCharacter : AFishEntity
             InventoryComponent = UInventoryComponent::Get(this);
 
         if (InventoryComponent != nullptr)
-        {
             InventoryComponent.AddItem(FishInfo);
-        }
+        
     }
 
 	UFUNCTION(BlueprintEvent)
