@@ -74,19 +74,21 @@ class ATimeManager : AActor
     {
         SetReplicates(true);
 
+        SunActor = Gameplay::GetActorOfClass(ADirectionalLight);
+
         TArray<AActor> Actors;
-        Gameplay::GetAllActorsWithTag( n"Sun", Actors);
-        SunActor = Cast<ADirectionalLight>(Actors[0]);
-
-		Actors.Empty();
-
 		Gameplay::GetAllActorsWithTag(n"SkySphere", Actors);
 		SkySphereActor = Cast<AStaticMeshActor>(Actors[0]);
 
 		Actors.Empty();
 
         CurrentTime = FTimespan::FromHours(GameTime.Hour) + FTimespan::FromMinutes(GameTime.Minute);
+
+		BP_BeginPlay();
     }
+
+	UFUNCTION(BlueprintEvent, DisplayName = "Begin Play")
+	void BP_BeginPlay() { }
 
 	UFUNCTION(BlueprintOverride)
 	void Tick(float DeltaSeconds)
@@ -96,14 +98,19 @@ class ATimeManager : AActor
         {
             SetTime(DeltaSeconds);
         }
+
+		BP_Tick();
 	}
+
+	UFUNCTION(BlueprintEvent, DisplayName = "Tick")
+	void BP_Tick() { }
 
     UFUNCTION(Server)
     void SetTime(float DeltaSeconds)
     {
         if (!HasAuthority()) return; // double-safety: only run on server
 
-        CurrentTime += FTimespan::FromSeconds(DeltaSeconds * TimeScale * TimeDilation);
+        CurrentTime += FTimespan::FromSeconds(DeltaSeconds * TimeScale);
 
         GameTime.Hour = CurrentTime.GetHours() % 24; // 24-hour format
         GameTime.Minute = CurrentTime.GetMinutes() % 60;

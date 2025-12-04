@@ -43,6 +43,9 @@ class AFish : AActor
     FText Description = FText::FromString("A generic fish. \nNothing special about it.");
 
     UPROPERTY(Category = "Fish | Info")
+    UTexture2D Thumbnail;
+
+    UPROPERTY(Category = "Fish | Info")
     TArray<UBait> RequiredBaits;
 
     /**

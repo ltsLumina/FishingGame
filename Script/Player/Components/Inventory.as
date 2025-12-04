@@ -1,4 +1,10 @@
-event void FOnInventoryChanged();
+event void FOnInventoryChanged(FFishInfo FishInfo, EInventoryChangeType Change);
+
+enum EInventoryChangeType
+{
+	Added,
+	Removed
+};
 
 class UInventoryComponent : UActorComponent
 {
@@ -16,7 +22,7 @@ class UInventoryComponent : UActorComponent
 	{
 		Items.Add(FishInfo);
         Print("Added fish to inventory: " + FishInfo.FishName.ToString(), 1.0);
-        OnInventoryChanged.Broadcast();
+        OnInventoryChanged.Broadcast(FishInfo, EInventoryChangeType::Added);
 	}
 
 	UFUNCTION(Category = "Inventory")
@@ -28,7 +34,7 @@ class UInventoryComponent : UActorComponent
             {
                 Items.RemoveAt(i);
                 Print("Removed fish from inventory: " + ID.ToString());
-                OnInventoryChanged.Broadcast();
+                OnInventoryChanged.Broadcast(FFishInfo(), EInventoryChangeType::Removed);
                 return true;
             }
         }
@@ -80,6 +86,9 @@ struct FFishInfo
 	UPROPERTY(Category = "Fish | Info", Meta = (MultiLine), BlueprintReadOnly)
 	FText Description = FText::FromString("A generic fish. \nNothing special about it.");
 
+	UPROPERTY(Category = "Fish | Info", VisibleAnywhere, BlueprintReadOnly)
+	UTexture2D Thumbnail;
+
 	/**
 	 * Recommended player level to catch this fish.
 	 * Does not restrict catching; purely informational.
@@ -118,6 +127,7 @@ struct FFishInfo
         FishID = FName(FGuid::NewGuid().ToString());
 		FishName = Fish.FishName;
 		Description = Fish.Description;
+		Thumbnail = Fish.Thumbnail;
 		RecommendedLevel = Fish.RecommendedLevel;
 		FishType = Fish.FishType;
 		Rarity = Fish.Rarity;

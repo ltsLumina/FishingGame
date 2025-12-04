@@ -57,7 +57,7 @@ class AFishPlayerState : APlayerState
 	}
 
 	UFUNCTION(NotBlueprintCallable)
-	void HandleInventoryChanged()
+	void HandleInventoryChanged(FFishInfo FishInfo, EInventoryChangeType Change)
 	{
 		if (CurrentQuest == nullptr)
 			return;

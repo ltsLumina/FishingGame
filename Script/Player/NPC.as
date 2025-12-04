@@ -15,11 +15,20 @@ class AFishNPC : AFishEntity
 	UPROPERTY(Category = "NPC | Quests")
 	TArray<UQuest> AvailableQuests;
 
+	UPROPERTY(Category = "NPC | Quests", EditDefaultsOnly)
+	TArray<UTexture2D> QuestProgressIcons;
+
 	UFUNCTION(BlueprintOverride)
 	void BeginPlay()
 	{
 		InteractionBox.OnComponentBeginOverlap.AddUFunction(this, n"BeginOverlap");
+
+		BP_BeginPlay();
 	}
+
+	UFUNCTION(BlueprintEvent, DisplayName = "Begin Play")
+	void BP_BeginPlay()
+	{}
 
 	UFUNCTION(NotBlueprintCallable)
 	void BeginOverlap(UPrimitiveComponent OverlappedComponent, AActor OtherActor,
@@ -34,11 +43,11 @@ class AFishNPC : AFishEntity
 		if (!Character.IsLocallyControlled())
 			return;
 
-		Foo(OtherActor);
+		ProgressQuest(OtherActor);
 	}
 
 	UFUNCTION(NotBlueprintCallable)
-	void Foo(AActor OtherActor)
+	void ProgressQuest(AActor OtherActor)
 	{
 		auto Character = Cast<AFishCharacter>(OtherActor);
 		if (Character != nullptr)
@@ -47,10 +56,13 @@ class AFishNPC : AFishEntity
 			if (PS == nullptr)
 				return;
 
-			if (PS.CurrentQuest == nullptr)
+			if (PS.CurrentQuest == nullptr && AvailableQuests.Num() > 0)
 			{
 				PS.CurrentQuest = AvailableQuests.Num() > 0 ? AvailableQuests[0] : nullptr;
-				Print("Started quest!");
+				Print("Quest started!");
+
+				UBillboardComponent QuestIcon = UBillboardComponent::Get(this);
+				QuestIcon.SetSprite(QuestProgressIcons[3]);
 			}
 
 			if (PS.CurrentQuest != nullptr)
@@ -62,6 +74,17 @@ class AFishNPC : AFishEntity
 						Print(f"Quest Completed! ({Objective.GetName()})", 3.0f, FLinearColor::Green);
 						PS.CurrentQuest = nullptr;
 						AvailableQuests.RemoveAt(0);
+
+						if (AvailableQuests.Num() == 0)
+						{
+							UBillboardComponent QuestIcon = UBillboardComponent::Get(this);
+							QuestIcon.SetSprite(nullptr);
+						}
+						else
+						{
+							UBillboardComponent QuestIcon = UBillboardComponent::Get(this);
+							QuestIcon.SetSprite(QuestProgressIcons[0]);
+						}
 						break;
 					}
 					else
