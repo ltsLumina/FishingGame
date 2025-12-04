@@ -66,14 +66,11 @@ class ATimeManager : AActor
 	ADirectionalLight SunActor;
 	AStaticMeshActor SkySphereActor;
 
-    default Replicates = true;
-    default bReplicates = true;
+	default bReplicates = true;
 
     UFUNCTION(BlueprintOverride)
     void BeginPlay()
     {
-        SetReplicates(true);
-
         SunActor = Gameplay::GetActorOfClass(ADirectionalLight);
 
         TArray<AActor> Actors;

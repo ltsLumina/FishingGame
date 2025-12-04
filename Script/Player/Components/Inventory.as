@@ -14,14 +14,13 @@ class UInventoryComponent : UActorComponent
     UPROPERTY(Category = "Inventory")
     FOnInventoryChanged OnInventoryChanged;
 
-	default IsReplicated = true;
 	default bReplicates = true;
 
 	UFUNCTION(Category = "Inventory")
 	void AddItem(FFishInfo FishInfo)
 	{
 		Items.Add(FishInfo);
-        Print("Added fish to inventory: " + FishInfo.FishName.ToString(), 1.0);
+        Print("Added fish to inventory: " + FishInfo.FishName.ToString(), 3.0);
         OnInventoryChanged.Broadcast(FishInfo, EInventoryChangeType::Added);
 	}
 

@@ -1,3 +1,4 @@
+UCLASS(ClassGroup="Fishing")
 class UFishingHoleComponent : UActorComponent
 {
 	UPROPERTY(Category = "Fishing | Area", DisplayName = "Name")

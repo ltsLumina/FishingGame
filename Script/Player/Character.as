@@ -29,6 +29,10 @@ class AFishCharacter : AFishEntity
 	UFUNCTION(BlueprintOverride)
 	void Tick(float DeltaSeconds)
 	{
+		UTextRenderComponent TextRender = UTextRenderComponent::Get(this);
+		if (TextRender == nullptr)
+			return;
+
 		EFishingState State = FishingState.CurrentState;
 		FString NiceName = String::RightChop(f"{State}", 15); // Remove "FishingState::"
 		NiceName = String::LeftChop(NiceName, 4);			   // Remove " (0)"
@@ -41,7 +45,7 @@ class AFishCharacter : AFishEntity
 		FText FishingHole = FishingState.CurrentFishingHole.HoleName;
 
 		InfoText = FText::FromString(f"{NiceName}\n{CurrentFish}\nLevel {ExperienceLevel}\n{RoundTo(BiteTimer, 2)}s\n{FishingHole}");
-		UTextRenderComponent::Get(this).SetText(InfoText);
+		TextRender.SetText(InfoText);
 
 		BP_Tick(DeltaSeconds);
 	}

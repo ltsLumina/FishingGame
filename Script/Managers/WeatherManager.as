@@ -42,12 +42,14 @@ class AWeatherManager : AActor
 
     float TimeSinceSeasonChange = 0.0f;
 
+    default bReplicates = true;
+
     UFUNCTION(BlueprintOverride)
     void BeginPlay()
     {
         TransitionWeather(DetermineWeather());
 
-        //RandomizeSeasonDurations(60, 300); // Randomize season durations between 1 and 5 minutes
+        RandomizeSeasonDurations(60, 300); // Randomize season durations between 1 and 5 minutes
         
         BP_BeginPlay();
     }

@@ -90,8 +90,21 @@ class UFishingStateComponent : UActorComponent
 			}
 
 			CurrentCatchableFish.Add(FishClass);
+			for (auto Fish : CurrentCatchableFish)
+			{
+				if (Fish.DefaultObject.Rarity > EFishRarity::Dungeon)
+				{
+					if (!temp)
+					{
+						Print(f"A rare \"{FishClass.DefaultObject.ActorNameOrLabel}\" is available!", 30, FLinearColor::Green);
+						temp = true;
+					}
+				}
+			}
 		}
 	}
+
+	bool temp = false;
 
 	/* Events */
 
@@ -180,12 +193,12 @@ class UFishingStateComponent : UActorComponent
 		if (CurrentBait == nullptr)
 		{
 			PrintWarning("Fishing without any bait!", 1.5f);
-			MissedTimerHandle = System::SetTimer(this, n"StopFishing", 3, false);
+			MissedTimerHandle = System::SetTimer(this, n"StopFishing", 5, false);
 		}
 		else if (CurrentCatchableFish.Num() == 0)
 		{
 			PrintWarning("There are no fish to catch here! (Bait and/or Conditions Failed!)", 2.5f);
-			MissedTimerHandle = System::SetTimer(this, n"StopFishing", 3, false);
+			MissedTimerHandle = System::SetTimer(this, n"StopFishing", 5, false);
 		}
 		else
 		{
@@ -255,18 +268,23 @@ class UFishingStateComponent : UActorComponent
 			return;
 		}
 
-		CurrentState = EFishingState::ReelingIn;  // only true while the animation plays
-		CurrentState = EFishingState::CaughtFish; // will be set by animation notify in the future
+		// CurrentState = EFishingState::ReelingIn;  // only true while the animation plays
+		// CurrentState = EFishingState::CaughtFish; // set by animation completion
 
-		if (CurrentFish != nullptr)
-		{
-			FVector SpawnLocation = GetOwner().GetActorLocation() + GetOwner().GetActorForwardVector() * 100;
-			SpawnFish_Server(CurrentFish.GetClass(), SpawnLocation);
-		}
+		/* NOW HANDLED IN BLUEPRINT
+				if (CurrentFish != nullptr)
+				{
+					FVector SpawnLocation = GetOwner().GetActorLocation() + GetOwner().GetActorForwardVector() * 100;
+					SpawnFish_Server(CurrentFish.GetClass(), SpawnLocation);
+				}
+		*/
+
+		// Store locally before StopFishing clears 'CurrentFish'
+		AFish CaughtFish = CurrentFish;
 
 		StopFishing();
 
-		BP_Hook(CurrentFish);
+		BP_Hook(CaughtFish);
 	}
 
 	/**
@@ -277,7 +295,7 @@ class UFishingStateComponent : UActorComponent
 		AFish ResultFish = nullptr;
 
 		// Determine the fish that will bite when fishing starts
-		// Weighted random selection using AFish::GetCatchRate(Rarity) -> 0..1
+		// Weighted random selection using AFish::GetCatchRate(Rarity) -> 0..100
 		float TotalWeight = 0.0f;
 		for (TSubclassOf<AFish> FishClass : CurrentCatchableFish)
 		{
@@ -316,29 +334,31 @@ class UFishingStateComponent : UActorComponent
 		return ResultFish;
 	}
 
-	UFUNCTION(NotBlueprintCallable, Server)
-    AFish SpawnFish_Server(TSubclassOf<AFish> FishClass, FVector SpawnLocation)
-    {
-        auto Fish = SpawnActor(FishClass, SpawnLocation);
-        Fish.SetLifeSpan(3);
+	UFUNCTION(Server)
+	AFish SpawnFish_Server(TSubclassOf<AFish> FishClass, FVector SpawnLocation)
+	{
+		auto Fish = SpawnActor(FishClass, SpawnLocation);
+		Fish.SetLifeSpan(3);
 
-        Fish.OnCaught(Cast<AFishCharacter>(GetOwner()));
+		Fish.OnCaught(Cast<AFishCharacter>(GetOwner()));
 
-        // Send the fish info to the owning client so they add it locally
-        auto OwnerChar = Cast<AFishCharacter>(GetOwner());
-        if (OwnerChar != nullptr)
-        {
-            OwnerChar.AddFish_Client(Fish.FishInfo);
-        }
-        else
-        {
-            // Fallback: server-side add if owner not found
-            GetFishCharacterBase().InventoryComponent.AddItem(Fish.FishInfo);
-        }
+		// Send the fish info to the owning client so they add it locally
+		auto OwnerChar = Cast<AFishCharacter>(GetOwner());
+		if (OwnerChar != nullptr)
+		{
+			OwnerChar.AddFish_Client(Fish.FishInfo);
+		}
+		else
+		{
+			PrintError("SpawnFish_Server: Owner is not a FishCharacter!");
+		}
 
-        return Fish;
-    }
+		return Fish;
+	}
 
+	/**
+	 * Called when a fish is successfully hooked and the player begins reeling it in.
+	 */
 	UFUNCTION(BlueprintEvent, DisplayName = "Hook Fish")
 	void BP_Hook(AFish CaughtFish)
 	{}

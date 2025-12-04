@@ -24,7 +24,7 @@ namespace Fish
     }
 }
 
-UCLASS(Abstract)
+UCLASS(Abstract, NotPlaceable, ClassGroup="Fishing", Meta=(PrioritizeCategories="Fish | Info"))
 class AFish : AActor
 {
     UPROPERTY(DefaultComponent, RootComponent)
@@ -51,7 +51,7 @@ class AFish : AActor
     /**
      * Time it takes for this fish to bite (in seconds).
      */
-    UPROPERTY(Category = "Fish | Info", Meta=(Units="s"))
+    UPROPERTY(Category = "Fish | Info", Meta=(Units="s", UIMin="5.0", UIMax="30.0", Delta="0.5"))
     float BiteTime = 5;
 
     /**
@@ -113,7 +113,7 @@ class AFish : AActor
     UPROPERTY(Category = "Fish | Physical", NotVisible)
     bool IsLarge;
 
-    default Replicates = true;
+    default bReplicates = true;
 
     UFUNCTION(BlueprintOverride)
     void BeginPlay()
@@ -139,6 +139,8 @@ class AFish : AActor
         // considered Tiny if in lowest 25% of the span, Large if in highest 25%
         IsTiny = Normalized < 0.25f;
         IsLarge = Normalized > 0.75f;
+
+        VendorValue = Math::RoundToInt((Size + Weight) * 2 * Math::Max(1,float(Rarity))); // Simple formula: (size + weight) * 2 * rarity
 
         FishInfo = FFishInfo(this);
     }
@@ -166,28 +168,28 @@ enum EFishType
 enum EFishRarity
 {
     /**
-     * 100% catch rate weight.
+     * 100% spawn rate weight.
      */
     Basic,
     /**
-     * 75% catch rate weight
+     * 75% spawn rate weight.
      */
     Aetherial,
     /**
-     * 50% catch rate weight.
+     * 50% spawn rate weight.
      */
     Dungeon,
     /**
-     * 30% catch rate weight.
+     * 30% spawn rate weight.
      */
     Tomestone,
     /**
-     * 15% catch rate weight.
+     * 15% spawn rate weight.
      */
     Relic,
     /**
      * Legendary fish are obtained through quests only.
-     * 5% catch rate weight.
+     * 5% spawn rate weight (when obtainable).
      */
     UMETA(DisplayName="Legendary (Quest)")
     Legendary
