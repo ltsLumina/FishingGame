@@ -58,10 +58,9 @@ class UAbility : UObject
 			Params.MP -= AbilityData.Details.Cost.Amount;
 		}
 
-		if (CostType == ECostType::ThaliaksFavor)
+		if (CostType == ECostType::Other)
 		{
-			// Placeholder for Thaliak's Favor cost check
-			PrintWarning("Thaliak's Favor cost type not implemented yet.");
+			PrintWarning("Ability uses 'Other' cost type, which is not implemented yet: " + AbilityData.Details.Name.ToString());
 		}
 
         // If all checks passed, invoke the ability and its cooldown, and trigger global cooldown

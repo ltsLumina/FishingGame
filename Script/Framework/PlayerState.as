@@ -6,7 +6,16 @@ class AFishPlayerState : APlayerState
 	FOnLevelUp OnLevelUp;
 
 	UPROPERTY(Category = "Stats")
-	UCurveFloat ExperienceCurve;
+	UCurveFloat EXPGainCurve;
+
+	UPROPERTY(Category = "Stats", BlueprintGetter = "GetXPToLevelUp")
+	float XPToLevelUp;
+	
+	UFUNCTION(BlueprintPure)
+	float GetXPToLevelUp() { return EXPGainCurve.GetFloatValue(Stats.ExperienceLevel + 1); }
+
+	UPROPERTY(Category = "Stats")
+	UCurveFloat MPGainCurve;
 
 	UPROPERTY(Category = "Stats")
 	int Gil;
@@ -17,13 +26,6 @@ class AFishPlayerState : APlayerState
 	UPROPERTY(Category = "Quest")
 	UQuest CurrentQuest;
 
-	UFUNCTION(Server, DisplayName = "Level Up")
-	void LevelUp_Server()
-	{
-		Stats.ExperienceLevel++;
-		OnLevelUp.Broadcast(Stats.ExperienceLevel);
-	}
-
 	UFUNCTION(BlueprintOverride)
 	void BeginPlay()
 	{
@@ -33,13 +35,33 @@ class AFishPlayerState : APlayerState
 		}
 	}
 
+	UFUNCTION()
+	void GainExperience(float Amount)
+	{
+		Stats.ExperiencePoints += Amount;
+		float RequiredXP = EXPGainCurve.GetFloatValue(Stats.ExperienceLevel + 1);
+		while (Stats.ExperiencePoints >= RequiredXP)
+		{
+			Stats.ExperiencePoints -= RequiredXP;
+			LevelUp_Server();
+			RequiredXP = EXPGainCurve.GetFloatValue(Stats.ExperienceLevel + 1);
+		}
+	}
+
+	UFUNCTION(Server, DisplayName = "Level Up")
+	void LevelUp_Server()
+	{
+		Stats.ExperienceLevel++;
+		OnLevelUp.Broadcast(Stats.ExperienceLevel);
+	}
+
 	UFUNCTION(NotBlueprintCallable)
 	void HandleLevelUp(int NewLevel)
 	{
 		UParameterBar ParameterBar = UParameterBar::Get(GetPawn());
 		if (ParameterBar != nullptr)
 		{
-			float NewMaxMP = ExperienceCurve.GetFloatValue(NewLevel);
+			float NewMaxMP = MPGainCurve.GetFloatValue(NewLevel);
 			ParameterBar.MaxMP = NewMaxMP;
 			ParameterBar.MP = NewMaxMP;
 		}
@@ -49,15 +71,15 @@ class AFishPlayerState : APlayerState
 	void DelayedStart() // To ensure Pawn is possessed and available
 	{
 		UParameterBar ParameterBar = UParameterBar::Get(GetPawn());
-		ParameterBar.MP = ExperienceCurve.GetFloatValue(Stats.ExperienceLevel);
-		ParameterBar.MaxMP = ExperienceCurve.GetFloatValue(Stats.ExperienceLevel);
+		ParameterBar.MP = MPGainCurve.GetFloatValue(Stats.ExperienceLevel);
+		ParameterBar.MaxMP = MPGainCurve.GetFloatValue(Stats.ExperienceLevel);
 
 		OnLevelUp.AddUFunction(this, n"HandleLevelUp");
 		GetFishCharacterBase().InventoryComponent.OnInventoryChanged.AddUFunction(this, n"HandleInventoryChanged");
 	}
 
 	UFUNCTION(NotBlueprintCallable)
-	void HandleInventoryChanged(FFishInfo FishInfo, EInventoryChangeType Change)
+	void HandleInventoryChanged(FName ID, FFishInfo FishInfo, EInventoryChangeType Change)
 	{
 		if (CurrentQuest == nullptr)
 			return;
@@ -69,6 +91,12 @@ class AFishPlayerState : APlayerState
 				Print("Objective satisfied: " + Objective.GetName(), 3.0f, FLinearColor::Green);
 			}
 		}
+	}
+
+	UFUNCTION(Category = "Gil")
+	void GainGil(int Amount)
+	{
+		Gil += Amount;
 	}
 };
 
@@ -91,6 +119,9 @@ struct FStats
 {
 	UPROPERTY(Category = "Stats", Replicated, DisplayName = "Level")
 	int ExperienceLevel = 1;
+
+	UPROPERTY(Category = "Stats", Replicated, DisplayName = "XP")
+	float ExperiencePoints;
 
 	UPROPERTY(Category = "Stats", Replicated, DisplayName = "Gathering Points")
 	int Gathering = 100;

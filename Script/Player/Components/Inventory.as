@@ -1,4 +1,4 @@
-event void FOnInventoryChanged(FFishInfo FishInfo, EInventoryChangeType Change);
+event void FOnInventoryChanged(FName FishID, FFishInfo FishInfo, EInventoryChangeType Change);
 
 enum EInventoryChangeType
 {
@@ -21,7 +21,7 @@ class UInventoryComponent : UActorComponent
 	{
 		Items.Add(FishInfo);
         Print("Added fish to inventory: " + FishInfo.FishName.ToString(), 3.0);
-        OnInventoryChanged.Broadcast(FishInfo, EInventoryChangeType::Added);
+        OnInventoryChanged.Broadcast(FishInfo.FishID, FishInfo, EInventoryChangeType::Added);
 	}
 
 	UFUNCTION(Category = "Inventory")
@@ -33,12 +33,20 @@ class UInventoryComponent : UActorComponent
             {
                 Items.RemoveAt(i);
                 Print("Removed fish from inventory: " + ID.ToString());
-                OnInventoryChanged.Broadcast(FFishInfo(), EInventoryChangeType::Removed);
+                OnInventoryChanged.Broadcast(ID, FFishInfo(), EInventoryChangeType::Removed);
                 return true;
             }
         }
         return false;
     }
+
+	UFUNCTION(Category = "Inventory")
+	void ClearInventory()
+	{
+		Items.Empty();
+		Print("Cleared inventory.");
+		OnInventoryChanged.Broadcast(FName("Everything"), FFishInfo(), EInventoryChangeType::Removed);
+	}
 
 	UFUNCTION(Category = "Inventory", BlueprintPure, Meta = (CompactNodeTitle = "Contains", Keywords = "has,find"))
 	bool Contains(TSubclassOf<AFish> FishClass)
@@ -65,6 +73,17 @@ class UInventoryComponent : UActorComponent
             }
         }
         return Quantity;
+	}
+
+	UFUNCTION(Category = "Inventory", BlueprintPure)
+	int GetTotalValue()
+	{
+		int TotalValue = 0;
+		for (auto& Pair : Items)
+		{
+			TotalValue += Pair.VendorValue;
+		}
+		return TotalValue;
 	}
 };
 
@@ -116,6 +135,12 @@ struct FFishInfo
 
 	UPROPERTY(Category = "Fish | Physical", Meta = (Units = "kg"), VisibleAnywhere, BlueprintReadOnly)
 	float Weight = 0.5f;
+	
+	UPROPERTY(Category = "Fish | Physical", VisibleInstanceOnly)
+    bool IsTiny;
+
+    UPROPERTY(Category = "Fish | Physical", VisibleInstanceOnly)
+    bool IsLarge;
 
 	FFishInfo()
 	{}
@@ -133,5 +158,7 @@ struct FFishInfo
 		VendorValue = Fish.VendorValue;
 		Size = Fish.Size;
 		Weight = Fish.Weight;
+		IsTiny = Fish.IsTiny;
+		IsLarge = Fish.IsLarge;
 	}
 }

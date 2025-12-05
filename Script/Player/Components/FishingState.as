@@ -38,6 +38,33 @@ class UFishingStateComponent : UActorComponent
 	UPROPERTY(Category = "Fishing | State", Meta = (Units = "s"))
 	float TimeToReelIn = 2.5f;
 
+	UPROPERTY(Category = "Fishing | State", VisibleInstanceOnly)
+	TArray<TSubclassOf<UFishCondition>> CurrentIgnoredConditions;
+
+	/**
+	 * Tokens are granted by certain abilities to modify fishing behavior (e.g., ignoring conditions).
+	 * For instance, an ability may grant a "Thaliak's Favor" token, which can be used by other abilities.
+	 */
+	UPROPERTY(Category = "Fishing | State", VisibleAnywhere)
+	TMap<FName, int> Tokens;
+
+	UPROPERTY(Category = "Fishing | State", VisibleAnywhere)
+	TArray<TSubclassOf<AFish>> MoochedFish;
+
+	UPROPERTY(Category = "Fishing | State", VisibleAnywhere, BlueprintGetter = "GetHasMoochOpportunity")
+	bool HasMoochOpportunity;
+
+	UFUNCTION(BlueprintPure)
+	bool GetHasMoochOpportunity() { return CurrentMoochableFish != nullptr; }
+
+	/**
+	 * Status effects currently applied to the player while fishing.
+	 * Key is the effect name.
+	 * Value is the amount of stacks.
+	 */
+	UPROPERTY(Category = "Fishing | State", VisibleAnywhere)
+	TMap<FName, int> StatusEffects;
+
 	/**
 	 * The fish that is currently hooked.
 	 * Determined when fishing starts.
@@ -64,6 +91,9 @@ class UFishingStateComponent : UActorComponent
 
 	void UpdateCatchableFish()
 	{
+		if (Character == nullptr || FishingState == nullptr || TimeManager == nullptr || WeatherManager == nullptr)
+			return;
+		
 		CurrentCatchableFish.Empty();
 
 		if (CurrentFishingHole == nullptr)
@@ -77,12 +107,21 @@ class UFishingStateComponent : UActorComponent
 
 			for (UFishCondition Condition : FishDefault.Conditions)
 			{
+				if (Condition.Mute)
+					continue;
+
 				if (Condition == nullptr)
 				{
 					throw(f"Fish {FishClass.DefaultObject.GetName()} has a null FishCondition!");
 					continue;
 				}
-				if (!Condition.IsSatisfied(Cast<AFishCharacter>(GetOwner()), Gameplay::GetActorOfClass(ATimeManager), Gameplay::GetActorOfClass(AWeatherManager)))
+
+				if (CurrentIgnoredConditions.Contains(Condition.GetClass()))
+				{
+					Print(f"An ability is ignoring condition: {Condition.Name} for fish: {FishClass.DefaultObject.ActorNameOrLabel}", 0.005f, FLinearColor::Yellow);
+					continue;
+				}
+				if (!Condition.IsSatisfied(Character, FishingState, TimeManager, WeatherManager))
 				{
 					PrintWarning(f"{Condition.Name} not satisfied for fish: {FishClass.DefaultObject.ActorNameOrLabel}", 0.005f);
 					return;
@@ -94,11 +133,7 @@ class UFishingStateComponent : UActorComponent
 			{
 				if (Fish.DefaultObject.Rarity > EFishRarity::Dungeon)
 				{
-					if (!temp)
-					{
-						Print(f"A rare \"{FishClass.DefaultObject.ActorNameOrLabel}\" is available!", 30, FLinearColor::Green);
-						temp = true;
-					}
+					Print(f"A rare \"{FishClass.DefaultObject.ActorNameOrLabel}\" is available!", 0.01f, FLinearColor::Green);
 				}
 			}
 		}
@@ -118,9 +153,16 @@ class UFishingStateComponent : UActorComponent
 	UPROPERTY(NotVisible)
 	UFishingHoleComponent DefaultFishingHole;
 
+	AFishCharacter Character;
+	UFishingStateComponent FishingState;
+	ATimeManager TimeManager;
+	AWeatherManager WeatherManager;
+
 	UFUNCTION(BlueprintOverride)
 	void BeginPlay()
 	{
+		System::SetTimerForNextTick(this, "DelayedStart");
+
 		DefaultFishingHole = UFishingHoleComponent::Create(GetOwner());
 		DefaultFishingHole.HoleName = FText::FromString("Default Fishing Hole");
 		DefaultFishingHole.CatchableFish.Add(AFish);
@@ -129,6 +171,18 @@ class UFishingStateComponent : UActorComponent
 		CurrentFishingHole = DefaultFishingHole;
 
 		BP_BeginPlay();
+	}
+
+	UFUNCTION(NotBlueprintCallable)
+	void DelayedStart()
+	{
+		Character = Cast<AFishCharacter>(GetOwner());
+		FishingState = Character.FishingState;
+		TimeManager = Gameplay::GetActorOfClass(ATimeManager);
+		WeatherManager = Gameplay::GetActorOfClass(AWeatherManager);
+
+		if (WeatherManager == nullptr)
+			System::SetTimerForNextTick(this, "DelayedStart");
 	}
 
 	UFUNCTION(BlueprintEvent, DisplayName = "Begin Play")
@@ -268,6 +322,16 @@ class UFishingStateComponent : UActorComponent
 			return;
 		}
 
+		if (CurrentFish != nullptr)
+		{
+			if (CurrentFish.Rarity > EFishRarity::Aetherial) // TODO: check if Thaliak's Favor is unlocked
+			{
+				Print(f"You've hooked a rare \"{CurrentFish.ActorNameOrLabel}\"!", 3, FLinearColor::Green);
+				Tokens.Add(FName("Angler's Art"), 1);
+				StatusEffects.Add(FName("Angler's Art"), 1); // TODO: separate system with data assets so I can display the icon.
+			}
+		}
+
 		// CurrentState = EFishingState::ReelingIn;  // only true while the animation plays
 		// CurrentState = EFishingState::CaughtFish; // set by animation completion
 
@@ -282,10 +346,23 @@ class UFishingStateComponent : UActorComponent
 		// Store locally before StopFishing clears 'CurrentFish'
 		AFish CaughtFish = CurrentFish;
 
+		if (CaughtFish.IsMoochable)
+		{
+			CurrentMoochableFish = CaughtFish.GetClass();
+		}
+		else
+		{
+			CurrentMoochableFish = nullptr;
+			MoochedFish.Empty();
+		}
+
 		StopFishing();
 
 		BP_Hook(CaughtFish);
 	}
+
+	UPROPERTY()
+	TSubclassOf<AFish> CurrentMoochableFish;
 
 	/**
 	 * Selects a fish to be caught using weighted random selection based on fish rarity.
@@ -347,6 +424,9 @@ class UFishingStateComponent : UActorComponent
 		if (OwnerChar != nullptr)
 		{
 			OwnerChar.AddFish_Client(Fish.FishInfo);
+
+			auto PS = Cast<AFishPlayerState>(OwnerChar.Controller.PlayerState);
+			PS.GainExperience(Fish.ExperienceValue);
 		}
 		else
 		{

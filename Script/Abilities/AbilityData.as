@@ -32,11 +32,10 @@ class UAbilityData : UPrimaryDataAsset
 				throw(f"Ability {AbilityClass.DefaultObject.GetName()} has a null AbilityCondition!");
 				continue;
 			}
-			if (!Condition.IsSatisfied(User)) 
+			if (!Condition.IsSatisfied(User, User.FishingState)) 
 			{
 				return false;
 			}
-			
 		}
 
 		return true;
@@ -99,5 +98,5 @@ enum ECostType
 {
 	None,
 	MP,
-	ThaliaksFavor,
+	Other,
 }

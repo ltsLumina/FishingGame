@@ -74,6 +74,12 @@ class AFish : AActor
     int MinimumGathering = 0;
 
     /**
+     * Experience points awarded when this fish is caught.
+     */
+    UPROPERTY(Category = "Fish | Info", Meta=(UIMin="0", UIMax="1000", Delta="1"))
+    float ExperienceValue = 10;
+
+    /**
      * Which area types this fish can be found in.
      * Only cosmetic.
      */
@@ -106,6 +112,9 @@ class AFish : AActor
 
     UPROPERTY(Category = "Fish | Physical", Meta=(Units="kg"), VisibleAnywhere)
     float Weight = 0.5f;
+
+    UPROPERTY(Category = "Fish | Physical", EditDefaultsOnly, DisplayName = "Moochable")
+    bool IsMoochable;
 
     UPROPERTY(Category = "Fish | Physical", NotVisible)
     bool IsTiny;

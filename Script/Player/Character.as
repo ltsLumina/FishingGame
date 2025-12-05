@@ -33,18 +33,29 @@ class AFishCharacter : AFishEntity
 		if (TextRender == nullptr)
 			return;
 
+		auto PS = Cast<AFishPlayerState>(PlayerState);
+		if (PS == nullptr)
+			return;
+
 		EFishingState State = FishingState.CurrentState;
 		FString NiceName = String::RightChop(f"{State}", 15); // Remove "FishingState::"
-		NiceName = String::LeftChop(NiceName, 4);			   // Remove " (0)"
+		NiceName = String::LeftChop(NiceName, 4);			  // Remove " (0)"
 
 		FText CurrentFish = FishingState.CurrentFish != nullptr ? FishingState.CurrentFish.FishName : FText::FromString("None");
 
-		if (PlayerState != nullptr)
-			ExperienceLevel = Cast<AFishPlayerState>(PlayerState).Stats.ExperienceLevel;
+		float ExperiencePoints = PS.Stats.ExperiencePoints;
+		float ToNextLevel = PS.GetXPToLevelUp();
+		ExperienceLevel = PS.Stats.ExperienceLevel;
 		float BiteTimer = FishingState.BiteTimer;
+		TArray<FString> MoochedFishNames;
+		for (TSubclassOf<AFish> FishClass : FishingState.MoochedFish)
+		{
+			MoochedFishNames.Add(FishClass.DefaultObject.FishName.ToString());
+		}
+		FString Joined = FString::Join(MoochedFishNames, ",");
 		FText FishingHole = FishingState.CurrentFishingHole.HoleName;
 
-		InfoText = FText::FromString(f"{NiceName}\n{CurrentFish}\nLevel {ExperienceLevel}\n{RoundTo(BiteTimer, 2)}s\n{FishingHole}");
+		InfoText = FText::FromString(f"{NiceName}\n{CurrentFish}\nLevel {ExperienceLevel} ({ExperiencePoints}/{Math::FloorToInt(ToNextLevel)})\n{RoundTo(BiteTimer, 2)}s\n{Joined}\n{FishingHole}");
 		TextRender.SetText(InfoText);
 
 		BP_Tick(DeltaSeconds);
