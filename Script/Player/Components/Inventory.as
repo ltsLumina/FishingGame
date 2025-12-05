@@ -1,4 +1,4 @@
-event void FOnInventoryChanged(FName FishID, FFishInfo FishInfo, EInventoryChangeType Change);
+event void FOnInventoryChanged(FName FishID, UItem Item, EInventoryChangeType Change);
 
 enum EInventoryChangeType
 {
@@ -8,8 +8,11 @@ enum EInventoryChangeType
 
 class UInventoryComponent : UActorComponent
 {
-	UPROPERTY(Category = "Inventory", VisibleAnywhere)
-	TArray<FFishInfo> Items;
+	UPROPERTY(Category = "Inventory", VisibleInstanceOnly)
+	TArray<UItem> Items;
+
+	UPROPERTY(Category = "Inventory", EditDefaultsOnly)
+	TMap<UBait, int> Baits;
 
     UPROPERTY(Category = "Inventory")
     FOnInventoryChanged OnInventoryChanged;
@@ -17,11 +20,11 @@ class UInventoryComponent : UActorComponent
 	default bReplicates = true;
 
 	UFUNCTION(Category = "Inventory")
-	void AddItem(FFishInfo FishInfo)
+	void AddItem(UItem Item)
 	{
-		Items.Add(FishInfo);
-        Print("Added fish to inventory: " + FishInfo.FishName.ToString(), 3.0);
-        OnInventoryChanged.Broadcast(FishInfo.FishID, FishInfo, EInventoryChangeType::Added);
+		Items.Add(Item);
+        Print("Added fish to inventory: " + Item.ItemName.ToString(), 3.0);
+        OnInventoryChanged.Broadcast(Item.ID, Item, EInventoryChangeType::Added);
 	}
 
 	UFUNCTION(Category = "Inventory")
@@ -29,11 +32,11 @@ class UInventoryComponent : UActorComponent
     {
         for (int i = 0; i < Items.Num(); i++)
         {
-            if (Items[i].FishID == ID)
+            if (Items[i].ID == ID)
             {
                 Items.RemoveAt(i);
                 Print("Removed fish from inventory: " + ID.ToString());
-                OnInventoryChanged.Broadcast(ID, FFishInfo(), EInventoryChangeType::Removed);
+                OnInventoryChanged.Broadcast(ID, nullptr, EInventoryChangeType::Removed);
                 return true;
             }
         }
@@ -45,7 +48,7 @@ class UInventoryComponent : UActorComponent
 	{
 		Items.Empty();
 		Print("Cleared inventory.");
-		OnInventoryChanged.Broadcast(FName("Everything"), FFishInfo(), EInventoryChangeType::Removed);
+		OnInventoryChanged.Broadcast(FName("Everything"), nullptr, EInventoryChangeType::Removed);
 	}
 
 	UFUNCTION(Category = "Inventory", BlueprintPure, Meta = (CompactNodeTitle = "Contains", Keywords = "has,find"))
@@ -53,7 +56,7 @@ class UInventoryComponent : UActorComponent
 	{
 		for (auto& Pair : Items)
         {
-            if (Pair.FishClass == FishClass)
+            if (Cast<UFishItem>(Pair).FishClass == FishClass)
             {
                 return true;
             }
@@ -62,17 +65,17 @@ class UInventoryComponent : UActorComponent
 	}
 
 	UFUNCTION(Category = "Inventory", BlueprintPure, Meta = (CompactNodeTitle = "Quantity", Keywords = "count,number"))
-	int GetItemQuantity(TSubclassOf<AFish> FishClass)
+	int GetItemQuantity(FName ID)
 	{
 		int Quantity = 0;
-        for (auto& Pair : Items)
-        {
-            if (Pair.FishClass == FishClass)
-            {
-                Quantity++;
-            }
-        }
-        return Quantity;
+		for (auto& Pair : Items)
+		{
+			if (Pair.ID == ID)
+			{
+				Quantity++;
+			}
+		}
+		return Quantity;
 	}
 
 	UFUNCTION(Category = "Inventory", BlueprintPure)
@@ -81,84 +84,26 @@ class UInventoryComponent : UActorComponent
 		int TotalValue = 0;
 		for (auto& Pair : Items)
 		{
-			TotalValue += Pair.VendorValue;
+			if (Cast<UFishItem>(Pair) == nullptr)
+				continue;
+			TotalValue += Cast<UFishItem>(Pair).VendorValue;
 		}
 		return TotalValue;
 	}
-};
 
-/**
- * Data structure to hold fish inventory data.
- */
-struct FFishInfo
-{
-	UPROPERTY(Category = "Fish | Info", VisibleAnywhere, BlueprintReadOnly)
-	TSubclassOf<AFish> FishClass;
-
-    UPROPERTY(Category = "Fish | Info", DisplayName = "ID", VisibleAnywhere, BlueprintReadOnly)
-    FName FishID;
-
-	UPROPERTY(Category = "Fish | Info", DisplayName = "Name", BlueprintReadOnly)
-	FText FishName = FText::FromString("Default Fish");
-
-	UPROPERTY(Category = "Fish | Info", Meta = (MultiLine), BlueprintReadOnly)
-	FText Description = FText::FromString("A generic fish. \nNothing special about it.");
-
-	UPROPERTY(Category = "Fish | Info", VisibleAnywhere, BlueprintReadOnly)
-	UTexture2D Thumbnail;
-
-	/**
-	 * Recommended player level to catch this fish.
-	 * Does not restrict catching; purely informational.
-	 */
-	UPROPERTY(Category = "Fish | Info", Meta = (UIMin = "1", UIMax = "100"), VisibleAnywhere, BlueprintReadOnly)
-	int RecommendedLevel = 1;
-
-	/**
-	 * Which area types this fish can be found in.
-	 * Only cosmetic.
-	 */
-	UPROPERTY(Category = "Fish | Info", VisibleAnywhere, BlueprintReadOnly)
-	EFishType FishType = EFishType::Freshwater;
-
-	UPROPERTY(Category = "Fish | Info", VisibleAnywhere, BlueprintReadOnly)
-	EFishRarity Rarity = EFishRarity::Basic;
-
-	/**
-	 * Sell price to vendors.
-	 */
-	UPROPERTY(Category = "Fish | Shop", VisibleAnywhere, BlueprintReadOnly)
-	int VendorValue = 1;
-
-	UPROPERTY(Category = "Fish | Physical", Meta = (Units = "cm"), VisibleAnywhere, BlueprintReadOnly)
-	float Size = 10.0f;
-
-	UPROPERTY(Category = "Fish | Physical", Meta = (Units = "kg"), VisibleAnywhere, BlueprintReadOnly)
-	float Weight = 0.5f;
-	
-	UPROPERTY(Category = "Fish | Physical", VisibleInstanceOnly)
-    bool IsTiny;
-
-    UPROPERTY(Category = "Fish | Physical", VisibleInstanceOnly)
-    bool IsLarge;
-
-	FFishInfo()
-	{}
-
-	FFishInfo(AFish Fish)
+	UFUNCTION(Category = "Inventory | Bait")
+	void ConsumeBait(UBait Bait)
 	{
-        FishClass = Fish.GetClass();
-        FishID = FName(FGuid::NewGuid().ToString());
-		FishName = Fish.FishName;
-		Description = Fish.Description;
-		Thumbnail = Fish.Thumbnail;
-		RecommendedLevel = Fish.RecommendedLevel;
-		FishType = Fish.FishType;
-		Rarity = Fish.Rarity;
-		VendorValue = Fish.VendorValue;
-		Size = Fish.Size;
-		Weight = Fish.Weight;
-		IsTiny = Fish.IsTiny;
-		IsLarge = Fish.IsLarge;
+		if (!Baits.Contains(Bait))
+			return;
+
+		Baits[Bait] = Math::Max(0, Baits[Bait] - 1);
+
+		if (Baits[Bait] == 0)
+		{
+			auto FishingState = UFishingStateComponent::Get(GetOwner());
+			FishingState.CurrentBait = nullptr;
+			PrintWarning("You have run out of " + Bait.BaitName.ToString() + "!");
+		}
 	}
-}
+};

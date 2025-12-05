@@ -302,6 +302,13 @@ class UFishingStateComponent : UActorComponent
 	UFUNCTION(Category = "Fishing", CallInEditor)
 	void Hook()
 	{
+		if (CurrentBait == nullptr)
+		{
+			PrintWarning("You have no bait equipped!", 2.5f, FLinearColor::Yellow);
+			Missed();
+			return;
+		}
+
 		if (CurrentState == EFishingState::Fishing)
 		{
 			Print("Hooked too soon!", 2.5f, FLinearColor::Yellow);
@@ -423,7 +430,7 @@ class UFishingStateComponent : UActorComponent
 		auto OwnerChar = Cast<AFishCharacter>(GetOwner());
 		if (OwnerChar != nullptr)
 		{
-			OwnerChar.AddFish_Client(Fish.FishInfo);
+			OwnerChar.AddFish_Client(Fish.Item);
 
 			auto PS = Cast<AFishPlayerState>(OwnerChar.Controller.PlayerState);
 			PS.GainExperience(Fish.ExperienceValue);

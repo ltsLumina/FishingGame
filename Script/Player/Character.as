@@ -75,13 +75,13 @@ class AFishCharacter : AFishEntity
 	}
 
 	UFUNCTION(Client, NotBlueprintCallable)
-    void AddFish_Client(FFishInfo FishInfo)
+    void AddFish_Client(UItem Item)
     {
         if (InventoryComponent == nullptr)
             InventoryComponent = UInventoryComponent::Get(this);
 
         if (InventoryComponent != nullptr)
-            InventoryComponent.AddItem(FishInfo);
+            InventoryComponent.AddItem(Item);
         
     }
 

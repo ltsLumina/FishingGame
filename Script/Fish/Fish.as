@@ -34,7 +34,10 @@ class AFish : AActor
      * The inventory data for this fish.
      */
     UPROPERTY(Category = "Fish | Info", NotVisible)
-    FFishInfo FishInfo;
+    UFishItem Item;
+
+    UPROPERTY(Category = "Fish | Info", VisibleInstanceOnly)
+    FName FishID;
 
     UPROPERTY(Category = "Fish | Info", DisplayName = "Name")
     FText FishName = FText::FromString("Default Fish");
@@ -127,6 +130,8 @@ class AFish : AActor
     UFUNCTION(BlueprintOverride)
     void BeginPlay()
     {
+        FishID = FName(FishName.ToString().ToLower().Replace(" ", "_"));
+        
         if (RequiredBaits.Num() == 0)
         {
             PrintError("Fish " + FishName.ToString() + " has no required baits set!");
@@ -151,7 +156,8 @@ class AFish : AActor
 
         VendorValue = Math::RoundToInt((Size + Weight) * 2 * Math::Max(1,float(Rarity))); // Simple formula: (size + weight) * 2 * rarity
 
-        FishInfo = FFishInfo(this);
+        Item = NewObject(this, UFishItem);
+        Item.Init(this);
     }
 
     void OnCaught(AFishCharacter Catcher)

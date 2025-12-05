@@ -1,4 +1,4 @@
-UCLASS(Abstract, EditInlineNew, DefaultToInstanced)
+UCLASS(Abstract, EditInlineNew, DefaultToInstanced, Meta=(BlueprintSpawnableComponent, DuplicateTransient))
 class UFishCondition : UObject
 {
     /**
