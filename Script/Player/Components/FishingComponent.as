@@ -1,8 +1,10 @@
+event void FOnStateChange(EFishingState NewState);
 event void FOnSelectBait(UBait Bait);
+event void FOnFishCaught(AFish Fish);
 
-class UFishingStateComponent : UActorComponent
+class UFishingComponent : UActorComponent
 {
-	UPROPERTY(Category = "Fishing | State", VisibleAnywhere)
+	UPROPERTY(Category = "Fishing | State", VisibleAnywhere, BlueprintReadOnly)
 	EFishingState CurrentState = EFishingState::NotFishing;
 
 	UPROPERTY(Category = "Fishing | State", VisibleAnywhere, BlueprintGetter = "GetIsFishing")
@@ -55,7 +57,10 @@ class UFishingStateComponent : UActorComponent
 	bool HasMoochOpportunity;
 
 	UFUNCTION(BlueprintPure)
-	bool GetHasMoochOpportunity() { return CurrentMoochableFish != nullptr; }
+	bool GetHasMoochOpportunity()
+	{
+		return CurrentMoochableFish != nullptr;
+	}
 
 	/**
 	 * Status effects currently applied to the player while fishing.
@@ -91,9 +96,9 @@ class UFishingStateComponent : UActorComponent
 
 	void UpdateCatchableFish()
 	{
-		if (Character == nullptr || FishingState == nullptr || TimeManager == nullptr || WeatherManager == nullptr)
+		if (Character == nullptr || FishingComponent == nullptr || TimeManager == nullptr || WeatherManager == nullptr)
 			return;
-		
+
 		CurrentCatchableFish.Empty();
 
 		if (CurrentFishingHole == nullptr)
@@ -121,7 +126,7 @@ class UFishingStateComponent : UActorComponent
 					Print(f"An ability is ignoring condition: {Condition.Name} for fish: {FishClass.DefaultObject.ActorNameOrLabel}", 0.005f, FLinearColor::Yellow);
 					continue;
 				}
-				if (!Condition.IsSatisfied(Character, FishingState, TimeManager, WeatherManager))
+				if (!Condition.IsSatisfied(Character, FishingComponent, TimeManager, WeatherManager))
 				{
 					PrintWarning(f"{Condition.Name} not satisfied for fish: {FishClass.DefaultObject.ActorNameOrLabel}", 0.005f);
 					return;
@@ -144,7 +149,13 @@ class UFishingStateComponent : UActorComponent
 	/* Events */
 
 	UPROPERTY()
+	FOnStateChange OnStateChange;
+
+	UPROPERTY()
 	FOnSelectBait OnSelectBait;
+
+	UPROPERTY()
+	FOnFishCaught OnFishCaught;
 
 	/* End */
 
@@ -154,14 +165,14 @@ class UFishingStateComponent : UActorComponent
 	UFishingHoleComponent DefaultFishingHole;
 
 	AFishCharacter Character;
-	UFishingStateComponent FishingState;
+	UFishingComponent FishingComponent;
 	ATimeManager TimeManager;
 	AWeatherManager WeatherManager;
 
 	UFUNCTION(BlueprintOverride)
 	void BeginPlay()
 	{
-		System::SetTimerForNextTick(this, "DelayedStart");
+		System::SetTimerForNextTick(this, "LatePlay");
 
 		DefaultFishingHole = UFishingHoleComponent::Create(GetOwner());
 		DefaultFishingHole.HoleName = FText::FromString("Default Fishing Hole");
@@ -174,15 +185,15 @@ class UFishingStateComponent : UActorComponent
 	}
 
 	UFUNCTION(NotBlueprintCallable)
-	void DelayedStart()
+	void LatePlay()
 	{
 		Character = Cast<AFishCharacter>(GetOwner());
-		FishingState = Character.FishingState;
+		FishingComponent = Character.FishingComponent;
 		TimeManager = Gameplay::GetActorOfClass(ATimeManager);
 		WeatherManager = Gameplay::GetActorOfClass(AWeatherManager);
 
 		if (WeatherManager == nullptr)
-			System::SetTimerForNextTick(this, "DelayedStart");
+			System::SetTimerForNextTick(this, "LatePlay");
 	}
 
 	UFUNCTION(BlueprintEvent, DisplayName = "Begin Play")
@@ -202,7 +213,7 @@ class UFishingStateComponent : UActorComponent
 			BiteTimer -= DeltaSeconds;
 			if (BiteTimer <= 0)
 			{
-				CurrentState = EFishingState::FishOnHook;
+				SetState(EFishingState::FishOnHook);
 				BiteTimer = 0;
 
 				// Only runs once when the hook proc happens.
@@ -219,6 +230,13 @@ class UFishingStateComponent : UActorComponent
 	UFUNCTION(BlueprintEvent, DisplayName = "Tick")
 	void BP_Tick(float DeltaSeconds)
 	{}
+
+	UFUNCTION(Category = "Fishing")
+	void SetState(EFishingState NewState)
+	{
+		CurrentState = NewState;
+		OnStateChange.Broadcast(NewState);
+	}
 
 	/**
 	 * AKA "Cast"
@@ -239,7 +257,7 @@ class UFishingStateComponent : UActorComponent
 			return;
 		}
 
-		CurrentState = EFishingState::Fishing;
+		SetState(EFishingState::Fishing);
 
 		// If no fish are available, it automatically fails after this time.
 		float NewBiteTimer = 3;
@@ -288,7 +306,7 @@ class UFishingStateComponent : UActorComponent
 	UFUNCTION(Category = "Fishing", CallInEditor)
 	void StopFishing()
 	{
-		CurrentState = EFishingState::NotFishing;
+		SetState(EFishingState::NotFishing);
 
 		CurrentFish = nullptr;
 		BiteTimer = 0;
@@ -316,7 +334,7 @@ class UFishingStateComponent : UActorComponent
 			return;
 		}
 
-		float PlayerGathering = GetFishPlayerStateBase().Stats.Gathering;
+		float PlayerGathering = GetFishPlayerStateBase().StatsComponent.Stats.Gathering;
 		float GatheringDiff = Math::Max(0.0f, PlayerGathering - CurrentFish.MinimumGathering);
 		float CurrentCatchRate = Math::Clamp(CurrentFish.CatchRate + GatheringDiff * 0.5f, 0.0f, 100.0f);
 
@@ -338,17 +356,6 @@ class UFishingStateComponent : UActorComponent
 				StatusEffects.Add(FName("Angler's Art"), 1); // TODO: separate system with data assets so I can display the icon.
 			}
 		}
-
-		// CurrentState = EFishingState::ReelingIn;  // only true while the animation plays
-		// CurrentState = EFishingState::CaughtFish; // set by animation completion
-
-		/* NOW HANDLED IN BLUEPRINT
-				if (CurrentFish != nullptr)
-				{
-					FVector SpawnLocation = GetOwner().GetActorLocation() + GetOwner().GetActorForwardVector() * 100;
-					SpawnFish_Server(CurrentFish.GetClass(), SpawnLocation);
-				}
-		*/
 
 		// Store locally before StopFishing clears 'CurrentFish'
 		AFish CaughtFish = CurrentFish;
@@ -419,28 +426,27 @@ class UFishingStateComponent : UActorComponent
 	}
 
 	UFUNCTION(Server)
-	AFish SpawnFish_Server(TSubclassOf<AFish> FishClass, FVector SpawnLocation)
+	void SpawnFish_Server(TSubclassOf<AFish> FishClass)
 	{
+		FVector SpawnLocation = GetOwner().GetActorLocation() + GetOwner().GetActorForwardVector() * 100;
 		auto Fish = SpawnActor(FishClass, SpawnLocation);
 		Fish.SetLifeSpan(3);
-
+		Fish.SetOwner(GetOwner());
 		Fish.OnCaught(Cast<AFishCharacter>(GetOwner()));
 
-		// Send the fish info to the owning client so they add it locally
-		auto OwnerChar = Cast<AFishCharacter>(GetOwner());
-		if (OwnerChar != nullptr)
-		{
-			OwnerChar.AddFish_Client(Fish.Item);
+		SpawnFish_Client(FishClass);
+	}
 
-			auto PS = Cast<AFishPlayerState>(OwnerChar.Controller.PlayerState);
-			PS.GainExperience(Fish.ExperienceValue);
-		}
-		else
-		{
-			PrintError("SpawnFish_Server: Owner is not a FishCharacter!");
-		}
+	UFUNCTION(Client)
+	void SpawnFish_Client(TSubclassOf<AFish> FishClass)
+	{
+		FVector SpawnLocation = GetOwner().GetActorLocation() + GetOwner().GetActorForwardVector() * 100;
+		AFish Fish = SpawnActor(FishClass, SpawnLocation);
+		Fish.SetActorHiddenInGame(true); // The locally spawned fish is just for data purposes; the server-spawned one is used for visuals.
+		Fish.SetLifeSpan(3);
 
-		return Fish;
+		auto State = Cast<AFishPlayerState>(Cast<AFishCharacter>(GetOwner()).PlayerState);
+		State.InventoryComponent.AddItem(Fish.Item);
 	}
 
 	/**
@@ -450,9 +456,12 @@ class UFishingStateComponent : UActorComponent
 	void BP_Hook(AFish CaughtFish)
 	{}
 
-	UFUNCTION(NotBlueprintCallable)
+	UFUNCTION()
 	void Missed()
 	{
+		if (CurrentState == EFishingState::NotFishing)
+			return;
+
 		Print("The fish got away!", 2.5f, FLinearColor::Yellow);
 		BP_Missed(CurrentFish);
 		StopFishing();
@@ -478,6 +487,18 @@ class UFishingStateComponent : UActorComponent
 	UFUNCTION(BlueprintEvent, DisplayName = "Fish On Hook")
 	void BP_FishOnHook()
 	{}
+
+	UFUNCTION(BlueprintPure, Category = "Fishing", DisplayName = "Is State")
+	bool IsState(TArray<EFishingState> StatesToCheck)
+	{
+		return StatesToCheck.Contains(CurrentState);
+	}
+
+	UFUNCTION(Category = "Fishing", Meta = (ExpandBoolAsExecs = "ReturnValue"), DisplayName = "Is State (branch)")
+	bool IsState_Branch(TArray<EFishingState> StatesToCheck)
+	{
+		return StatesToCheck.Contains(CurrentState);
+	}
 };
 
 enum EFishingState

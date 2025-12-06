@@ -21,7 +21,7 @@ class USpecificFish : UQuestObjective
 	UFUNCTION(BlueprintOverride)
 	bool IsSatisfied(AFishCharacter User)
 	{
-		UInventoryComponent Inventory = User.InventoryComponent;
+		UInventoryComponent Inventory = UInventoryComponent::Get(User.PlayerState);
 		auto CDO = FishClass.DefaultObject;
 
 		int CurrentQuantity = Inventory.GetItemQuantity(CDO.FishID);

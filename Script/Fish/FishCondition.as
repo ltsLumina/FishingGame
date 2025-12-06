@@ -1,4 +1,4 @@
-UCLASS(Abstract, EditInlineNew, DefaultToInstanced, Meta=(BlueprintSpawnableComponent, DuplicateTransient))
+UCLASS(Abstract, EditInlineNew, DefaultToInstanced)
 class UFishCondition : UObject
 {
     /**
@@ -9,7 +9,7 @@ class UFishCondition : UObject
     bool Mute;
 
     UFUNCTION(BlueprintEvent)
-    bool IsSatisfied(AFishCharacter User, UFishingStateComponent FishingState, ATimeManager TimeManager, AWeatherManager WeatherManager)
+    bool IsSatisfied(AFishCharacter User, UFishingComponent FishingComponent, ATimeManager TimeManager, AWeatherManager WeatherManager)
     {
         return true;
     }

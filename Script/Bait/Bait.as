@@ -10,3 +10,9 @@ class UBait : UPrimaryDataAsset
     UPROPERTY()
     UTexture2D Icon;
 }
+
+UFUNCTION(Meta=(ExpandBoolAsExecs="ReturnValue"))
+bool CompareBait(UBait A, UBait B)
+{
+    return A == B;
+}

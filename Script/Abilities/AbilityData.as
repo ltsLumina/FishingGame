@@ -32,7 +32,7 @@ class UAbilityData : UPrimaryDataAsset
 				throw(f"Ability {AbilityClass.DefaultObject.GetName()} has a null AbilityCondition!");
 				continue;
 			}
-			if (!Condition.IsSatisfied(User, User.FishingState)) 
+			if (!Condition.IsSatisfied(User, User.FishingComponent)) 
 			{
 				return false;
 			}

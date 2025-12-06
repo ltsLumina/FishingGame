@@ -2,7 +2,7 @@ UCLASS(Abstract)
 class UAbility : UObject
 {
 	UFUNCTION(BlueprintEvent)
-	void Execute(UAbilityData AbilityData, AFishCharacter Instigator, UFishingStateComponent FishingState)
+	void Execute(UAbilityData AbilityData, AFishCharacter Instigator, UFishingComponent FishingComponent)
 	{
 		Print("Executing ability: " + AbilityData.Details.Name.ToString() + " by " + Instigator.GetName());
 	}
@@ -19,6 +19,14 @@ class UAbility : UObject
             PrintError("Ability ended without being committed!\nMake sure to call CommitAbility() in your ability implementation blueprint!", 30.0f);
         }
     }
+
+	UFUNCTION(BlueprintProtected)
+	void GetWidget(TSubclassOf<UUserWidget> WidgetClass, bool TopLevelOnly, TArray<UUserWidget>&out FoundWidgets)
+	{
+		TArray<UUserWidget> Widgets;
+		Widget::GetAllWidgetsOfClass(Widgets, WidgetClass, TopLevelOnly);
+		FoundWidgets = Widgets;
+	}
 
     bool HasCommited;
 

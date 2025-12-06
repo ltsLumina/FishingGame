@@ -9,7 +9,7 @@ class UFishingHoleComponent : UActorComponent
 	TArray<TSubclassOf<AFish>> CatchableFish;
 
 	APawn Character;
-	UFishingStateComponent FishingState;
+	UFishingComponent FishingComponent;
 
 	UFUNCTION(BlueprintOverride)
 	void BeginPlay()
@@ -52,20 +52,20 @@ class UFishingHoleComponent : UActorComponent
 		if (Character == nullptr)
 			return;
 
-		FishingState = UFishingStateComponent::Get(Character);
-		if (FishingState == nullptr)
+		FishingComponent = UFishingComponent::Get(Character);
+		if (FishingComponent == nullptr)
 			return;
 
-		FishingState.OnSelectBait.AddUFunction(this, n"UpdateCatchableFish");
+		FishingComponent.OnSelectBait.AddUFunction(this, n"UpdateCatchableFish");
 
-		FishingState.CurrentFishingHole = this;
-		FishingState.UpdateCatchableFish();
+		FishingComponent.CurrentFishingHole = this;
+		FishingComponent.UpdateCatchableFish();
 	}
 
 	UFUNCTION(NotBlueprintCallable)
 	void UpdateCatchableFish(UBait Bait)
 	{
-		FishingState.UpdateCatchableFish();
+		FishingComponent.UpdateCatchableFish();
 	}
 
 	UFUNCTION()
@@ -75,13 +75,13 @@ class UFishingHoleComponent : UActorComponent
 		if (Character == nullptr)
 			return;
 
-		FishingState = UFishingStateComponent::Get(Character);
-		if (FishingState == nullptr)
+		FishingComponent = UFishingComponent::Get(Character);
+		if (FishingComponent == nullptr)
 			return;
 
-		FishingState.OnSelectBait.UnbindObject(this);
+		FishingComponent.OnSelectBait.UnbindObject(this);
 
-		FishingState.CurrentFishingHole = FishingState.DefaultFishingHole;
-		FishingState.UpdateCatchableFish();
+		FishingComponent.CurrentFishingHole = FishingComponent.DefaultFishingHole;
+		FishingComponent.UpdateCatchableFish();
 	}
 }

@@ -8,9 +8,47 @@ class UHotbar : UUserWidget
     TArray<UHotbarSlot> oGCD_Slots;
 
     UFUNCTION(BlueprintOverride)
-    void Construct() // TODO: This will probably break when I decide to add slots in runtime.
+    void Construct()
     {
+        UAbilityHandlerComponent AbilityHandler = UAbilityHandlerComponent::Get(GetOwningPlayerPawn());
+        check(AbilityHandler != nullptr);
+
+        AbilityHandler.OnAbilityGranted.AddUFunction(this, n"RefreshHotbar");
+        AbilityHandler.OnAbilityRevoked.AddUFunction(this, n"RefreshHotbar");
+
         Slots = HotbarGrid.GetAllChildren();
+
+        for (UAbilityData AbilityData : AbilityHandler.Abilities)
+        {
+            RefreshHotbar(AbilityData);
+        }
+    }
+
+    UFUNCTION()
+    void RefreshHotbar(UAbilityData NewAbilityData)
+    {
+        for (auto Child : Slots)
+        {
+            UHotbarSlot HotbarSlot = Cast<UHotbarSlot>(Child);
+            if (HotbarSlot != nullptr)
+            {
+                if (HotbarSlot.AbilityData == nullptr)
+                {
+                    HotbarSlot.AbilityData = NewAbilityData;
+                    HotbarSlot.LateConstruct();
+                    break;
+                }
+            }
+        }
+
+        SortSlots();
+    }
+
+    UFUNCTION()
+    void SortSlots()
+    {
+        GCD_Slots.Empty();
+        oGCD_Slots.Empty();
 
         for (UWidget Child : Slots)
         {

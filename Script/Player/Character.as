@@ -4,17 +4,15 @@ class AFishCharacter : AFishEntity
 	UAbilityHandlerComponent AbilityHandler;
 
 	UPROPERTY(Category = "Components", NotVisible, BlueprintHidden)
-	UInventoryComponent InventoryComponent;
-
-	UPROPERTY(Category = "Components", NotVisible, BlueprintHidden)
-	UFishingStateComponent FishingState;
+	UFishingComponent FishingComponent;
 
 	UFUNCTION(BlueprintOverride)
 	void BeginPlay()
 	{
+		Super::BeginPlay();
+
 		AbilityHandler = UAbilityHandlerComponent::Get(this); // using BP child so I need to get it here.
-		InventoryComponent = UInventoryComponent::Get(this); // using BP child so I need to get it here.
-		FishingState = UFishingStateComponent::Get(this); // using BP child so I need to get it here.
+		FishingComponent = UFishingComponent::Get(this); // using BP child so I need to get it here.
 
 		BP_BeginPlay();
 	}
@@ -37,23 +35,27 @@ class AFishCharacter : AFishEntity
 		if (PS == nullptr)
 			return;
 
-		EFishingState State = FishingState.CurrentState;
-		FString NiceName = String::RightChop(f"{State}", 15); // Remove "FishingState::"
+		auto XPComponent = PS.ExperienceComponent;
+		if (XPComponent == nullptr)
+			return;
+
+		EFishingState State = FishingComponent.CurrentState;
+		FString NiceName = String::RightChop(f"{State}", 15); // Remove "FishingComponent::"
 		NiceName = String::LeftChop(NiceName, 4);			  // Remove " (0)"
 
-		FText CurrentFish = FishingState.CurrentFish != nullptr ? FishingState.CurrentFish.FishName : FText::FromString("None");
+		FText CurrentFish = FishingComponent.CurrentFish != nullptr ? FishingComponent.CurrentFish.FishName : FText::FromString("None");
 
-		float ExperiencePoints = PS.Stats.ExperiencePoints;
-		float ToNextLevel = PS.GetXPToLevelUp();
-		ExperienceLevel = PS.Stats.ExperienceLevel;
-		float BiteTimer = FishingState.BiteTimer;
+		float ExperiencePoints = XPComponent.CurrentXP;
+		float ToNextLevel = XPComponent.GetXPToLevelUp();
+		ExperienceLevel = XPComponent.ExperienceLevel;
+		float BiteTimer = FishingComponent.BiteTimer;
 		TArray<FString> MoochedFishNames;
-		for (TSubclassOf<AFish> FishClass : FishingState.MoochedFish)
+		for (TSubclassOf<AFish> FishClass : FishingComponent.MoochedFish)
 		{
 			MoochedFishNames.Add(FishClass.DefaultObject.FishName.ToString());
 		}
 		FString Joined = FString::Join(MoochedFishNames, ",");
-		FText FishingHole = FishingState.CurrentFishingHole.HoleName;
+		FText FishingHole = FishingComponent.CurrentFishingHole.HoleName;
 
 		InfoText = FText::FromString(f"{NiceName}\n{CurrentFish}\nLevel {ExperienceLevel} ({ExperiencePoints}/{Math::FloorToInt(ToNextLevel)})\n{RoundTo(BiteTimer, 2)}s\n{Joined}\n{FishingHole}");
 		TextRender.SetText(InfoText);
@@ -73,17 +75,6 @@ class AFishCharacter : AFishEntity
 		SetActorLabel(f"FishCharacter ({NewController.PlayerState.PlayerId})");
 #endif
 	}
-
-	UFUNCTION(Client, NotBlueprintCallable)
-    void AddFish_Client(UItem Item)
-    {
-        if (InventoryComponent == nullptr)
-            InventoryComponent = UInventoryComponent::Get(this);
-
-        if (InventoryComponent != nullptr)
-            InventoryComponent.AddItem(Item);
-        
-    }
 
 	UFUNCTION(BlueprintEvent)
 	void HotbarSlotPressed(int SlotIndex)

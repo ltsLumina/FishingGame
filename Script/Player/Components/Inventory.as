@@ -1,4 +1,4 @@
-event void FOnInventoryChanged(FName FishID, UItem Item, EInventoryChangeType Change);
+event void FOnInventoryChanged(FName ItemID, UItem Item, EInventoryChangeType Change);
 
 enum EInventoryChangeType
 {
@@ -17,7 +17,7 @@ class UInventoryComponent : UActorComponent
     UPROPERTY(Category = "Inventory")
     FOnInventoryChanged OnInventoryChanged;
 
-	default bReplicates = true;
+	default bReplicates = false;
 
 	UFUNCTION(Category = "Inventory")
 	void AddItem(UItem Item)
@@ -101,8 +101,11 @@ class UInventoryComponent : UActorComponent
 
 		if (Baits[Bait] == 0)
 		{
-			auto FishingState = UFishingStateComponent::Get(GetOwner());
-			FishingState.CurrentBait = nullptr;
+			auto State = Cast<AFishPlayerState>(GetOwner());
+			auto Character = Cast<AFishCharacter>(State.GetPawn());
+			auto FishingComponent = UFishingComponent::Get(Character);
+			
+			FishingComponent.CurrentBait = nullptr;
 			PrintWarning("You have run out of " + Bait.BaitName.ToString() + "!");
 		}
 	}

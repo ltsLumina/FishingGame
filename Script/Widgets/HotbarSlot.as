@@ -28,6 +28,12 @@ class UHotbarSlot : UUserWidget
 	void BP_Invoke()
 	{}
 
+	/**
+	 * Unreal calls construct too slowly so we're doing it this way :P
+	 */
+	UFUNCTION(BlueprintEvent)
+    void LateConstruct() { }
+
 	UFUNCTION(BlueprintOverride)
 	void Construct()
 	{
@@ -100,7 +106,7 @@ class UHotbarSlot : UUserWidget
 		auto PlayerState = Cast<AFishPlayerState>(Character.PlayerState);
 		if (PlayerState != nullptr)
 		{
-			LevelRequirementMet = PlayerState.Stats.ExperienceLevel >= AbilityData.Details.UnlockLevel;
+			LevelRequirementMet = PlayerState.ExperienceComponent.ExperienceLevel >= AbilityData.Details.UnlockLevel;
 		}
 
 		return CanUse && HasMP && LevelRequirementMet;
