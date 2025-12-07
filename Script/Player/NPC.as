@@ -18,15 +18,19 @@ class AFishNPC : AFishEntity
 	UPROPERTY(Category = "NPC | Quests", EditDefaultsOnly)
 	TArray<UTexture2D> QuestProgressIcons;
 
+	default bReplicates = false;
+	default bReplicateMovement = false;
+
 	UFUNCTION(BlueprintOverride)
 	void BeginPlay()
 	{
 		Super::BeginPlay();
-		BP_BeginPlay();	
+		BP_BeginPlay();
 	}
 
 	UFUNCTION(BlueprintEvent, DisplayName = "Begin Play")
-	void BP_BeginPlay() { }
+	void BP_BeginPlay()
+	{}
 
 	void LatePlay() override
 	{
@@ -40,24 +44,22 @@ class AFishNPC : AFishEntity
 	void BeginOverlap(UPrimitiveComponent OverlappedComponent, AActor OtherActor,
 					  UPrimitiveComponent OtherComp, int OtherBodyIndex, bool bFromSweep,
 					  const FHitResult&in SweepResult)
-	{		
-		if (!Character.IsLocallyControlled())
+	{
+		if (!Cast<AFishCharacter>(OtherActor).IsLocallyControlled())
 			return;
 
-		if (State.QuestComponent.CurrentQuest == nullptr && AvailableQuests.Num() > 0)
-			PromptQuest(AvailableQuests[0]);
-		else if (State.QuestComponent.CurrentQuest != nullptr)
-			ProgressQuest();
-		
-		if (PendingCompletion)
-			CompleteQuest();
+		if (AvailableQuests.Num() > 0)
+			PromptQuest(AvailableQuests[0], Cast<AFishCharacter>(OtherActor), PendingCompletion);
 	}
 
 	UFUNCTION(BlueprintOverride)
 	void ActorEndOverlap(AActor OtherActor)
 	{
+		if (!Cast<AFishCharacter>(OtherActor).IsLocallyControlled())
+			return;
+
 		if (State.QuestComponent.CurrentQuest == nullptr && AvailableQuests.Num() > 0)
-			PromptQuest(nullptr);
+			PromptQuest(nullptr, nullptr, false);
 	}
 
 	UFUNCTION(NotBlueprintCallable)
@@ -83,9 +85,10 @@ class AFishNPC : AFishEntity
 			QuestBegun();
 		}
 
-		ProgressQuest(); // Check if already completed
+		ProgressQuest();	 // Check if already completed
 
-		CompleteQuest(); // try to complete right away
+		if (PendingCompletion)
+			CompleteQuest(); // try to complete right away
 	}
 
 	bool PendingCompletion;
@@ -104,11 +107,14 @@ class AFishNPC : AFishEntity
 				if (Objective.IsSatisfied(Character))
 				{
 					Completed++;
+					QuestProgressed(Objective);
 					break;
 				}
 				else
 				{
 					Print(f"Quest: not yet completed. ({Objective.GetName()})", 1.5f, FLinearColor::Yellow);
+					UBillboardComponent QuestIcon = UBillboardComponent::Get(this);
+					QuestIcon.SetSprite(QuestProgressIcons[3]);
 					break;
 				}
 			}
@@ -124,31 +130,39 @@ class AFishNPC : AFishEntity
 		}
 	}
 
+	UFUNCTION()
 	void CompleteQuest()
 	{
 		Print("Quest completed!", 3.0f, FLinearColor::Green);
-			auto Reward = State.QuestComponent.CurrentQuest.Reward;
-			State.StatsComponent.GainGil(Reward.Gil);
-			State.ExperienceComponent.GainExperience(Reward.Experience);
-			if (Reward.GrantsItem && Reward.Item != nullptr)
+		auto Reward = State.QuestComponent.CurrentQuest.Reward;
+		State.StatsComponent.GainGil(Reward.Gil);
+		State.ExperienceComponent.GainExperience(Reward.Experience);
+		if (Reward.GrantsItem && Reward.Items.Num() > 0)
+		{
+			for (auto& Pair : Reward.Items)
 			{
-				State.InventoryComponent.AddItem(Reward.Item.GetDefaultObject(), Reward.Quantity); // TODO: move add bait to inventory rather than baitmenu widget
+				State.InventoryComponent.AddBait(Pair.Key, Pair.Value);
 			}
-			
-			PendingCompletion = false;
+		}
 
-			UBillboardComponent QuestIcon = UBillboardComponent::Get(this);
-			if (AvailableQuests.Num() > 1)
-				QuestIcon.SetSprite(QuestProgressIcons[1]);
-			else
-				QuestIcon.SetHiddenInGame(true);
+		PendingCompletion = false;
 
-			QuestCompleted();
-			State.QuestComponent.CurrentQuest = nullptr;
+		UBillboardComponent QuestIcon = UBillboardComponent::Get(this);
+		if (AvailableQuests.Num() > 1)
+			QuestIcon.SetSprite(QuestProgressIcons[1]);
+		else
+			QuestIcon.SetHiddenInGame(true);
+
+		QuestCompleted();
+		State.QuestComponent.CurrentQuest = nullptr;
 	}
 
 	UFUNCTION(BlueprintEvent)
-	void PromptQuest(UQuest Quest)
+	void PromptQuest(UQuest Quest, AFishCharacter Claimant, bool InPendingCompletion)
+	{}
+
+	UFUNCTION(BlueprintEvent)
+	void PromptQuestCompletion(UQuest Quest)
 	{}
 
 	UFUNCTION(BlueprintEvent)
@@ -156,7 +170,7 @@ class AFishNPC : AFishEntity
 	{}
 
 	UFUNCTION(BlueprintEvent)
-	void QuestProgressed()
+	void QuestProgressed(UQuestObjective Objective)
 	{}
 
 	UFUNCTION(BlueprintEvent)

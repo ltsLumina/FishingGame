@@ -1,8 +1,5 @@
 class AFishEntity : ACharacter
 {
-    default bReplicates = true;
-    default bReplicateMovement = true;
-
     AFishPlayerState State;
 	AFishCharacter Character;
 

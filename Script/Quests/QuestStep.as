@@ -1,4 +1,0 @@
-class UQuestStep : UObject
-{
-    
-}

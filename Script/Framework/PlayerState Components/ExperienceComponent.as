@@ -62,7 +62,11 @@ class UExperienceComponent : UFishComponent
 	{
 		ExperienceLevel++;
 		OnLevelUp.Broadcast(ExperienceLevel);
+		BP_OnLevelUp(ExperienceLevel);
 	}
+
+	UFUNCTION(BlueprintEvent, DisplayName = "Level Up")
+	void BP_OnLevelUp(int NewLevel) { }
 
 	UFUNCTION(NotBlueprintCallable)
 	void HandleLevelUp(int NewLevel)

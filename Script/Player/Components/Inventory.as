@@ -46,6 +46,20 @@ class UInventoryComponent : UActorComponent
         return false;
     }
 
+	UFUNCTION(Category = "Inventory | Bait")
+	void AddBait(UBait Bait, int Quantity = 1)
+	{
+		if (Baits.Contains(Bait))
+		{
+			Baits[Bait] += Quantity;
+		}
+		else
+		{
+			Baits.Add(Bait, Quantity);
+		}
+		Print("Added " + Quantity + " x " + Bait.BaitName.ToString() + " to bait inventory.", 3.0);
+	}
+
 	UFUNCTION(Category = "Inventory")
 	void ClearInventory()
 	{

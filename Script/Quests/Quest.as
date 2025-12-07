@@ -10,6 +10,12 @@ class UQuest : UPrimaryDataAsset
     UPROPERTY(Category = "Quest | Info", Meta=(MultiLine))
     FText Description;
 
+    UPROPERTY(Category = "Quest | Info", Meta=(MultiLine))
+    FText ObjectiveDescription;
+
+    UPROPERTY(Category = "Quest | Info")
+    int MinimumLevel = 1;
+
     UPROPERTY(Category = "Quest | Info")
     UTexture2D Icon;
 
@@ -21,6 +27,26 @@ class UQuest : UPrimaryDataAsset
 
     UPROPERTY(Category = "Quest | Reward")
     FQuestReward Reward;
+
+    UFUNCTION(Category = "Quest | Objectives")
+    FText GetObjectiveSteps()
+    {
+        FString Result;
+
+        for (auto& Objective : Objectives)
+        {
+            auto Obj = Cast<USpecificFish>(Objective);
+            int Quantity = Obj.Quantity;
+            FText FishName = Obj.FishClass.DefaultObject.FishName;
+            bool IsLarge = Obj.IsLarge;
+            FString LargeText = IsLarge ? "(L)" : "";
+
+            FString Step = FString(f"• Catch {Quantity}x {FishName} {LargeText}");
+            Result = Result.Append(Step).Append("\n");
+        }
+
+        return FText::FromString(Result);
+    }
 }
 
 struct FQuestReward
@@ -35,8 +61,5 @@ struct FQuestReward
     bool GrantsItem;
 
     UPROPERTY(Category = "Quest | Reward", Meta=(EditCondition="GrantsItem"))
-    TSubclassOf<UItem> Item;
-
-    UPROPERTY(Category = "Quest | Reward", Meta=(EditCondition="Item != nullptr", EditConditionHides))
-    int32 Quantity = 1;
+    TMap<UBait, int> Items;
 }
