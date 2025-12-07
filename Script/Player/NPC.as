@@ -18,6 +18,8 @@ class AFishNPC : AFishEntity
 	UPROPERTY(Category = "NPC | Quests", EditDefaultsOnly)
 	TArray<UTexture2D> QuestProgressIcons;
 
+	UQuestComponent QuestComponent;
+
 	default bReplicates = false;
 	default bReplicateMovement = false;
 
@@ -35,6 +37,8 @@ class AFishNPC : AFishEntity
 	void LatePlay() override
 	{
 		Super::LatePlay();
+
+		QuestComponent = State.QuestComponent;
 
 		InteractionBox.OnComponentBeginOverlap.AddUFunction(this, n"BeginOverlap");
 		State.InventoryComponent.OnInventoryChanged.AddUFunction(this, n"HandleInventoryChanged");
@@ -58,21 +62,21 @@ class AFishNPC : AFishEntity
 		if (!Cast<AFishCharacter>(OtherActor).IsLocallyControlled())
 			return;
 
-		if (State.QuestComponent.CurrentQuest == nullptr && AvailableQuests.Num() > 0)
+		if (QuestComponent.CurrentQuest == nullptr && AvailableQuests.Num() > 0)
 			PromptQuest(nullptr, nullptr, false);
 	}
 
 	UFUNCTION(NotBlueprintCallable)
 	void HandleInventoryChanged(FName ItemID, UItem Item, EInventoryChangeType Change)
 	{
-		if (State.QuestComponent.CurrentQuest != nullptr)
+		if (QuestComponent.CurrentQuest != nullptr)
 			ProgressQuest();
 	}
 
 	UFUNCTION(Category = "Quest")
 	void BeginQuest()
 	{
-		auto QuestComp = State.QuestComponent;
+		auto QuestComp = QuestComponent;
 
 		if (QuestComp.CurrentQuest == nullptr && AvailableQuests.Num() > 0)
 		{
@@ -96,7 +100,7 @@ class AFishNPC : AFishEntity
 	UFUNCTION(Category = "Quest")
 	void ProgressQuest()
 	{
-		auto QuestComp = State.QuestComponent;
+		auto QuestComp = QuestComponent;
 
 		if (IsValid(QuestComp.CurrentQuest))
 		{
@@ -134,18 +138,24 @@ class AFishNPC : AFishEntity
 	void CompleteQuest()
 	{
 		Print("Quest completed!", 3.0f, FLinearColor::Green);
-		auto Reward = State.QuestComponent.CurrentQuest.Reward;
+		PendingCompletion = false;
+		
+		if (AvailableQuests.IsValidIndex(0))
+			AvailableQuests.RemoveAt(0);
+		
+		// Grant rewards
+		auto Reward = QuestComponent.CurrentQuest.Reward;
 		State.StatsComponent.GainGil(Reward.Gil);
 		State.ExperienceComponent.GainExperience(Reward.Experience);
-		if (Reward.GrantsItem && Reward.Items.Num() > 0)
+		if (Reward.GrantsItem)
 		{
+			check(Reward.Items.Num() > 0, "Quest reward marked as granting item, but no items specified.");
 			for (auto& Pair : Reward.Items)
 			{
 				State.InventoryComponent.AddBait(Pair.Key, Pair.Value);
 			}
 		}
 
-		PendingCompletion = false;
 
 		UBillboardComponent QuestIcon = UBillboardComponent::Get(this);
 		if (AvailableQuests.Num() > 1)
@@ -153,8 +163,8 @@ class AFishNPC : AFishEntity
 		else
 			QuestIcon.SetHiddenInGame(true);
 
+		QuestComponent.CurrentQuest = nullptr;
 		QuestCompleted();
-		State.QuestComponent.CurrentQuest = nullptr;
 	}
 
 	UFUNCTION(BlueprintEvent)

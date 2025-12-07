@@ -9,6 +9,9 @@ class UBait : UPrimaryDataAsset
 
     UPROPERTY()
     UTexture2D Icon;
+
+    UPROPERTY()
+    int Price = 10;
 }
 
 UFUNCTION(Meta=(ExpandBoolAsExecs="ReturnValue"))

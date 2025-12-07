@@ -1,4 +1,4 @@
-UCLASS(Abstract, EditInlineNew, DefaultToInstanced)
+UCLASS(Abstract, EditInlineNew)
 class UAbilityCondition : UObject
 {
     UFUNCTION(BlueprintEvent)

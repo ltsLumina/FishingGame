@@ -10,9 +10,6 @@ class UQuest : UPrimaryDataAsset
     UPROPERTY(Category = "Quest | Info", Meta=(MultiLine))
     FText Description;
 
-    UPROPERTY(Category = "Quest | Info", Meta=(MultiLine))
-    FText ObjectiveDescription;
-
     UPROPERTY(Category = "Quest | Info")
     int MinimumLevel = 1;
 
