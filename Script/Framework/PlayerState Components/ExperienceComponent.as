@@ -2,7 +2,7 @@ event void FOnLevelUp(int NewLevel);
 
 class UExperienceComponent : UFishComponent
 {
-    UPROPERTY(Category = "Stats", Replicated, DisplayName = "Level", VisibleInstanceOnly)
+    UPROPERTY(Category = "Stats", DisplayName = "Level", VisibleInstanceOnly)
 	int ExperienceLevel = 1;
 
 	UPROPERTY(Category = "Stats", DisplayName = "XP", VisibleInstanceOnly)
@@ -19,6 +19,16 @@ class UExperienceComponent : UFishComponent
 
     UPROPERTY(Category = "Events")
 	FOnLevelUp OnLevelUp;
+
+	UFUNCTION(BlueprintOverride)
+	void BeginPlay()
+	{
+		Super::BeginPlay();
+		BP_BeginPlay();
+	}
+
+	UFUNCTION(BlueprintEvent, DisplayName = "Begin Play")
+	void BP_BeginPlay() { }
 
     void LatePlay() override
     {
@@ -42,13 +52,13 @@ class UExperienceComponent : UFishComponent
 		while (CurrentXP >= RequiredXP)
 		{
 			CurrentXP -= RequiredXP;
-			LevelUp_Server();
+			LevelUp();
 			RequiredXP = EXPGainCurve.GetFloatValue(ExperienceLevel + 1);
 		}
 	}
 
-	UFUNCTION(Server, DisplayName = "Level Up")
-	void LevelUp_Server()
+	UFUNCTION()
+	void LevelUp()
 	{
 		ExperienceLevel++;
 		OnLevelUp.Broadcast(ExperienceLevel);

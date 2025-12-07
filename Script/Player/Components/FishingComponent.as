@@ -447,6 +447,8 @@ class UFishingComponent : UActorComponent
 
 		auto State = Cast<AFishPlayerState>(Cast<AFishCharacter>(GetOwner()).PlayerState);
 		State.InventoryComponent.AddItem(Fish.Item);
+
+		OnFishCaught.Broadcast(Fish);
 	}
 
 	/**

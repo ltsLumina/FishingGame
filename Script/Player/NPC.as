@@ -22,82 +22,144 @@ class AFishNPC : AFishEntity
 	void BeginPlay()
 	{
 		Super::BeginPlay();
-
-		InteractionBox.OnComponentBeginOverlap.AddUFunction(this, n"BeginOverlap");
-
-		BP_BeginPlay();
+		BP_BeginPlay();	
 	}
 
 	UFUNCTION(BlueprintEvent, DisplayName = "Begin Play")
-	void BP_BeginPlay()
-	{}
+	void BP_BeginPlay() { }
+
+	void LatePlay() override
+	{
+		Super::LatePlay();
+
+		InteractionBox.OnComponentBeginOverlap.AddUFunction(this, n"BeginOverlap");
+		State.InventoryComponent.OnInventoryChanged.AddUFunction(this, n"HandleInventoryChanged");
+	}
 
 	UFUNCTION(NotBlueprintCallable)
 	void BeginOverlap(UPrimitiveComponent OverlappedComponent, AActor OtherActor,
 					  UPrimitiveComponent OtherComp, int OtherBodyIndex, bool bFromSweep,
 					  const FHitResult&in SweepResult)
-	{
-		auto Character = Cast<AFishCharacter>(OtherActor);
-		if (Character == nullptr)
-			return;
-
-		// This ensures the code runs only for the local player's pawn (works for clients and host player).
+	{		
 		if (!Character.IsLocallyControlled())
 			return;
 
-		ProgressQuest(OtherActor);
+		if (State.QuestComponent.CurrentQuest == nullptr && AvailableQuests.Num() > 0)
+			PromptQuest(AvailableQuests[0]);
+		else if (State.QuestComponent.CurrentQuest != nullptr)
+			ProgressQuest();
+		
+		if (PendingCompletion)
+			CompleteQuest();
+	}
+
+	UFUNCTION(BlueprintOverride)
+	void ActorEndOverlap(AActor OtherActor)
+	{
+		if (State.QuestComponent.CurrentQuest == nullptr && AvailableQuests.Num() > 0)
+			PromptQuest(nullptr);
 	}
 
 	UFUNCTION(NotBlueprintCallable)
-	void ProgressQuest(AActor OtherActor)
+	void HandleInventoryChanged(FName ItemID, UItem Item, EInventoryChangeType Change)
 	{
-		auto Character = Cast<AFishCharacter>(OtherActor);
-		if (Character != nullptr)
+		if (State.QuestComponent.CurrentQuest != nullptr)
+			ProgressQuest();
+	}
+
+	UFUNCTION(Category = "Quest")
+	void BeginQuest()
+	{
+		auto QuestComp = State.QuestComponent;
+
+		if (QuestComp.CurrentQuest == nullptr && AvailableQuests.Num() > 0)
 		{
-			auto PS = Cast<AFishPlayerState>(Character.PlayerState);
-			if (PS == nullptr)
-				return;
+			QuestComp.CurrentQuest = AvailableQuests.Num() > 0 ? AvailableQuests[0] : nullptr;
+			Print("Quest started!");
 
-			auto QuestComp = UQuestComponent::Get(PS);
+			UBillboardComponent QuestIcon = UBillboardComponent::Get(this);
+			QuestIcon.SetSprite(QuestProgressIcons[3]);
 
-			if (QuestComp.CurrentQuest == nullptr && AvailableQuests.Num() > 0)
+			QuestBegun();
+		}
+
+		ProgressQuest(); // Check if already completed
+
+		CompleteQuest(); // try to complete right away
+	}
+
+	bool PendingCompletion;
+
+	UFUNCTION(Category = "Quest")
+	void ProgressQuest()
+	{
+		auto QuestComp = State.QuestComponent;
+
+		if (IsValid(QuestComp.CurrentQuest))
+		{
+			int Objectives = QuestComp.CurrentQuest.Objectives.Num();
+			int Completed = 0;
+			for (auto& Objective : QuestComp.CurrentQuest.Objectives)
 			{
-				QuestComp.CurrentQuest = AvailableQuests.Num() > 0 ? AvailableQuests[0] : nullptr;
-				Print("Quest started!");
-
-				UBillboardComponent QuestIcon = UBillboardComponent::Get(this);
-				QuestIcon.SetSprite(QuestProgressIcons[3]);
+				if (Objective.IsSatisfied(Character))
+				{
+					Completed++;
+					break;
+				}
+				else
+				{
+					Print(f"Quest: not yet completed. ({Objective.GetName()})", 1.5f, FLinearColor::Yellow);
+					break;
+				}
 			}
 
-			if (QuestComp.CurrentQuest != nullptr)
+			PendingCompletion = (Completed >= Objectives);
+			if (PendingCompletion)
 			{
-				for (auto& Objective : QuestComp.CurrentQuest.Objectives)
-				{
-					if (Objective.IsSatisfied(Character))
-					{
-						Print(f"Quest Completed! ({Objective.GetName()})", 3.0f, FLinearColor::Green);
-						QuestComp.CurrentQuest = nullptr;
-						AvailableQuests.RemoveAt(0);
+				Print("Quest ready to complete!", 1.5f, FLinearColor(0.84, 0.62, 0.15));
 
-						if (AvailableQuests.Num() == 0)
-						{
-							UBillboardComponent QuestIcon = UBillboardComponent::Get(this);
-							QuestIcon.SetSprite(nullptr);
-						}
-						else
-						{
-							UBillboardComponent QuestIcon = UBillboardComponent::Get(this);
-							QuestIcon.SetSprite(QuestProgressIcons[0]);
-						}
-						break;
-					}
-					else
-					{
-						Print(f"Quest: not yet completed. ({Objective.GetName()})", 1.5f, FLinearColor::Yellow);
-						break;
-					}
-				}
+				UBillboardComponent QuestIcon = UBillboardComponent::Get(this);
+				QuestIcon.SetSprite(QuestProgressIcons[2]);
 			}
 		}
 	}
+
+	void CompleteQuest()
+	{
+		Print("Quest completed!", 3.0f, FLinearColor::Green);
+			auto Reward = State.QuestComponent.CurrentQuest.Reward;
+			State.StatsComponent.GainGil(Reward.Gil);
+			State.ExperienceComponent.GainExperience(Reward.Experience);
+			if (Reward.GrantsItem && Reward.Item != nullptr)
+			{
+				State.InventoryComponent.AddItem(Reward.Item.GetDefaultObject(), Reward.Quantity); // TODO: move add bait to inventory rather than baitmenu widget
+			}
+			
+			PendingCompletion = false;
+
+			UBillboardComponent QuestIcon = UBillboardComponent::Get(this);
+			if (AvailableQuests.Num() > 1)
+				QuestIcon.SetSprite(QuestProgressIcons[1]);
+			else
+				QuestIcon.SetHiddenInGame(true);
+
+			QuestCompleted();
+			State.QuestComponent.CurrentQuest = nullptr;
+	}
+
+	UFUNCTION(BlueprintEvent)
+	void PromptQuest(UQuest Quest)
+	{}
+
+	UFUNCTION(BlueprintEvent)
+	void QuestBegun()
+	{}
+
+	UFUNCTION(BlueprintEvent)
+	void QuestProgressed()
+	{}
+
+	UFUNCTION(BlueprintEvent)
+	void QuestCompleted()
+	{}
 };

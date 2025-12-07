@@ -18,8 +18,8 @@ class AFishCharacter : AFishEntity
 	}
 
 	UFUNCTION(BlueprintEvent, DisplayName = "Begin Play")
-	void BP_BeginPlay()
-	{}
+    void BP_BeginPlay()
+    {}
 
 	FText InfoText;
 	int ExperienceLevel;
@@ -39,8 +39,8 @@ class AFishCharacter : AFishEntity
 		if (XPComponent == nullptr)
 			return;
 
-		EFishingState State = FishingComponent.CurrentState;
-		FString NiceName = String::RightChop(f"{State}", 15); // Remove "FishingComponent::"
+		EFishingState FishingState = FishingComponent.CurrentState;
+		FString NiceName = String::RightChop(f"{FishingState}", 15); // Remove "FishingComponent::"
 		NiceName = String::LeftChop(NiceName, 4);			  // Remove " (0)"
 
 		FText CurrentFish = FishingComponent.CurrentFish != nullptr ? FishingComponent.CurrentFish.FishName : FText::FromString("None");

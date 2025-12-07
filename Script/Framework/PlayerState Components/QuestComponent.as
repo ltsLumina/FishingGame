@@ -13,7 +13,11 @@ class UQuestComponent : UFishComponent
 	void BeginPlay()
 	{
 		Super::BeginPlay();
+		BP_BeginPlay();
 	}
+
+	UFUNCTION(BlueprintEvent, DisplayName = "Begin Play")
+	void BP_BeginPlay() { }
 
 	void LatePlay() override
 	{

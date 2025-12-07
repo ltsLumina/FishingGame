@@ -20,11 +20,14 @@ class UInventoryComponent : UActorComponent
 	default bReplicates = false;
 
 	UFUNCTION(Category = "Inventory")
-	void AddItem(UItem Item)
+	void AddItem(UItem Item, int Quantity = 1)
 	{
-		Items.Add(Item);
-        Print("Added fish to inventory: " + Item.ItemName.ToString(), 3.0);
-        OnInventoryChanged.Broadcast(Item.ID, Item, EInventoryChangeType::Added);
+		for (int i = 0; i < Quantity; i++)
+		{
+			Items.Add(Item);
+		}
+		Print("Added " + Quantity + " x " + Item.ItemName.ToString() + " to inventory.", 3.0);
+		OnInventoryChanged.Broadcast(Item.ID, Item, EInventoryChangeType::Added);
 	}
 
 	UFUNCTION(Category = "Inventory")
