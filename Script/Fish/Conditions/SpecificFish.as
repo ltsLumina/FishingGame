@@ -16,7 +16,11 @@ class USpecificFish : UQuestObjective
 	bool IsSatisfied(AFishCharacter User)
 	{
 		UInventoryComponent Inventory = UInventoryComponent::Get(User.PlayerState);
-		auto CDO = FishClass.DefaultObject;
+		AFish CDO = FishClass.DefaultObject;
+		if (CDO.FishID == NAME_None)
+		{
+			CDO.FishID = FName(CDO.FishName.ToString().ToLower().Replace(" ", "_"));
+		}
 
 		int CurrentQuantity = Inventory.GetItemQuantity(CDO.FishID);
 		bool bMeetsQuantity = CurrentQuantity >= Quantity;
@@ -27,14 +31,14 @@ class USpecificFish : UQuestObjective
 			if (Cast<UFishItem>(Info).FishClass != FishClass)
 				continue;
 
-			if (Cast<UFishItem>(Info).IsLarge == IsLarge)
+			if (Cast<UFishItem>(Info).IsLarge)
 			{
 				bMeetsSize = true;
 				break;
 			}
 		}
 
-		if (bMeetsQuantity && bMeetsSize)
+		if (bMeetsQuantity && (!IsLarge || bMeetsSize))
 		{
 			return true;
 		}

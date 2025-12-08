@@ -36,8 +36,10 @@ class AFish : AActor
     UPROPERTY(Category = "Fish | Info", NotVisible)
     UFishItem Item;
 
-    UPROPERTY(Category = "Fish | Info", VisibleInstanceOnly)
+    UPROPERTY(Category = "Fish | Info", EditDefaultsOnly)
     FName FishID;
+    default FishID = FName(FishName.ToString().ToLower().Replace(" ", "_"));
+    default check(FishID != NAME_None);
 
     UPROPERTY(Category = "Fish | Info", DisplayName = "Name")
     FText FishName = FText::FromString("Default Fish");
@@ -95,7 +97,7 @@ class AFish : AActor
     UPROPERTY(Category = "Fish | Info", Meta=(UIMin="0.0", UIMax="100.0", Delta="0.5", Units="%", EditCondition ="Rarity == EFishRarity::Legendary", EditConditionHides))
     float RarityWeight = 100.0f;
 
-    UPROPERTY(Category = "Fish | Info", EditInline, Instanced)
+    UPROPERTY(Category = "Fish | Info", EditInline)
     TArray<UFishCondition> Conditions;
 
     /**

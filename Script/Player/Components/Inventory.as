@@ -22,6 +22,8 @@ class UInventoryComponent : UActorComponent
 	UFUNCTION(Category = "Inventory")
 	void AddItem(UItem Item, int Quantity = 1)
 	{
+		if (Items.Num() > 40) return;
+
 		for (int i = 0; i < Quantity; i++)
 		{
 			Items.Add(Item);
@@ -30,21 +32,75 @@ class UInventoryComponent : UActorComponent
 		OnInventoryChanged.Broadcast(Item.ID, Item, EInventoryChangeType::Added);
 	}
 
+	UFUNCTION(Category = "Inventory", Meta=(ReturnDisplayName="Found"))
+	bool FindItem(FName ID, int&out Index)
+	{
+		for (int i = 0; i < Items.Num(); i++)
+		{
+			if (Items[i].ID == ID)
+			{
+				Index = i;
+				return true;
+			}
+		}
+		return false;
+	}
+
+	UFUNCTION(Category = "Inventory", BlueprintPure)
+	int GetFirstEmptySlot()
+	{
+		return Items.Num() - 1;
+	}
+
 	UFUNCTION(Category = "Inventory")
-	bool RemoveItem(FName ID)
+	bool HasItem(FName ID)
+	{
+		for (auto& Pair : Items)
+		{
+			if (Pair.ID == ID)
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Removes an item from the inventory by its ID.
+	 * @param ID The ID of the item to remove.
+	 * @param RemoveDuplicates If true, removes all instances of the item with the given ID
+	 */
+	UFUNCTION(Category = "Inventory")
+	bool RemoveItem(FName ID, bool RemoveDuplicates = false)
     {
-        for (int i = 0; i < Items.Num(); i++)
-        {
-            if (Items[i].ID == ID)
-            {
-                Items.RemoveAt(i);
-                Print("Removed fish from inventory: " + ID.ToString());
-                OnInventoryChanged.Broadcast(ID, nullptr, EInventoryChangeType::Removed);
-                return true;
-            }
-        }
-        return false;
+		bool bRemoved = false;
+		for (int i = Items.Num() - 1; i >= 0; i--)
+		{
+			if (Items[i].ID == ID)
+			{
+				auto RemovedItem = Items[i];
+				Items.RemoveAt(i);
+				bRemoved = true;
+				OnInventoryChanged.Broadcast(ID, RemovedItem, EInventoryChangeType::Removed);
+				if (!RemoveDuplicates)
+					break;
+			}
+		}
+		return bRemoved;
     }
+
+	UFUNCTION(Category = "Inventory")
+	bool RemoveItemByIndex(int Index)
+	{
+		if (Index < 0 || Index >= Items.Num())
+			return false;
+
+		auto RemovedItem = Items[Index];
+		Items.RemoveAt(Index);
+
+		OnInventoryChanged.Broadcast(RemovedItem.ID, RemovedItem, EInventoryChangeType::Removed);
+		return true;
+	}
 
 	UFUNCTION(Category = "Inventory | Bait")
 	void AddBait(UBait Bait, int Quantity = 1)

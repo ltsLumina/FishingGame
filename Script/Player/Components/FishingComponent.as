@@ -309,8 +309,11 @@ class UFishingComponent : UActorComponent
 		SetState(EFishingState::NotFishing);
 
 		CurrentFish = nullptr;
+		
 		BiteTimer = 0;
 		BiteTimeModifiers.Empty();
+
+		MoochedFish.Empty();
 
 		System::ClearAndInvalidateTimerHandle(MissedTimerHandle);
 
@@ -367,7 +370,6 @@ class UFishingComponent : UActorComponent
 		else
 		{
 			CurrentMoochableFish = nullptr;
-			MoochedFish.Empty();
 		}
 
 		StopFishing();

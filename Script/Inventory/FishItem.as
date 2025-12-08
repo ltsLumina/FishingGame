@@ -23,7 +23,7 @@ class UFishItem : UItem
 	/**
 	 * Sell price to vendors.
 	 */
-	UPROPERTY(Category = "Fish | Shop", VisibleAnywhere, BlueprintReadOnly)
+	UPROPERTY(Category = "Fish | Shop", VisibleAnywhere, BlueprintReadOnly, ExposeOnSpawn)
 	int VendorValue = 1;
 
 	UPROPERTY(Category = "Fish | Physical", Meta = (Units = "cm"), VisibleAnywhere, BlueprintReadOnly)
@@ -35,7 +35,7 @@ class UFishItem : UItem
 	UPROPERTY(Category = "Fish | Physical", VisibleInstanceOnly)
     bool IsTiny;
 
-    UPROPERTY(Category = "Fish | Physical", VisibleInstanceOnly)
+    UPROPERTY(Category = "Fish | Physical", VisibleInstanceOnly, ExposeOnSpawn)
     bool IsLarge;
 
 	void Init(AFish Fish)

@@ -44,6 +44,11 @@ class AFishNPC : AFishEntity
 		State.InventoryComponent.OnInventoryChanged.AddUFunction(this, n"HandleInventoryChanged");
 	}
 
+	UPROPERTY()
+	bool QuestStarted;
+	UPROPERTY()
+	bool PendingCompletion;
+
 	UFUNCTION(NotBlueprintCallable)
 	void BeginOverlap(UPrimitiveComponent OverlappedComponent, AActor OtherActor,
 					  UPrimitiveComponent OtherComp, int OtherBodyIndex, bool bFromSweep,
@@ -53,7 +58,7 @@ class AFishNPC : AFishEntity
 			return;
 
 		if (AvailableQuests.Num() > 0)
-			PromptQuest(AvailableQuests[0], Cast<AFishCharacter>(OtherActor), PendingCompletion);
+			PromptQuest(AvailableQuests[0], Cast<AFishCharacter>(OtherActor), QuestStarted, PendingCompletion);
 	}
 
 	UFUNCTION(BlueprintOverride)
@@ -62,9 +67,11 @@ class AFishNPC : AFishEntity
 		if (!Cast<AFishCharacter>(OtherActor).IsLocallyControlled())
 			return;
 
-		if (QuestComponent.CurrentQuest == nullptr && AvailableQuests.Num() > 0)
-			PromptQuest(nullptr, nullptr, false);
+		HideWidget();
 	}
+
+	UFUNCTION(BlueprintEvent)
+	void HideWidget() { }
 
 	UFUNCTION(NotBlueprintCallable)
 	void HandleInventoryChanged(FName ItemID, UItem Item, EInventoryChangeType Change)
@@ -82,6 +89,8 @@ class AFishNPC : AFishEntity
 		{
 			QuestComp.CurrentQuest = AvailableQuests.Num() > 0 ? AvailableQuests[0] : nullptr;
 			Print("Quest started!");
+			QuestStarted = true;
+			PendingCompletion = false;
 
 			UBillboardComponent QuestIcon = UBillboardComponent::Get(this);
 			QuestIcon.SetSprite(QuestProgressIcons[3]);
@@ -94,8 +103,6 @@ class AFishNPC : AFishEntity
 		if (PendingCompletion)
 			CompleteQuest(); // try to complete right away
 	}
-
-	bool PendingCompletion;
 
 	UFUNCTION(Category = "Quest")
 	void ProgressQuest()
@@ -138,6 +145,7 @@ class AFishNPC : AFishEntity
 	void CompleteQuest()
 	{
 		Print("Quest completed!", 3.0f, FLinearColor::Green);
+		QuestStarted = false;
 		PendingCompletion = false;
 		
 		if (AvailableQuests.IsValidIndex(0))
@@ -168,7 +176,7 @@ class AFishNPC : AFishEntity
 	}
 
 	UFUNCTION(BlueprintEvent)
-	void PromptQuest(UQuest Quest, AFishCharacter Claimant, bool InPendingCompletion)
+	void PromptQuest(UQuest Quest, AFishCharacter Claimant, bool InQuestStarted, bool InPendingCompletion)
 	{}
 
 	UFUNCTION(BlueprintEvent)

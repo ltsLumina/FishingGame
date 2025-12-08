@@ -1,4 +1,4 @@
-UCLASS(Abstract, EditInlineNew)
+UCLASS(Abstract, EditInlineNew, DefaultToInstanced)
 class UQuestObjective : UObject
 {
 	UFUNCTION(BlueprintEvent)
