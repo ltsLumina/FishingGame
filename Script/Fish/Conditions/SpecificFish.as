@@ -28,10 +28,10 @@ class USpecificFish : UQuestObjective
 		bool bMeetsSize = false;
 		for (auto& Info : Inventory.Items)
 		{
-			if (Cast<UFishItem>(Info).FishClass != FishClass)
+			if (Cast<UFishItem>(Info).FishData.FishClass != FishClass)
 				continue;
 
-			if (Cast<UFishItem>(Info).IsLarge)
+			if (Cast<UFishItem>(Info).FishData.IsLarge)
 			{
 				bMeetsSize = true;
 				break;

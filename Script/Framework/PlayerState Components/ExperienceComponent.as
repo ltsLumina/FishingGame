@@ -1,23 +1,23 @@
 event void FOnLevelUp(int NewLevel);
 
-class UExperienceComponent : UFishComponent
+class UExperienceComponent : UFishComponentBase
 {
-    UPROPERTY(Category = "Stats", DisplayName = "Level", VisibleInstanceOnly)
-	int ExperienceLevel = 1;
+	UPROPERTY(Category = "Stats", SaveGame)
+	FExperienceData ExperienceData;
 
-	UPROPERTY(Category = "Stats", DisplayName = "XP", VisibleInstanceOnly)
-	float CurrentXP;
-
-	UPROPERTY(Category = "Stats", BlueprintGetter = "GetXPToLevelUp", VisibleInstanceOnly)
+	UPROPERTY(Category = "Stats", BlueprintGetter = "GetXPToLevelUp", VisibleInstanceOnly, SaveGame)
 	float XPToLevelUp;
 
 	UFUNCTION(BlueprintPure)
-	float GetXPToLevelUp() { return EXPGainCurve.GetFloatValue(ExperienceLevel + 1); }
+	float GetXPToLevelUp()
+	{
+		return EXPGainCurve.GetFloatValue(ExperienceData.Level + 1);
+	}
 
-    UPROPERTY(Category = "Stats", EditDefaultsOnly)
+	UPROPERTY(Category = "Stats", EditDefaultsOnly)
 	UCurveFloat EXPGainCurve;
 
-    UPROPERTY(Category = "Events")
+	UPROPERTY(Category = "Events")
 	FOnLevelUp OnLevelUp;
 
 	UFUNCTION(BlueprintOverride)
@@ -28,15 +28,21 @@ class UExperienceComponent : UFishComponent
 	}
 
 	UFUNCTION(BlueprintEvent, DisplayName = "Begin Play")
-	void BP_BeginPlay() { }
+	void BP_BeginPlay()
+	{}
 
-    void LatePlay() override
-    {
-        Super::LatePlay();
+	void LatePlay() override
+	{
+		Super::LatePlay();
+		BP_LatePlay();
 
-        OnLevelUp.AddUFunction(this, n"HandleLevelUp");
+		OnLevelUp.AddUFunction(this, n"HandleLevelUp");
 		Character.FishingComponent.OnFishCaught.AddUFunction(this, n"OnFishCaught");
-    }
+	}
+
+	UFUNCTION(BlueprintEvent, DisplayName = "Late Play")
+	void BP_LatePlay()
+	{}
 
 	UFUNCTION(NotBlueprintCallable)
 	void OnFishCaught(AFish Fish)
@@ -44,29 +50,30 @@ class UExperienceComponent : UFishComponent
 		GainExperience(Fish.ExperienceValue);
 	}
 
-    UFUNCTION()
+	UFUNCTION()
 	void GainExperience(float Amount)
 	{
-		CurrentXP += Amount;
-		float RequiredXP = EXPGainCurve.GetFloatValue(ExperienceLevel + 1);
-		while (CurrentXP >= RequiredXP)
+		ExperienceData.CurrentXP += Amount;
+		float RequiredXP = EXPGainCurve.GetFloatValue(ExperienceData.Level + 1);
+		while (ExperienceData.CurrentXP >= RequiredXP)
 		{
-			CurrentXP -= RequiredXP;
+			ExperienceData.CurrentXP -= RequiredXP;
 			LevelUp();
-			RequiredXP = EXPGainCurve.GetFloatValue(ExperienceLevel + 1);
+			RequiredXP = EXPGainCurve.GetFloatValue(ExperienceData.Level + 1);
 		}
 	}
 
 	UFUNCTION()
 	void LevelUp()
 	{
-		ExperienceLevel++;
-		OnLevelUp.Broadcast(ExperienceLevel);
-		BP_OnLevelUp(ExperienceLevel);
+		ExperienceData.Level++;
+		OnLevelUp.Broadcast(ExperienceData.Level);
+		BP_OnLevelUp(ExperienceData.Level);
 	}
 
 	UFUNCTION(BlueprintEvent, DisplayName = "Level Up")
-	void BP_OnLevelUp(int NewLevel) { }
+	void BP_OnLevelUp(int NewLevel)
+	{}
 
 	UFUNCTION(NotBlueprintCallable)
 	void HandleLevelUp(int NewLevel)
@@ -90,13 +97,47 @@ class UExperienceComponent : UFishComponent
 			}
 		}
 	}
+
+	UFUNCTION(Category = "Save Game")
+	bool SaveExperience()
+	{
+		auto SaveGame = NewObject(this, UExperienceSaveGame);
+		SaveGame.SavedExperienceData = ExperienceData;
+		return Gameplay::SaveGameToSlot(SaveGame, "PlayerExperience", 0);
+	}
+
+	UFUNCTION(Category = "Save Game")
+	bool LoadExperience()
+	{
+		auto SaveGame = Gameplay::LoadGameFromSlot("PlayerExperience", 0);
+		if (SaveGame == nullptr)
+			return false;
+
+		auto LoadedSave = Cast<UExperienceSaveGame>(SaveGame);
+		if (LoadedSave == nullptr)
+			return false;
+
+		ExperienceData = LoadedSave.SavedExperienceData;
+		Print("Loaded Experience: Level " + ExperienceData.Level + ", XP " + ExperienceData.CurrentXP, 3.0f, FLinearColor::Green);
+
+		return true;
+	}
 };
+
+struct FExperienceData
+{
+	UPROPERTY(Category = "Stats", DisplayName = "Level", VisibleInstanceOnly, SaveGame)
+	int Level = 1;
+
+	UPROPERTY(Category = "Stats", DisplayName = "XP", VisibleInstanceOnly, SaveGame)
+	float CurrentXP;
+}
 
 struct FAbilityUnlockInfo
 {
-	UPROPERTY(Category = "Ability")
+	UPROPERTY(Category = "Ability", SaveGame)
 	UAbilityData Ability;
 
-	UPROPERTY(Category = "Ability", Meta = (UIMin="1", UIMax="100"))
+	UPROPERTY(Category = "Ability", Meta = (UIMin = "1", UIMax = "100"), SaveGame)
 	int UnlockLevel = 1;
 }

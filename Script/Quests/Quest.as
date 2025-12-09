@@ -16,9 +16,6 @@ class UQuest : UPrimaryDataAsset
     UPROPERTY(Category = "Quest | Info")
     UTexture2D Icon;
 
-    UPROPERTY(Category = "Quest | Giver")
-    FName QuestGiver;
-
     UPROPERTY(Category = "Quest | Objectives", EditInline, Instanced)
     TArray<UQuestObjective> Objectives;
 

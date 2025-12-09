@@ -313,8 +313,6 @@ class UFishingComponent : UActorComponent
 		BiteTimer = 0;
 		BiteTimeModifiers.Empty();
 
-		MoochedFish.Empty();
-
 		System::ClearAndInvalidateTimerHandle(MissedTimerHandle);
 
 		BP_StopFishing();
@@ -370,6 +368,7 @@ class UFishingComponent : UActorComponent
 		else
 		{
 			CurrentMoochableFish = nullptr;
+			MoochedFish.Empty();
 		}
 
 		StopFishing();
@@ -466,6 +465,8 @@ class UFishingComponent : UActorComponent
 		if (CurrentState == EFishingState::NotFishing)
 			return;
 
+		MoochedFish.Empty();
+		
 		Print("The fish got away!", 2.5f, FLinearColor::Yellow);
 		BP_Missed(CurrentFish);
 		StopFishing();

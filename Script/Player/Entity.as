@@ -1,12 +1,13 @@
 class AFishEntity : ACharacter
 {
+	UPROPERTY()
     AFishPlayerState State;
 	AFishCharacter Character;
 
 	UFUNCTION(BlueprintOverride)
 	void BeginPlay()
 	{
-		System::SetTimer(this, n"LatePlay", 0.3f, false);
+		System::SetTimer(this, n"LatePlay", 0.2f, false);
 	}
 
 	UFUNCTION(NotBlueprintCallable)

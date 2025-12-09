@@ -45,9 +45,9 @@ class AFishCharacter : AFishEntity
 
 		FText CurrentFish = FishingComponent.CurrentFish != nullptr ? FishingComponent.CurrentFish.FishName : FText::FromString("None");
 
-		float ExperiencePoints = XPComponent.CurrentXP;
+		float ExperiencePoints = XPComponent.ExperienceData.CurrentXP;
 		float ToNextLevel = XPComponent.GetXPToLevelUp();
-		ExperienceLevel = XPComponent.ExperienceLevel;
+		ExperienceLevel = XPComponent.ExperienceData.Level;
 		float BiteTimer = FishingComponent.BiteTimer;
 		TArray<FString> MoochedFishNames;
 		for (TSubclassOf<AFish> FishClass : FishingComponent.MoochedFish)

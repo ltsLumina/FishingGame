@@ -9,6 +9,9 @@ class UHotbarSlot : UUserWidget
 	UPROPERTY()
 	UAbilityData AbilityData;
 
+	UPROPERTY()
+	float CooldownTime;
+
 	bool OnCooldown;
 	float CooldownPercent;
 
@@ -73,8 +76,9 @@ class UHotbarSlot : UUserWidget
 			}
 
 			CooldownBar.SetPercent(CooldownPercent);
+			CooldownTime = Duration * CooldownPercent;
 
-			if (CooldownPercent <= 0.01f || Math::IsNearlyZero(CooldownPercent))
+			if (Math::IsNearlyZero(CooldownPercent))
 			{
 				OnCooldown = false;
 			}
@@ -106,10 +110,16 @@ class UHotbarSlot : UUserWidget
 		auto PlayerState = Cast<AFishPlayerState>(Character.PlayerState);
 		if (PlayerState != nullptr)
 		{
-			LevelRequirementMet = PlayerState.ExperienceComponent.ExperienceLevel >= AbilityData.Details.UnlockLevel;
+			LevelRequirementMet = PlayerState.ExperienceComponent.ExperienceData.Level >= AbilityData.Details.UnlockLevel;
 		}
 
 		return CanUse && HasMP && LevelRequirementMet;
+	}
+
+	UFUNCTION(BlueprintPure)
+	bool GetOnCooldown()
+	{
+		return OnCooldown;
 	}
 
 	void ValidateConditions()

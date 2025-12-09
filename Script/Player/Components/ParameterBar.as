@@ -1,4 +1,4 @@
-class UParameterBar : UFishComponent
+class UParameterBar : UFishComponentBase
 {
 	UPROPERTY(Category = "Parameter Bar", VisibleAnywhere)
 	float MP = 500;

@@ -1,7 +1,7 @@
 event void FOnAbilityGranted(UAbilityData AbilityData);
 event void FOnAbilityRevoked(UAbilityData AbilityData);
 
-class UAbilityHandlerComponent : UActorComponent
+class UAbilityHandlerComponent : UFishComponentBase
 {
 	UPROPERTY(Category = "Abilities", VisibleInstanceOnly, BlueprintReadOnly)
 	TArray<UAbilityData> Abilities;
@@ -18,6 +18,7 @@ class UAbilityHandlerComponent : UActorComponent
 	UFUNCTION(BlueprintOverride)
 	void BeginPlay()
 	{
+		Super::BeginPlay();
 		Abilities.Empty();
 
 		TArray<FAbilityUnlockInfo> UnlockInfos;
@@ -34,6 +35,19 @@ class UAbilityHandlerComponent : UActorComponent
 			}
 		}
 	}
+
+	UFUNCTION(BlueprintEvent, DisplayName = "Begin Play")
+	void BP_BeginPlay()
+	{}
+
+	void LatePlay() override
+	{
+		Super::LatePlay();
+		BP_LatePlay();
+	}
+
+	UFUNCTION(BlueprintEvent, DisplayName = "Late Play")
+	void BP_LatePlay() {}
 
 	UFUNCTION(NotBlueprintCallable)
 	void InvokeAbility(UAbilityData Ability)
@@ -79,5 +93,45 @@ class UAbilityHandlerComponent : UActorComponent
 			OnAbilityRevoked.Broadcast(AbilityData);
 			Print("Revoked ability: " + AbilityData.Details.Name.ToString(), 3.0f, FLinearColor::Red);
 		}
+	}
+
+	UFUNCTION(Category = "Save Game")
+	bool SaveAbilities()
+	{
+		auto SaveGame = NewObject(this, UAbilitySaveGame);
+		TArray<FAbilityUnlockInfo> UnlockedAbilities;
+		if (AbilityUnlockTable != nullptr)
+		{
+			AbilityUnlockTable.GetAllRows(UnlockedAbilities);
+			for (int i = UnlockedAbilities.Num() - 1; i >= 0; i--)
+			{
+				if (!Abilities.Contains(UnlockedAbilities[i].Ability))
+				{
+					UnlockedAbilities.RemoveAt(i);
+				}
+			}
+		}
+		SaveGame.UnlockedAbilities = UnlockedAbilities;
+		return Gameplay::SaveGameToSlot(SaveGame, "PlayerAbilities", 0);
+	}
+
+	UFUNCTION(Category = "Save Game")
+	bool LoadAbilities()
+	{
+		auto SaveGame = Gameplay::LoadGameFromSlot("PlayerAbilities", 0);
+		if (SaveGame == nullptr)
+			return false;
+
+		auto LoadedSave = Cast<UAbilitySaveGame>(SaveGame);
+		if (LoadedSave == nullptr)
+			return false;
+
+		for (FAbilityUnlockInfo UnlockInfo : LoadedSave.UnlockedAbilities)
+		{
+			if (!Abilities.Contains(UnlockInfo.Ability))
+				GrantAbility(UnlockInfo.Ability);
+		}
+
+		return true;
 	}
 };
