@@ -7,11 +7,11 @@ A small MMO-style fishing game with proximity voice chat and basic multiplayer f
 * [x] Proximity Voice Chat
 * [x] Lobbies
 * [x] Server Browser
-* [ ] Fishing Mechanics
+* [x] Fishing Mechanics
 
-  * [ ] Global Cooldown
-  * [ ] Hotbar
-  * [ ] Abilities/Actions
+  * [x] Global Cooldown
+  * [x] Hotbar
+  * [x] Abilities/Actions
      
 ---
 
