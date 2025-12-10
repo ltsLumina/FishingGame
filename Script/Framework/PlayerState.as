@@ -1,3 +1,5 @@
+event void FOnStatsLoadingComplete(bool bSuccess);
+
 class AFishPlayerState : APlayerState
 {
 	UPROPERTY(Category = "Components", VisibleInstanceOnly, BlueprintHidden)
@@ -12,6 +14,12 @@ class AFishPlayerState : APlayerState
 	UPROPERTY(Category = "Components", VisibleInstanceOnly, BlueprintHidden)
 	UQuestComponent QuestComponent;
 
+	UPROPERTY(Category = "Components", VisibleInstanceOnly, BlueprintHidden)
+	UCollectionComponent CollectionComponent;
+	
+	UPROPERTY(Category = "Events")
+	FOnStatsLoadingComplete OnStatsLoadingComplete;
+
 	UFUNCTION(BlueprintOverride)
 	void BeginPlay()
 	{
@@ -19,8 +27,11 @@ class AFishPlayerState : APlayerState
 		InventoryComponent = UInventoryComponent::Get(this);
 		ExperienceComponent = UExperienceComponent::Get(this);
 		QuestComponent = UQuestComponent::Get(this);
+		CollectionComponent = UCollectionComponent::Get(this);
 
-		ResetPlayerState();
+#if EDITOR
+		//ResetPlayerState();
+#endif
 
 		BP_BeginPlay();
 
@@ -31,21 +42,49 @@ class AFishPlayerState : APlayerState
 	void BP_BeginPlay()
 	{}
 
+	FAsyncLoadGameFromSlotDynamicDelegate InventoryDelegate;
+	FAsyncLoadGameFromSlotDynamicDelegate ExperienceDelegate;
+
 	UFUNCTION(NotBlueprintCallable)
 	void LatePlay()
 	{
-		if (InventoryComponent.LoadInventory())
-			Print(f"Loaded Inventory successfully.", 5.0f);
-		else Print("No Inventory save found.", 5.0f);
-		if (StatsComponent.LoadStats())
-			Print(f"Loaded Stats successfully.", 5.0f);
-		else Print("No Stats save found.", 5.0f);
-		if (ExperienceComponent.LoadExperience())
-			Print(f"Loaded Experience successfully.", 5.0f);
-		else Print("No Experience save found.", 5.0f);
-		if (QuestComponent.LoadQuests())
-			Print(f"Loaded Quests successfully.", 5.0f);
-		else Print("No Quests save found.", 5.0f);
+		InventoryComponent.AsyncLoadInventory(InventoryDelegate);
+		InventoryDelegate.BindUFunction(this, n"OnInventoryLoaded_Internal");
+		
+		FAsyncLoadGameFromSlotDynamicDelegate StatsDelegate;
+		StatsComponent.AsyncLoadStats(StatsDelegate);
+		StatsDelegate.BindUFunction(this, n"OnStatsLoaded_Internal");
+		
+		ExperienceComponent.AsyncLoadExperience(ExperienceDelegate);
+		ExperienceDelegate.BindUFunction(this, n"OnExperienceLoaded_Internal");
+		
+		FAsyncLoadGameFromSlotDynamicDelegate QuestDelegate;
+		QuestComponent.LoadQuests(QuestDelegate);
+		QuestDelegate.BindUFunction(this, n"OnQuestsLoaded_Internal");
+	}
+
+	UFUNCTION()
+	private void OnInventoryLoaded_Internal(FString SlotName, int UserIndex, USaveGame SaveGameObject)
+	{
+		Print("Inventory loaded!.", 3.0f, FLinearColor::Green);
+	}
+
+	UFUNCTION()
+	private void OnStatsLoaded_Internal(FString SlotName, int UserIndex, USaveGame SaveGameObject)
+	{
+		Print("Stats loaded!.", 3.0f, FLinearColor::Green);
+	}
+
+	UFUNCTION()
+	private void OnExperienceLoaded_Internal(FString SlotName, int UserIndex, USaveGame SaveGameObject)
+	{
+		Print("Experience loaded!.", 3.0f, FLinearColor::Green);
+	}
+
+	UFUNCTION()
+	private void OnQuestsLoaded_Internal(FString SlotName, int UserIndex, USaveGame SaveGameObject)
+	{
+		Print("Quests loaded!.", 3.0f, FLinearColor::Green);
 	}
 
 	UFUNCTION(BlueprintOverride)

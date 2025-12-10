@@ -136,7 +136,7 @@ class UFishingComponent : UActorComponent
 			CurrentCatchableFish.Add(FishClass);
 			for (auto Fish : CurrentCatchableFish)
 			{
-				if (Fish.DefaultObject.Rarity > EFishRarity::Dungeon)
+				if (Fish.DefaultObject.Rarity > EFishRarity::Prismatic)
 				{
 					Print(f"A rare \"{FishClass.DefaultObject.ActorNameOrLabel}\" is available!", 0.01f, FLinearColor::Green);
 				}
@@ -360,6 +360,7 @@ class UFishingComponent : UActorComponent
 
 		// Store locally before StopFishing clears 'CurrentFish'
 		AFish CaughtFish = CurrentFish;
+		//UCollectionComponent::Get(Character.PlayerState).AddToCollection(CaughtFish.Item);
 
 		if (CaughtFish.IsMoochable)
 		{

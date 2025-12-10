@@ -118,6 +118,8 @@ class UAbilityHandlerComponent : UFishComponentBase
 	UFUNCTION(Category = "Save Game")
 	bool LoadAbilities()
 	{
+		Gameplay::DeleteGameInSlot("PlayerAbilities", 0); // TEMP DELETE
+
 		auto SaveGame = Gameplay::LoadGameFromSlot("PlayerAbilities", 0);
 		if (SaveGame == nullptr)
 			return false;

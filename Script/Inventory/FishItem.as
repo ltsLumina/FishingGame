@@ -14,6 +14,7 @@ class UFishItem : UItem
 		FishData.RecommendedLevel = Fish.RecommendedLevel;
 		FishData.FishType = Fish.FishType;
 		FishData.Rarity = Fish.Rarity;
+		FishData.PreferredBaits = Fish.RequiredBaits;
 		FishData.VendorValue = Fish.VendorValue;
 		FishData.Size = Fish.Size;
 		FishData.Weight = Fish.Weight;
@@ -43,6 +44,9 @@ struct FFishItemData
 
 	UPROPERTY(Category = "Fish | Info", VisibleAnywhere, SaveGame)
 	EFishRarity Rarity = EFishRarity::Basic;
+
+	UPROPERTY(Category = "Fish | Info", VisibleAnywhere, SaveGame)
+	TArray<UBait> PreferredBaits;
 
 	/**
 	 * Sell price to vendors.

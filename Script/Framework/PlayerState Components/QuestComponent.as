@@ -16,7 +16,6 @@ struct FQuestEntry
 	FQuestEntry()
 	{
 		Quest = nullptr;
-	
 		Progress = 0;
 		Completed = false;
 	}
@@ -219,32 +218,36 @@ class UQuestComponent : UFishComponentBase
 	}
 
 	UFUNCTION(Category = "Save Game")
-	bool LoadQuests()
+	void LoadQuests(FAsyncLoadGameFromSlotDynamicDelegate& Delegate)
 	{
-		auto SaveGame = Gameplay::LoadGameFromSlot("PlayerQuestLog", 0);
-		if (SaveGame == nullptr)
-			return false;
-
-		auto LoadedSave = Cast<UQuestSaveGame>(SaveGame);
-		if (LoadedSave == nullptr)
-			return false;
-
-		//QuestLog = LoadedSave.SavedQuestLog;
-		SavedQuestLog = LoadedSave.SavedQuestLog;
-
-		System::SetTimer(this, n"DelayedLoad", 0.3f, false);
-		return true;
+		Gameplay::AsyncLoadGameFromSlot("PlayerQuestLog", 0, Delegate);
+		Delegate.BindUFunction(this, n"OnQuestsLoaded");
 	}
 
 	TMap<FName, FQuestEntry> SavedQuestLog;
+
+	UFUNCTION()
+	void OnQuestsLoaded(FString SlotName, int UserIndex, USaveGame SaveGameObject)
+	{
+		Print("Quests loaded from slot.", 3.0f, FLinearColor::Green);
+		auto SaveGame = Gameplay::LoadGameFromSlot("PlayerQuestLog", 0);
+		auto LoadedSave = Cast<UQuestSaveGame>(SaveGame);
+
+		QuestLog = LoadedSave.SavedQuestLog;
+
+		SavedQuestLog = LoadedSave.SavedQuestLog;
+
+		System::SetTimer(this, n"DelayedLoad", 0.3f, false);
+	}
 
 	UFUNCTION()
 	void DelayedLoad()
 	{
 		for (auto& Pair : SavedQuestLog)
 		{
-			BeginQuest(Pair.Value.Quest);
+			//BeginQuest(Pair.Value.Quest);
 			Print(f"Loaded Quest: {Pair.Value.Quest.QuestID}", 3.0f, FLinearColor::Green);
 		}
 	}
+
 };

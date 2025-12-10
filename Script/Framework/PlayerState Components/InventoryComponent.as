@@ -49,6 +49,7 @@ class UInventoryComponent : UFishComponentBase
 		}
 		//Print("Added " + Quantity + " x " + Item.BaseData.ItemName.ToString() + " to inventory.", 3.0);
 		OnInventoryChanged.Broadcast(Item.BaseData.ID, Item, EInventoryChangeType::Added);
+		UCollectionComponent::Get(GetOwner()).AddToCollection(Cast<UFishItem>(Item));
 	}
 
 	UFUNCTION(Category = "Inventory", Meta=(ReturnDisplayName="Found"))
@@ -229,18 +230,20 @@ class UInventoryComponent : UFishComponentBase
         return Gameplay::SaveGameToSlot(SaveGame, "PlayerInventory", 0);
     }
 
-    UFUNCTION(Category = "Save Game")
-    bool LoadInventory()
-    {
-        auto SaveGame = Gameplay::LoadGameFromSlot("PlayerInventory", 0);
-        if (SaveGame == nullptr)
-            return false;
+	UFUNCTION(Category = "Save Game")
+	void AsyncLoadInventory(FAsyncLoadGameFromSlotDynamicDelegate& Delegate)
+	{
+		Gameplay::AsyncLoadGameFromSlot("PlayerInventory", 0, Delegate);
+		Delegate.BindUFunction(this, n"OnInventoryLoaded");
+	}
 
-        auto LoadedSave = Cast<UInventorySaveGame>(SaveGame);
-        if (LoadedSave == nullptr)
-            return false;
+	UFUNCTION()
+	void OnInventoryLoaded(FString SlotName, int UserIndex, USaveGame SaveGameObject)
+	{
+		Print("Inventory loaded from slot.", 3.0f, FLinearColor::Green);
+		auto LoadedSave = Cast<UInventorySaveGame>(SaveGameObject);
 
-        Items.Empty();
+		Items.Empty();
 
         for (int i = 0; i < LoadedSave.SavedBaseData.Num(); i++)
         {
@@ -266,7 +269,5 @@ class UInventoryComponent : UFishComponentBase
             AddItem(NewItem, 1);
 			//Print("Loaded Item: " + NewItem.BaseData.ItemName.ToString(), 3.0f);
         }
-
-        return true;
-    }
+	}
 };

@@ -10,11 +10,11 @@ namespace Fish
                 return 100.0f;
             case EFishRarity::Aetherial:
                 return 75.0f;
-            case EFishRarity::Dungeon:
+            case EFishRarity::Prismatic:
                 return 50.0f;
-            case EFishRarity::Tomestone:
+            case EFishRarity::Seraphic:
                 return 30.0f;
-            case EFishRarity::Relic:
+            case EFishRarity::Iridescent:
                 return 15.0f;
             case EFishRarity::Legendary:
                 return Fish.RarityWeight;
@@ -195,15 +195,15 @@ enum EFishRarity
     /**
      * 50% spawn rate weight.
      */
-    Dungeon,
+    Prismatic,
     /**
      * 30% spawn rate weight.
      */
-    Tomestone,
+    Seraphic,
     /**
      * 15% spawn rate weight.
      */
-    Relic,
+    Iridescent,
     /**
      * Legendary fish are obtained through quests only.
      * 5% spawn rate weight (when obtainable).

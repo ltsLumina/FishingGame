@@ -118,7 +118,9 @@ class AFishNPC : AFishEntity
 	UFUNCTION(Category = "Save Game")
 	bool LoadQuests()
 	{
+#if EDITOR
 		Gameplay::DeleteGameInSlot(f"{NPC_ID}_Quests", 0); // TEMP DELETE
+#endif
 
 		auto SaveGame = Gameplay::LoadGameFromSlot(f"{NPC_ID}_Quests", 0);
 		if (SaveGame == nullptr)
@@ -135,7 +137,36 @@ class AFishNPC : AFishEntity
 			Print("Loaded Quest: " + Entry.Quest.QuestID.ToString(), 3.0f, FLinearColor::Green);
 		}
 
+		System::SetTimer(this, n"SetQuestSprite", 0.3f, false);
+
 		return true;
+	}
+
+	UFUNCTION()
+	void SetQuestSprite()
+	{
+		FQuestEntry Entry;
+		UQuestComponent::Get(State).QuestLog.Find(AvailableQuests[0].Quest.QuestID, Entry);
+		if (!IsValid(Entry.Quest))
+		{
+			UTexture2D Texture;
+			QuestIcons.Find(n"not_started", Texture);
+			Billboard.SetSprite(Texture);
+			return;
+		}
+		
+		if (Entry.Completed)
+		{
+			UTexture2D Texture;
+			QuestIcons.Find(n"completed", Texture);
+			Billboard.SetSprite(Texture);
+		}
+		else
+		{
+			UTexture2D Texture;
+			QuestIcons.Find(n"unsatisfied", Texture);
+			Billboard.SetSprite(Texture);
+		}
 	}
 
 	UFUNCTION(Category = "Save Game")

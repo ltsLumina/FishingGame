@@ -122,6 +122,23 @@ class UExperienceComponent : UFishComponentBase
 
 		return true;
 	}
+
+	UFUNCTION(Category = "Save Game")
+	void AsyncLoadExperience(FAsyncLoadGameFromSlotDynamicDelegate& Delegate)
+	{
+		Gameplay::AsyncLoadGameFromSlot("PlayerExperience", 0, Delegate);
+		Delegate.BindUFunction(this, n"OnExperienceLoaded");
+	}
+
+	UFUNCTION()
+	void OnExperienceLoaded(FString SlotName, int UserIndex, USaveGame SaveGameObject)
+	{
+		Print("Experience loaded from slot.", 3.0f, FLinearColor::Green);
+		auto LoadedSave = Cast<UExperienceSaveGame>(SaveGameObject);
+
+		ExperienceData = LoadedSave.SavedExperienceData;
+		Print("Loaded Experience: Level " + ExperienceData.Level + ", XP " + ExperienceData.CurrentXP, 3.0f, FLinearColor::Green);
+	}
 };
 
 struct FExperienceData
