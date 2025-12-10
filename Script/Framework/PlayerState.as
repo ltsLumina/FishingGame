@@ -20,7 +20,7 @@ class AFishPlayerState : APlayerState
 		ExperienceComponent = UExperienceComponent::Get(this);
 		QuestComponent = UQuestComponent::Get(this);
 
-		//ResetPlayerState();
+		ResetPlayerState();
 
 		BP_BeginPlay();
 
@@ -67,6 +67,7 @@ class AFishPlayerState : APlayerState
 	}
 };
 
+UFUNCTION(BlueprintPure, Category = "PlayerState")
 AFishPlayerState GetFishPlayerStateBase()
 {
 	return Cast<AFishPlayerState>(GetFishCharacterBase().PlayerState);

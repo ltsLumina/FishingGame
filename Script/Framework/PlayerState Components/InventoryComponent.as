@@ -197,6 +197,8 @@ class UInventoryComponent : UFishComponentBase
 			
 			FishingComponent.CurrentBait = nullptr;
 			PrintWarning("You have run out of " + Bait.BaitName.ToString() + "!");
+
+			GetFishHUD().AddNotification(f"You have run out of {Bait.BaitName}");
 		}
 	}
 

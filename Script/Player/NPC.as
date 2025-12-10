@@ -118,6 +118,8 @@ class AFishNPC : AFishEntity
 	UFUNCTION(Category = "Save Game")
 	bool LoadQuests()
 	{
+		Gameplay::DeleteGameInSlot(f"{NPC_ID}_Quests", 0); // TEMP DELETE
+
 		auto SaveGame = Gameplay::LoadGameFromSlot(f"{NPC_ID}_Quests", 0);
 		if (SaveGame == nullptr)
 			return false;

@@ -19,3 +19,16 @@ bool CompareBait(UBait A, UBait B)
 {
     return A == B;
 }
+
+UFUNCTION()
+bool HasBait(UBait BaitToCheck, TArray<UBait> BaitArray)
+{
+    for (UBait Bait : BaitArray)
+    {
+        if (CompareBait(Bait, BaitToCheck))
+        {
+            return true;
+        }
+    }
+    return false;
+}

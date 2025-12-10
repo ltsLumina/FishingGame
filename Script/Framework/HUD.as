@@ -1,18 +1,21 @@
 class AFishHUD : AHUD
 {
-    UFishHUDWidget HUDWidget;
+    UPROPERTY()
+    TSubclassOf<UUserWidget> HUDWidgetClass;
+
+    UPROPERTY(BlueprintReadOnly, NotVisible)
+    UUserWidget HUDWidget;
 
     UFUNCTION(BlueprintOverride)
     void BeginPlay()
     {
-        auto Widget = WidgetBlueprint::CreateWidget(UFishHUDWidget, Gameplay::GetPlayerController(0));
-        HUDWidget = Cast<UFishHUDWidget>(Widget);
+        HUDWidget = WidgetBlueprint::CreateWidget(HUDWidgetClass, Gameplay::GetPlayerController(0));
         HUDWidget.AddToViewport();
 
         Widget::SetInputMode_GameAndUIEx(Gameplay::GetPlayerController(0), HUDWidget, EMouseLockMode::LockInFullscreen);
         Gameplay::GetPlayerController(0).bShowMouseCursor = true;
 
-        AddNotification(FText::FromString("Welcome to Fishing Game!"), 5.0f);
+        AddNotification("Welcome to Fishing Game!", 3.5f);
         
         BP_BeginPlay();
     }
@@ -20,13 +23,29 @@ class AFishHUD : AHUD
     UFUNCTION(BlueprintEvent, DisplayName = "Begin Play")
     void BP_BeginPlay() { }
 
-    UFUNCTION()
-    void AddNotification(FText Title, float Duration = 5.0f)
+    UFUNCTION(BlueprintEvent, DisplayName = "Add Notification")
+    void AddNotificationEvent(FText Title, float Duration = 3.5f) { }
+
+    /**
+     * Helper overload to add notification with FString title.
+     */
+    UFUNCTION(DisplayName = "Add Notification", Category = "HUD")
+    void BP_AddNotification(FText Title, float Duration = 3.5f)
     {
-        auto Widget = WidgetBlueprint::CreateWidget(UNotification, Gameplay::GetPlayerController(0));
-        auto Notification = Cast<UNotification>(Widget);
-        Notification.Duration = Duration;
-        Notification.SetPadding(FMargin(0, 10));
-        HUDWidget.NotificationBox.AddChild(Notification);
+        AddNotificationEvent(Title, Duration);
+    }
+
+    /**
+     * Helper overload to add notification with FString title.
+     */
+    void AddNotification(FString Title, float Duration = 3.5f)
+    {
+        AddNotificationEvent(FText::FromString(Title), Duration);
     }
 };
+
+UFUNCTION(BlueprintPure, Category = "HUD")
+AFishHUD GetFishHUD()
+{
+    return Cast<AFishHUD>(Gameplay::GetPlayerController(0).GetHUD());
+}
