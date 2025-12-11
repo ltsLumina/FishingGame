@@ -79,6 +79,9 @@ class UExperienceComponent : UFishComponentBase
 	{
 		ExperienceData.Level++;
 		OnLevelUp.Broadcast(ExperienceData.Level);
+		
+		Notifications::AddNotification(f"You reached level {ExperienceData.Level}!");
+		
 		BP_OnLevelUp(ExperienceData.Level);
 	}
 

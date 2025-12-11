@@ -81,7 +81,7 @@ class UFishingHoleComponent : UActorComponent
 
 		FishingComponent.OnSelectBait.UnbindObject(this);
 
-		FishingComponent.CurrentFishingHole = FishingComponent.DefaultFishingHole;
+		FishingComponent.CurrentFishingHole = nullptr; 
 		FishingComponent.UpdateCatchableFish();
 	}
 }

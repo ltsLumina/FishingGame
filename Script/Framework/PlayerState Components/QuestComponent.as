@@ -125,8 +125,8 @@ class UQuestComponent : UFishComponentBase
 		
 		Print("Quest started!");
 
-		OnQuestBegun.Broadcast(Entry);
 		QuestBegun(Quest);
+		OnQuestBegun.Broadcast(Entry);
 
 		if (ProgressQuest(Quest))
 			CompleteQuest(Quest);

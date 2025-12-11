@@ -161,9 +161,6 @@ class UFishingComponent : UActorComponent
 
 	FTimerHandle MissedTimerHandle;
 
-	UPROPERTY(NotVisible)
-	UFishingHoleComponent DefaultFishingHole;
-
 	AFishCharacter Character;
 	UFishingComponent FishingComponent;
 	ATimeManager TimeManager;
@@ -172,14 +169,7 @@ class UFishingComponent : UActorComponent
 	UFUNCTION(BlueprintOverride)
 	void BeginPlay()
 	{
-		System::SetTimerForNextTick(this, "LatePlay");
-
-		DefaultFishingHole = UFishingHoleComponent::Create(GetOwner());
-		DefaultFishingHole.HoleName = FText::FromString("Default Fishing Hole");
-		DefaultFishingHole.CatchableFish.Add(AFish);
-
-		// We have to set the reference to SOMETHING, otherwise everything that depends on it for information breaks, especially in multiplayer :P
-		CurrentFishingHole = DefaultFishingHole;
+		System::SetTimer(this, n"LatePlay", 0.2f, false);
 
 		BP_BeginPlay();
 	}

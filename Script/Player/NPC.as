@@ -57,7 +57,12 @@ class AFishNPC : AFishEntity
 		UTexture2D Texture;
 		QuestIcons.Find(n"unsatisfied", Texture);
 		Billboard.SetSprite(Texture);
+
+		QuestBegunEvent();
 	}
+
+	UFUNCTION(BlueprintEvent, DisplayName = "Quest Begun")
+	void QuestBegunEvent() {}
 
 	UFUNCTION()
 	void QuestProgressed(FQuestEntry Entry)
@@ -85,7 +90,12 @@ class AFishNPC : AFishEntity
 		UTexture2D NextQuest;
 		QuestIcons.Find(n"progressed", NextQuest);
 		Billboard.SetSprite(NextQuest);
+
+		QuestCompletedEvent();
 	}
+
+	UFUNCTION(BlueprintEvent, DisplayName = "Quest Completed")
+	void QuestCompletedEvent() {}
 
 	UFUNCTION(BlueprintOverride)
 	void ActorEndOverlap(AActor OtherActor)
