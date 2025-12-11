@@ -230,44 +230,30 @@ class UInventoryComponent : UFishComponentBase
         return Gameplay::SaveGameToSlot(SaveGame, "PlayerInventory", 0);
     }
 
-	UFUNCTION(Category = "Save Game")
-	void AsyncLoadInventory(FAsyncLoadGameFromSlotDynamicDelegate& Delegate)
-	{
-		Gameplay::AsyncLoadGameFromSlot("PlayerInventory", 0, Delegate);
-		Delegate.BindUFunction(this, n"OnInventoryLoaded");
-	}
-
 	UFUNCTION()
-	void OnInventoryLoaded(FString SlotName, int UserIndex, USaveGame SaveGameObject)
+	bool LoadInventory()
 	{
-		Print("Inventory loaded from slot.", 3.0f, FLinearColor::Green);
-		auto LoadedSave = Cast<UInventorySaveGame>(SaveGameObject);
+		auto SaveGame = Gameplay::LoadGameFromSlot("PlayerInventory", 0);
+		if (SaveGame == nullptr)
+			return false;
+
+		auto LoadedSave = Cast<UInventorySaveGame>(SaveGame);
+		if (LoadedSave == nullptr)
+			return false;
 
 		Items.Empty();
 
-        for (int i = 0; i < LoadedSave.SavedBaseData.Num(); i++)
-        {
-            UItem NewItem;
+		for (int i = 0; i < LoadedSave.SavedBaseData.Num(); i++)
+		{
+			if (i < LoadedSave.SavedFishData.Num())
+			{
+				auto FishItem = NewObject(this, UFishItem);
+				FishItem.BaseData = LoadedSave.SavedBaseData[i];
+				FishItem.FishData = LoadedSave.SavedFishData[i];
+				AddItem(FishItem, 1);
+			}
+		}
 
-            auto BaseData = LoadedSave.SavedBaseData[i];
-
-            if (i < LoadedSave.SavedFishData.Num())
-            {
-                auto FishData = LoadedSave.SavedFishData[i];
-                auto FishItem = NewObject(this, UFishItem);
-                FishItem.FishData = FishData;
-                FishItem.BaseData = BaseData;
-                NewItem = FishItem;
-            }
-            else
-            {
-                auto GenericItem = NewObject(this, UItem);
-                GenericItem.BaseData = BaseData;
-                NewItem = GenericItem;
-            }
-
-            AddItem(NewItem, 1);
-			//Print("Loaded Item: " + NewItem.BaseData.ItemName.ToString(), 3.0f);
-        }
+		return true;
 	}
 };

@@ -1,0 +1,103 @@
+class UFishWidget : UUserWidget
+{
+    UPROPERTY(BlueprintReadOnly)
+    AFishCharacter Character;
+    
+    UPROPERTY(BlueprintReadOnly)
+    AFishPlayerState PlayerState;
+
+	UFUNCTION(BlueprintOverride)
+	void Construct()
+	{
+        Character = Cast<AFishCharacter>(GetOwningPlayerPawn());
+        PlayerState = Cast<AFishPlayerState>(Character.PlayerState);
+
+        if (Character == nullptr || PlayerState == nullptr)
+            System::SetTimer(this, n"Construct", 0.1f, false);
+
+		OnVisibilityChanged.AddUFunction(this, n"HandleVisibilityChanged");
+		OnVisibilityChanged.AddUFunction(this, n"OnVisibilityChangedEvent");
+
+		BP_Construct();
+	}
+
+	UFUNCTION()
+	private void HandleVisibilityChanged(ESlateVisibility InVisibility)
+	{
+		switch (InVisibility)
+		{
+			case ESlateVisibility::Visible:
+			case ESlateVisibility::SelfHitTestInvisible:
+			case ESlateVisibility::HitTestInvisible:
+				BecameVisible(InVisibility);
+				break;
+
+			case ESlateVisibility::Collapsed:
+			case ESlateVisibility::Hidden:
+				BecameHidden(InVisibility);
+                break;
+		}
+
+        OnVisibilityChangedEvent(InVisibility);
+	}
+
+	/**
+	 * Toggles the visibility of the widget between two states.
+	 * @param Visible The visibility state to set when the widget becomes visible.
+	 * @param Hidden The visibility state to set when the widget becomes hidden.
+	 */
+	UFUNCTION()
+	void ToggleVisibility(ESlateVisibility Visible = ESlateVisibility::Visible, ESlateVisibility Hidden = ESlateVisibility::Collapsed)
+	{
+		if (IsVisible())
+		{
+			SetVisibility(Hidden);
+			BecameHidden(Hidden);
+		}
+		else
+		{
+			SetVisibility(Visible);
+			BecameVisible(Visible);
+		}
+	}
+
+	UFUNCTION(BlueprintEvent, DisplayName = "Construct")
+	void BP_Construct()
+	{}
+
+	UFUNCTION(BlueprintEvent)
+	void BecameVisible(ESlateVisibility NewVisibility)
+	{}
+
+	UFUNCTION(BlueprintEvent)
+	void BecameHidden(ESlateVisibility NewVisibility)
+	{}
+
+	UFUNCTION(BlueprintEvent, DisplayName = "On Visibility Changed")
+	void OnVisibilityChangedEvent(ESlateVisibility NewVisibility)
+	{}
+
+	UFUNCTION()
+	void Show(ESlateVisibility NewVisibility = ESlateVisibility::Visible)
+	{
+		SetVisibility(NewVisibility);
+	}
+
+	UFUNCTION()
+	void Hide(ESlateVisibility NewVisibility = ESlateVisibility::Hidden)
+	{
+		SetVisibility(NewVisibility);
+	}
+};
+
+UFUNCTION(DisplayName = "Show (Static)")
+void Show(UFishWidget Widget, ESlateVisibility NewVisibility = ESlateVisibility::Visible)
+{
+	Widget.SetVisibility(NewVisibility);
+}
+
+UFUNCTION(DisplayName = "Hide (Static)")
+void Hide(UFishWidget Widget, ESlateVisibility NewVisibility = ESlateVisibility::Hidden)
+{
+	Widget.SetVisibility(NewVisibility);
+}

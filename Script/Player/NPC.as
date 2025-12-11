@@ -52,7 +52,7 @@ class AFishNPC : AFishEntity
 	{}
 
 	UFUNCTION()
-	void QuestBegun(UQuest Quest)
+	void QuestBegun(FQuestEntry Entry)
 	{
 		UTexture2D Texture;
 		QuestIcons.Find(n"unsatisfied", Texture);
@@ -60,9 +60,9 @@ class AFishNPC : AFishEntity
 	}
 
 	UFUNCTION()
-	void QuestProgressed(UQuest Quest, bool Completed)
+	void QuestProgressed(FQuestEntry Entry)
 	{
-		if (!Completed)
+		if (!Entry.Completed)
 			return;
 
 		UTexture2D Texture;
@@ -138,7 +138,6 @@ class AFishNPC : AFishEntity
 		}
 
 		System::SetTimer(this, n"SetQuestSprite", 0.3f, false);
-
 		return true;
 	}
 

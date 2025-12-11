@@ -1,5 +1,5 @@
-event void FOnQuestBegun(UQuest Quest);
-event void FOnQuestProgressed(UQuest Quest, bool Completed);
+event void FOnQuestBegun(FQuestEntry Entry);
+event void FOnQuestProgressed(FQuestEntry Entry);
 event void FOnQuestCompleted(FQuestEntry Entry);
 
 struct FQuestEntry
@@ -125,7 +125,7 @@ class UQuestComponent : UFishComponentBase
 		
 		Print("Quest started!");
 
-		OnQuestBegun.Broadcast(Quest);
+		OnQuestBegun.Broadcast(Entry);
 		QuestBegun(Quest);
 
 		if (ProgressQuest(Quest))
@@ -155,12 +155,12 @@ class UQuestComponent : UFishComponentBase
 				Print("Objective completed: " + Objective.GetName(), 3.0f, FLinearColor::Green);
 
 				Entry.Progress++;
-				OnQuestProgressed.Broadcast(Entry.Quest, Entry.Progress >= Objectives);
+				Entry.Completed = (Entry.Progress >= Objectives);
+				OnQuestProgressed.Broadcast(Entry);
 				QuestProgressed(Entry.Quest, Entry.Progress >= Objectives);
 			}
 		}
 
-		Entry.Completed = (Entry.Progress >= Objectives);
 		QuestLog[Quest.QuestID] = Entry;
 
 		if (Entry.Completed)
@@ -218,27 +218,24 @@ class UQuestComponent : UFishComponentBase
 	}
 
 	UFUNCTION(Category = "Save Game")
-	void LoadQuests(FAsyncLoadGameFromSlotDynamicDelegate& Delegate)
+	bool LoadQuests()
 	{
-		Gameplay::AsyncLoadGameFromSlot("PlayerQuestLog", 0, Delegate);
-		Delegate.BindUFunction(this, n"OnQuestsLoaded");
-	}
-
-	TMap<FName, FQuestEntry> SavedQuestLog;
-
-	UFUNCTION()
-	void OnQuestsLoaded(FString SlotName, int UserIndex, USaveGame SaveGameObject)
-	{
-		Print("Quests loaded from slot.", 3.0f, FLinearColor::Green);
 		auto SaveGame = Gameplay::LoadGameFromSlot("PlayerQuestLog", 0);
+		if (SaveGame == nullptr)
+			return false;
+
 		auto LoadedSave = Cast<UQuestSaveGame>(SaveGame);
+		if (LoadedSave == nullptr)
+			return false;
 
 		QuestLog = LoadedSave.SavedQuestLog;
-
 		SavedQuestLog = LoadedSave.SavedQuestLog;
 
 		System::SetTimer(this, n"DelayedLoad", 0.3f, false);
+		return true;
 	}
+
+	TMap<FName, FQuestEntry> SavedQuestLog;
 
 	UFUNCTION()
 	void DelayedLoad()

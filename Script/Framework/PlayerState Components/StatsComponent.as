@@ -67,37 +67,9 @@ class UStatsComponent : UFishComponentBase
 
         return true;
     }
+};
 
-	UFUNCTION(Category = "Data")
-	void AsyncLoadStats(FAsyncLoadGameFromSlotDynamicDelegate& Delegate)
-	{
-		Gameplay::AsyncLoadGameFromSlot("PlayerStats", 0, Delegate);
-        Delegate.BindUFunction(this, n"OnStatsLoaded");
-	}
-
-	FStats CachedStats;
-	int CachedGil;
-
-	UFUNCTION()
-	void OnStatsLoaded(FString SlotName, int UserIndex, USaveGame SaveGameObject)
-	{
-		Print("Stats loaded from slot.", 3.0f, FLinearColor::Green);
-		auto SaveGame = Gameplay::LoadGameFromSlot("PlayerStats", 0);
-		auto LoadedSave = Cast<UStatsSaveGame>(SaveGame);
-
-		CachedStats = LoadedSave.SavedStats;
-		CachedGil = LoadedSave.SavedGil;
-
-		System::SetTimer(this, n"DelayedLoadStats", 0.3f, false);
-	}
-
-	UFUNCTION()
-	void DelayedLoadStats()
-	{
-		Stats = CachedStats;
-		Gil = CachedGil;
-	}
-};struct FStats
+struct FStats
 {
 	UPROPERTY(Category = "Stats", DisplayName = "Gathering Points", SaveGame)
 	int Gathering = 100;

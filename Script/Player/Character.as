@@ -84,7 +84,19 @@ class AFishCharacter : AFishEntity
 UFUNCTION(BlueprintPure)
 AFishCharacter GetFishCharacterBase(int PlayerIndex = 0)
 {
-	return Cast<AFishCharacter>(Gameplay::GetPlayerCharacter(PlayerIndex));
+	auto PC = Gameplay::GetPlayerController(PlayerIndex);
+	if (PC == nullptr)
+	{
+		return nullptr;
+	}
+
+	auto Char = Cast<AFishCharacter>(PC.GetControlledPawn());
+	if (Char == nullptr)
+	{
+		return nullptr;
+	}
+
+	return Char;
 }
 
 UFUNCTION(BlueprintPure, Category = "Math", Meta = (CompactNodeTitle = "Round", Keywords = "round,decimal,places"))

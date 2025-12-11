@@ -2,23 +2,20 @@ event void FOnStatsLoadingComplete(bool bSuccess);
 
 class AFishPlayerState : APlayerState
 {
-	UPROPERTY(Category = "Components", VisibleInstanceOnly, BlueprintHidden)
+	UPROPERTY(Category = "Components", VisibleInstanceOnly)
 	UStatsComponent StatsComponent;
 
-	UPROPERTY(Category = "Components", VisibleInstanceOnly, BlueprintHidden)
+	UPROPERTY(Category = "Components", VisibleInstanceOnly)
 	UInventoryComponent InventoryComponent;
 
-	UPROPERTY(Category = "Components", VisibleInstanceOnly, BlueprintHidden)
+	UPROPERTY(Category = "Components", VisibleInstanceOnly)
 	UExperienceComponent ExperienceComponent;
 
-	UPROPERTY(Category = "Components", VisibleInstanceOnly, BlueprintHidden)
+	UPROPERTY(Category = "Components", VisibleInstanceOnly)
 	UQuestComponent QuestComponent;
 
-	UPROPERTY(Category = "Components", VisibleInstanceOnly, BlueprintHidden)
+	UPROPERTY(Category = "Components", VisibleInstanceOnly)
 	UCollectionComponent CollectionComponent;
-	
-	UPROPERTY(Category = "Events")
-	FOnStatsLoadingComplete OnStatsLoadingComplete;
 
 	UFUNCTION(BlueprintOverride)
 	void BeginPlay()
@@ -42,49 +39,23 @@ class AFishPlayerState : APlayerState
 	void BP_BeginPlay()
 	{}
 
-	FAsyncLoadGameFromSlotDynamicDelegate InventoryDelegate;
-	FAsyncLoadGameFromSlotDynamicDelegate ExperienceDelegate;
-
 	UFUNCTION(NotBlueprintCallable)
 	void LatePlay()
 	{
-		InventoryComponent.AsyncLoadInventory(InventoryDelegate);
-		InventoryDelegate.BindUFunction(this, n"OnInventoryLoaded_Internal");
-		
-		FAsyncLoadGameFromSlotDynamicDelegate StatsDelegate;
-		StatsComponent.AsyncLoadStats(StatsDelegate);
-		StatsDelegate.BindUFunction(this, n"OnStatsLoaded_Internal");
-		
-		ExperienceComponent.AsyncLoadExperience(ExperienceDelegate);
-		ExperienceDelegate.BindUFunction(this, n"OnExperienceLoaded_Internal");
-		
-		FAsyncLoadGameFromSlotDynamicDelegate QuestDelegate;
-		QuestComponent.LoadQuests(QuestDelegate);
-		QuestDelegate.BindUFunction(this, n"OnQuestsLoaded_Internal");
-	}
+		if (StatsComponent.LoadStats()) Print("Stats loaded from save.", 3.0f, FLinearColor::Green);
+		else Print("No stats save found.", 3.0f, FLinearColor::Yellow);
 
-	UFUNCTION()
-	private void OnInventoryLoaded_Internal(FString SlotName, int UserIndex, USaveGame SaveGameObject)
-	{
-		Print("Inventory loaded!.", 3.0f, FLinearColor::Green);
-	}
+		if (InventoryComponent.LoadInventory()) Print("Inventory loaded from save.", 3.0f, FLinearColor::Green);
+		else Print("No inventory save found.", 3.0f, FLinearColor::Yellow);
 
-	UFUNCTION()
-	private void OnStatsLoaded_Internal(FString SlotName, int UserIndex, USaveGame SaveGameObject)
-	{
-		Print("Stats loaded!.", 3.0f, FLinearColor::Green);
-	}
+		if (ExperienceComponent.LoadExperience()) Print("Experience loaded from save.", 3.0f, FLinearColor::Green);
+		else Print("No experience save found.", 3.0f, FLinearColor::Yellow);
 
-	UFUNCTION()
-	private void OnExperienceLoaded_Internal(FString SlotName, int UserIndex, USaveGame SaveGameObject)
-	{
-		Print("Experience loaded!.", 3.0f, FLinearColor::Green);
-	}
+		if (QuestComponent.LoadQuests()) Print("Quests loaded from save.", 3.0f, FLinearColor::Green);
+		else Print("No quests save found.", 3.0f, FLinearColor::Yellow);
 
-	UFUNCTION()
-	private void OnQuestsLoaded_Internal(FString SlotName, int UserIndex, USaveGame SaveGameObject)
-	{
-		Print("Quests loaded!.", 3.0f, FLinearColor::Green);
+		if (CollectionComponent.LoadCollection()) Print("Collection loaded from save.", 3.0f, FLinearColor::Green);
+		else Print("No collection save found.", 3.0f, FLinearColor::Yellow);
 	}
 
 	UFUNCTION(BlueprintOverride)
@@ -94,6 +65,7 @@ class AFishPlayerState : APlayerState
 		InventoryComponent.SaveInventory();
 		ExperienceComponent.SaveExperience();
 		QuestComponent.SaveQuests();
+		// Collection is not saved -- it uses the inventory's data to rebuild itself on load.
 	}
 
 	UFUNCTION(Category = "Save Game")
@@ -103,11 +75,26 @@ class AFishPlayerState : APlayerState
 		Gameplay::DeleteGameInSlot("PlayerInventory", 0);
 		Gameplay::DeleteGameInSlot("PlayerExperience", 0);
 		Gameplay::DeleteGameInSlot("PlayerQuestLog", 0);
+		Gameplay::DeleteGameInSlot("PlayerCollection", 0);
+
+		PrintWarning("Player state reset: all save data deleted.", 5.0f);
 	}
 };
 
 UFUNCTION(BlueprintPure, Category = "PlayerState")
 AFishPlayerState GetFishPlayerStateBase()
 {
-	return Cast<AFishPlayerState>(GetFishCharacterBase().PlayerState);
+	auto PC = Gameplay::GetPlayerController(0);
+	if (PC == nullptr)
+	{
+		return nullptr;
+	}
+
+	auto PS = Cast<AFishPlayerState>(PC.PlayerState);
+	if (PS == nullptr)
+	{
+		return nullptr;
+	}
+
+	return PS;
 }

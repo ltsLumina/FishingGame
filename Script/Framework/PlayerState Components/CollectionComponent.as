@@ -32,7 +32,7 @@ class UCollectionComponent : UFishComponentBase
         OnCollectionChanged.Broadcast(NewItem);
     }
 
-    UFUNCTION()
+    UFUNCTION(BlueprintPure)
     bool HasItem(UFishItem ItemToCheck)
     {
         for (UFishItem Item : CollectedItems)
@@ -43,5 +43,32 @@ class UCollectionComponent : UFishComponentBase
             }
         }
         return false;
+    }
+
+    UFUNCTION()
+    bool LoadCollection()
+    {
+        auto SaveGame = Gameplay::LoadGameFromSlot("PlayerInventory", 0);
+        if (SaveGame == nullptr)
+            return false;
+
+        auto LoadedSave = Cast<UInventorySaveGame>(SaveGame);
+        if (LoadedSave == nullptr)
+            return false;
+
+        CollectedItems.Empty();
+
+        for (int i = 0; i < LoadedSave.SavedBaseData.Num(); i++)
+        {
+            if (i < LoadedSave.SavedFishData.Num())
+            {
+                auto FishItem = NewObject(this, UFishItem);
+                FishItem.BaseData = LoadedSave.SavedBaseData[i];
+                FishItem.FishData = LoadedSave.SavedFishData[i];
+                AddToCollection(FishItem);
+            }
+        }
+
+        return true;
     }
 };

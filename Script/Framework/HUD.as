@@ -58,3 +58,13 @@ AFishHUD GetFishHUD()
 {
     return Cast<AFishHUD>(Gameplay::GetPlayerController(0).GetHUD());
 }
+
+UFUNCTION(Category = "Notifications", DisplayName = "Add Notification")
+void AddNotificationStatic(FString Title, float Duration = 3.5f)
+{
+    AFishHUD FishHUD = GetFishHUD();
+    if (FishHUD != nullptr)
+    {
+        FishHUD.AddNotification(Title, Duration);
+    }
+}

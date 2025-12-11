@@ -5,11 +5,21 @@ class UExperienceComponent : UFishComponentBase
 	UPROPERTY(Category = "Stats", SaveGame)
 	FExperienceData ExperienceData;
 
-	UPROPERTY(Category = "Stats", BlueprintGetter = "GetXPToLevelUp", VisibleInstanceOnly, SaveGame)
-	float XPToLevelUp;
+	UPROPERTY(Category = "Stats", BlueprintGetter = "GetXPToLevelUp", VisibleInstanceOnly)
+	float XPToNextLevel;
 
 	UFUNCTION(BlueprintPure)
 	float GetXPToLevelUp()
+	{
+		float RequiredXP = EXPGainCurve.GetFloatValue(ExperienceData.Level + 1);
+		return RequiredXP - ExperienceData.CurrentXP;
+	}
+
+	UPROPERTY(Category = "Stats", BlueprintGetter = "GetNextLevelXP", VisibleInstanceOnly)
+	float NextLevelXP;
+
+	UFUNCTION(BlueprintPure)
+	float GetNextLevelXP()
 	{
 		return EXPGainCurve.GetFloatValue(ExperienceData.Level + 1);
 	}
@@ -54,6 +64,7 @@ class UExperienceComponent : UFishComponentBase
 	void GainExperience(float Amount)
 	{
 		ExperienceData.CurrentXP += Amount;
+
 		float RequiredXP = EXPGainCurve.GetFloatValue(ExperienceData.Level + 1);
 		while (ExperienceData.CurrentXP >= RequiredXP)
 		{
@@ -118,26 +129,7 @@ class UExperienceComponent : UFishComponentBase
 			return false;
 
 		ExperienceData = LoadedSave.SavedExperienceData;
-		Print("Loaded Experience: Level " + ExperienceData.Level + ", XP " + ExperienceData.CurrentXP, 3.0f, FLinearColor::Green);
-
 		return true;
-	}
-
-	UFUNCTION(Category = "Save Game")
-	void AsyncLoadExperience(FAsyncLoadGameFromSlotDynamicDelegate& Delegate)
-	{
-		Gameplay::AsyncLoadGameFromSlot("PlayerExperience", 0, Delegate);
-		Delegate.BindUFunction(this, n"OnExperienceLoaded");
-	}
-
-	UFUNCTION()
-	void OnExperienceLoaded(FString SlotName, int UserIndex, USaveGame SaveGameObject)
-	{
-		Print("Experience loaded from slot.", 3.0f, FLinearColor::Green);
-		auto LoadedSave = Cast<UExperienceSaveGame>(SaveGameObject);
-
-		ExperienceData = LoadedSave.SavedExperienceData;
-		Print("Loaded Experience: Level " + ExperienceData.Level + ", XP " + ExperienceData.CurrentXP, 3.0f, FLinearColor::Green);
 	}
 };
 
