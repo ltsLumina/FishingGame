@@ -41,6 +41,8 @@ class AFishNPC : AFishEntity
 		Super::LatePlay();
 		BP_LatePlay();
 
+		if (AvailableQuests.Num() == 0) return;
+
 		auto QuestComponent = UQuestComponent::Get(State);
 		QuestComponent.OnQuestBegun.AddUFunction(this, n"QuestBegun");
 		QuestComponent.OnQuestProgressed.AddUFunction(this, n"QuestProgressed");
