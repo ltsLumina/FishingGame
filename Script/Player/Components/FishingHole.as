@@ -6,7 +6,7 @@ class UFishingHoleComponent : UActorComponent
 	default HoleName = FText::FromName(GetName());
 
 	UPROPERTY(Category = "Fishing | Area")
-	TArray<TSubclassOf<AFish>> CatchableFish;
+	TArray<UFishItem> CatchableFish;
 
 	APawn Character;
 	UFishingComponent FishingComponent;

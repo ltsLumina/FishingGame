@@ -57,7 +57,7 @@ class UExperienceComponent : UFishComponentBase
 	UFUNCTION(NotBlueprintCallable)
 	void OnFishCaught(AFish Fish)
 	{
-		GainExperience(Fish.ExperienceValue);
+		GainExperience(Fish.GetFishData().ExperienceValue);
 	}
 
 	UFUNCTION()

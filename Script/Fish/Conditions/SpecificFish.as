@@ -4,7 +4,7 @@
 class USpecificFish : UQuestObjective
 {
 	UPROPERTY(Category = "Quest | Objective", DisplayName = "Fish")
-	TSubclassOf<AFish> FishClass;
+	TSubclassOf<AFish> FishClass; // TODO: Change to FishItem later?
 
 	UPROPERTY(Category = "Quest | Objective", Meta = (UIMin = "1", UIMax = "100", Delta = "1"))
 	int Quantity = 1;
@@ -16,22 +16,23 @@ class USpecificFish : UQuestObjective
 	bool IsSatisfied(AFishCharacter User)
 	{
 		UInventoryComponent Inventory = UInventoryComponent::Get(User.PlayerState);
-		AFish CDO = FishClass.DefaultObject;
-		if (CDO.FishID == NAME_None)
-		{
-			CDO.FishID = FName(CDO.FishName.ToString().ToLower().Replace(" ", "_"));
-		}
+		UFishItem Item = FishClass.DefaultObject.Item;
+		auto BaseData = Item.BaseData;
 
-		int CurrentQuantity = Inventory.GetItemQuantity(CDO.FishID);
+		int CurrentQuantity = Inventory.GetItemQuantity(BaseData.ID);
 		bool bMeetsQuantity = CurrentQuantity >= Quantity;
 
 		bool bMeetsSize = false;
-		for (auto& Info : Inventory.Items)
+		for (auto& Slot : Inventory.Items)
 		{
-			if (Cast<UFishItem>(Info).FishData.FishClass != FishClass)
+			auto FishItem = Cast<UFishItem>(Slot);
+			if (FishItem == nullptr) // if its not a fish,
 				continue;
 
-			if (Cast<UFishItem>(Info).FishData.IsLarge)
+			if (FishItem.BaseData.ID != BaseData.ID) // wrong fish
+				continue;
+
+			if (Slot.GetFishSizeData().IsLarge && IsLarge)
 			{
 				bMeetsSize = true;
 				break;

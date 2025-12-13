@@ -31,7 +31,7 @@ class UQuest : UPrimaryDataAsset
         {
             auto Obj = Cast<USpecificFish>(Objective);
             int Quantity = Obj.Quantity;
-            FText FishName = Obj.FishClass.DefaultObject.FishName;
+            FText FishName = Obj.FishClass.DefaultObject.Item.BaseData.ItemName;
             bool IsLarge = Obj.IsLarge;
             FString LargeText = IsLarge ? "(L)" : "";
 

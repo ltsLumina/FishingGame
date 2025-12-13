@@ -69,7 +69,7 @@ class UQuestComponent : UFishComponentBase
 	{}
 
 	UFUNCTION(NotBlueprintCallable)
-	void HandleInventoryChanged(FName ItemID, UItem Item, EInventoryChangeType Change)
+	void HandleInventoryChanged(FName _0, UInventorySlot _1, EInventoryChangeType _2)
 	{
 		for (auto& LogEntry : QuestLog)
 		{

@@ -1,4 +1,4 @@
-event void FOnInventoryChanged(FName ItemID, UItem Item, EInventoryChangeType Change);
+event void FOnInventoryChanged(FName ItemID, UInventorySlot Slot, EInventoryChangeType Change);
 
 enum EInventoryChangeType
 {
@@ -9,13 +9,13 @@ enum EInventoryChangeType
 class UInventoryComponent : UFishComponentBase
 {
 	UPROPERTY(Category = "Inventory", VisibleInstanceOnly)
-	TArray<UItem> Items;
+	TArray<UInventorySlot> Items;
 
 	UPROPERTY(Category = "Inventory", EditDefaultsOnly)
 	TMap<UBait, int> Baits;
 
-    UPROPERTY(Category = "Inventory")
-    FOnInventoryChanged OnInventoryChanged;
+	UPROPERTY(Category = "Inventory")
+	FOnInventoryChanged OnInventoryChanged;
 
 	default bReplicates = false;
 
@@ -27,7 +27,8 @@ class UInventoryComponent : UFishComponentBase
 	}
 
 	UFUNCTION(BlueprintEvent, DisplayName = "Begin Play")
-	void BP_BeginPlay() { }
+	void BP_BeginPlay()
+	{}
 
 	void LatePlay() override
 	{
@@ -36,28 +37,41 @@ class UInventoryComponent : UFishComponentBase
 	}
 
 	UFUNCTION(BlueprintEvent, DisplayName = "Late Play")
-	void BP_LatePlay() { }
+	void BP_LatePlay()
+	{}
 
 	UFUNCTION(Category = "Inventory")
-	void AddItem(UItem Item, int Quantity = 1)
+	void AddItem(UItem Item, FInventoryInstanceData InstanceData = FInventoryInstanceData(), int Quantity = 1)
 	{
-		if (Items.Num() >= 40) return;
+		if (Items.Num() >= 40)
+			return;
+
+		UInventorySlot Slot;
 
 		for (int i = 0; i < Quantity; i++)
 		{
-			Items.Add(Item);
+			int SlotIndex = GetFirstEmptySlot();
+			
+			// Expand array if needed
+			if (SlotIndex >= Items.Num())
+			{
+				Items.SetNum(SlotIndex + 1);
+			}
+
+			Slot = NewObject(this, UInventorySlot);
+			Slot.Item = Item;
+			Slot.InstanceData = InstanceData;
+			Items[SlotIndex] = Slot;
 		}
-		//Print("Added " + Quantity + " x " + Item.BaseData.ItemName.ToString() + " to inventory.", 3.0);
-		OnInventoryChanged.Broadcast(Item.BaseData.ID, Item, EInventoryChangeType::Added);
-		UCollectionComponent::Get(GetOwner()).AddToCollection(Cast<UFishItem>(Item));
+		OnInventoryChanged.Broadcast(Item.BaseData.ID, Slot, EInventoryChangeType::Added);
 	}
 
-	UFUNCTION(Category = "Inventory", Meta=(ReturnDisplayName="Found"))
+	UFUNCTION(Category = "Inventory", Meta = (ReturnDisplayName = "Found"))
 	bool FindItem(FName ID, int&out Index)
 	{
 		for (int i = 0; i < Items.Num(); i++)
 		{
-			if (Items[i].BaseData.ID == ID)
+			if (Items[i].Item.BaseData.ID == ID)
 			{
 				Index = i;
 				return true;
@@ -69,7 +83,12 @@ class UInventoryComponent : UFishComponentBase
 	UFUNCTION(Category = "Inventory", BlueprintPure)
 	int GetFirstEmptySlot()
 	{
-		return Items.Num() - 1;
+		for (int i = 0; i < Items.Num(); i++)
+		{
+			if (Items[i] == nullptr)
+				return i;
+		}
+		return Items.Num();  // Return next slot if no empty ones found
 	}
 
 	UFUNCTION(Category = "Inventory")
@@ -77,7 +96,7 @@ class UInventoryComponent : UFishComponentBase
 	{
 		for (auto& Pair : Items)
 		{
-			if (Pair.BaseData.ID == ID)
+			if (Pair.Item.BaseData.ID == ID)
 			{
 				return true;
 			}
@@ -92,14 +111,14 @@ class UInventoryComponent : UFishComponentBase
 	 */
 	UFUNCTION(Category = "Inventory")
 	bool RemoveItem(FName ID, bool RemoveDuplicates = false)
-    {
+	{
 		bool bRemoved = false;
-		for (int i = Items.Num() - 1; i >= 0; i--)
+		for (int i = 0; i < Items.Num(); i++)
 		{
-			if (Items[i].BaseData.ID == ID)
+			if (Items[i] != nullptr && Items[i].Item.BaseData.ID == ID)
 			{
 				auto RemovedItem = Items[i];
-				Items.RemoveAt(i);
+				Items[i] = nullptr;  // Clear the slot instead of removing it
 				bRemoved = true;
 				OnInventoryChanged.Broadcast(ID, RemovedItem, EInventoryChangeType::Removed);
 				if (!RemoveDuplicates)
@@ -107,7 +126,7 @@ class UInventoryComponent : UFishComponentBase
 			}
 		}
 		return bRemoved;
-    }
+	}
 
 	UFUNCTION(Category = "Inventory")
 	bool RemoveItemByIndex(int Index)
@@ -115,10 +134,10 @@ class UInventoryComponent : UFishComponentBase
 		if (Index < 0 || Index >= Items.Num())
 			return false;
 
-		auto RemovedItem = Items[Index];
-		Items.RemoveAt(Index);
+		auto RemovedSlot = Items[Index];
+		Items[Index] = nullptr;  // Clear the slot instead of removing it
 
-		OnInventoryChanged.Broadcast(RemovedItem.BaseData.ID, RemovedItem, EInventoryChangeType::Removed);
+		OnInventoryChanged.Broadcast(RemovedSlot.Item.BaseData.ID, RemovedSlot, EInventoryChangeType::Removed);
 		return true;
 	}
 
@@ -140,7 +159,7 @@ class UInventoryComponent : UFishComponentBase
 	void ClearInventory()
 	{
 		Items.Empty();
-		//Print("Cleared inventory.");
+		// Print("Cleared inventory.");
 		OnInventoryChanged.Broadcast(FName("Everything"), nullptr, EInventoryChangeType::Removed);
 	}
 
@@ -148,13 +167,13 @@ class UInventoryComponent : UFishComponentBase
 	bool Contains(TSubclassOf<AFish> FishClass)
 	{
 		for (auto& Pair : Items)
-        {
-            if (Cast<UFishItem>(Pair).FishData.FishClass == FishClass)
-            {
-                return true;
-            }
-        }
-        return false;
+		{
+			if (Cast<UFishItem>(Pair).FishData.FishClass == FishClass)
+			{
+				return true;
+			}
+		}
+		return false;
 	}
 
 	UFUNCTION(Category = "Inventory", BlueprintPure, Meta = (CompactNodeTitle = "Quantity", Keywords = "count,number"))
@@ -163,7 +182,7 @@ class UInventoryComponent : UFishComponentBase
 		int Quantity = 0;
 		for (auto& Pair : Items)
 		{
-			if (Pair.BaseData.ID == ID)
+			if (Pair.Item.BaseData.ID == ID)
 			{
 				Quantity++;
 			}
@@ -195,7 +214,7 @@ class UInventoryComponent : UFishComponentBase
 		if (Baits[Bait] == 0)
 		{
 			auto FishingComponent = UFishingComponent::Get(Character);
-			
+
 			FishingComponent.CurrentBait = nullptr;
 			PrintWarning("You have run out of " + Bait.BaitName.ToString() + "!");
 
@@ -203,29 +222,36 @@ class UInventoryComponent : UFishComponentBase
 		}
 	}
 
-	UFUNCTION(Category = "Save Game")
-    bool SaveInventory()
+	 bool SaveInventory()
     {
         TArray<FItemData> SavedBaseData;
         TArray<FFishItemData> SavedFishData;
+		TArray<FInventoryInstanceData> SavedInstanceData;
 
         auto SaveGame = Gameplay::CreateSaveGameObject(UInventorySaveGame);
 
         SavedBaseData.Empty();
         SavedFishData.Empty();
+		SavedInstanceData.Empty();
 
-        for (auto& Item : Items)
+        for (auto& Slot : Items)
         {
-            SavedBaseData.Add(Item.BaseData);
-            if (Item.IsA(UFishItem))
-            {
-                auto FishItem = Cast<UFishItem>(Item);
-                SavedFishData.Add(FishItem.FishData);
-            }
+			if (Slot == nullptr)
+				continue;
+			
+            SavedBaseData.Add(Slot.Item.BaseData);
+			
+            auto FishItem = Cast<UFishItem>(Slot.Item);
+			if (FishItem != nullptr)
+			{
+				SavedFishData.Add(FishItem.FishData);
+				SavedInstanceData.Add(Slot.InstanceData);
+			}
         }
 
         SaveGame.SavedBaseData = SavedBaseData;
         SaveGame.SavedFishData = SavedFishData;
+		SaveGame.SavedInstanceData = SavedInstanceData;
 
         return Gameplay::SaveGameToSlot(SaveGame, "PlayerInventory", 0);
     }
@@ -250,9 +276,19 @@ class UInventoryComponent : UFishComponentBase
 				auto FishItem = NewObject(this, UFishItem);
 				FishItem.BaseData = LoadedSave.SavedBaseData[i];
 				FishItem.FishData = LoadedSave.SavedFishData[i];
-				AddItem(FishItem, 1);
+				auto SizeData = LoadedSave.SavedInstanceData[i];
+
+				AddItem(FishItem, SizeData, 1);
+			}
+			else
+			{
+				auto Item = NewObject(this, UItem);
+				Item.BaseData = LoadedSave.SavedBaseData[i];
+				AddItem(Item, FInventoryInstanceData(), 1);
 			}
 		}
+
+		Print("Loaded inventory with " + Items.Num() + " items.");
 
 		return true;
 	}

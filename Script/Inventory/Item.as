@@ -1,29 +1,48 @@
-class UItem : UObject
+class UItem : UPrimaryDataAsset
 {
-	UPROPERTY(Category = "Fish | Info", VisibleAnywhere, ExposeOnSpawn, SaveGame)
+	UPROPERTY(Category = "Item", ExposeOnSpawn, SaveGame)
 	FItemData BaseData;
 
-	void Init(FName InID, FText InItemName, FText InDescription, UTexture2D InThumbnail)
-    {
-        BaseData.ID = InID;
-        BaseData.ItemName = InItemName;
-        BaseData.Description = InDescription;
-        BaseData.Thumbnail = InThumbnail;
-    }
+	// Getters for easier access to item data in BLueprints. Getters rather than doing Item -> BaseData -> Break Struct, everytime
+
+	UFUNCTION(Category = "Item | Info", BlueprintPure)
+	FName GetID()
+	{
+		return BaseData.ID;
+	}
+
+	UFUNCTION(Category = "Item | Info", BlueprintPure)
+	FText GetItemName()
+	{
+		return BaseData.ItemName;
+	}
+
+	UFUNCTION(Category = "Item | Info", BlueprintPure)
+	FText GetDescription()
+	{
+		return BaseData.Description;
+	}
+
+	UFUNCTION(Category = "Item | Info", BlueprintPure)
+	UTexture2D GetThumbnail()
+	{
+		return BaseData.Thumbnail;
+	}
 }
 
+USTRUCT(Meta=(HiddenByDefault))
 struct FItemData
 {
-	UPROPERTY(Category = "Fish | Info", DisplayName = "ID", VisibleAnywhere, SaveGame)
-    FName ID;
+	UPROPERTY(Category = "Item | Info", DisplayName = "ID", SaveGame)
+    FName ID = n"default_item";
 
-	UPROPERTY(Category = "Fish | Info", DisplayName = "Name", SaveGame)
+	UPROPERTY(Category = "Item | Info", DisplayName = "Name", SaveGame)
 	FText ItemName = FText::FromString("Default Item");
 
-	UPROPERTY(Category = "Fish | Info", Meta = (MultiLine), SaveGame)
-	FText Description = FText::FromString("A generic fish. \nNothing special about it.");
+	UPROPERTY(Category = "Item | Info", Meta = (MultiLine), SaveGame)
+	FText Description = FText::FromString("A generic Item. \nNothing special about it.");
 
-	UPROPERTY(Category = "Fish | Info", VisibleAnywhere, SaveGame)
+	UPROPERTY(Category = "Item | Info", SaveGame)
 	UTexture2D Thumbnail;
 }
 

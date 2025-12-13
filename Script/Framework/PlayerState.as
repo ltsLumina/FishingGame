@@ -27,7 +27,7 @@ class AFishPlayerState : APlayerState
 		CollectionComponent = UCollectionComponent::Get(this);
 
 #if EDITOR
-		ResetPlayerState();
+		//ResetPlayerState();
 #endif
 
 		BP_BeginPlay();

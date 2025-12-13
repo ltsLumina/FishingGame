@@ -41,16 +41,16 @@ class AFishCharacter : AFishEntity
 
 		EFishingState FishingState = FishingComponent.CurrentState;
 
-		FText CurrentFish = FishingComponent.CurrentFish != nullptr ? FishingComponent.CurrentFish.FishName : FText::FromString("None");
+		FText CurrentFish = FishingComponent.CurrentFish != nullptr ? FishingComponent.CurrentFish.BaseData.ItemName : FText::FromString("None");
 
 		float ExperiencePoints = XPComponent.ExperienceData.CurrentXP;
 		float ToNextLevel = XPComponent.GetXPToLevelUp();
 		ExperienceLevel = XPComponent.ExperienceData.Level;
 		float BiteTimer = FishingComponent.BiteTimer;
 		TArray<FString> MoochedFishNames;
-		for (TSubclassOf<AFish> FishClass : FishingComponent.MoochedFish)
+		for (auto& FishItem : FishingComponent.MoochedFish)
 		{
-			MoochedFishNames.Add(FishClass.DefaultObject.FishName.ToString());
+			MoochedFishNames.Add(FishItem.BaseData.ItemName.ToString());
 		}
 		FString Joined = FString::Join(MoochedFishNames, ",");
 		FText FishingHole = IsValid(FishingComponent.CurrentFishingHole) ? FishingComponent.CurrentFishingHole.HoleName : FText::FromString("None");

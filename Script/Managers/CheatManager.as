@@ -14,7 +14,7 @@ class UFishCheatManager : UCheatManager
         UFishItem FishItem = NewObject(this, UFishItem);
         FishItem.BaseData.ID = FishID;
         FishItem.BaseData.ItemName = FText::FromString(FishID.ToString());
-        PS.InventoryComponent.AddItem(FishItem, Quantity);
+        PS.InventoryComponent.AddItem(FishItem, FInventoryInstanceData(), Quantity);
 
         Print(f"Granted {Quantity}x {FishID}!", 5.0f, FLinearColor::Green);
     }

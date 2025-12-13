@@ -51,7 +51,7 @@ class UFishingComponent : UActorComponent
 	TMap<FName, int> Tokens;
 
 	UPROPERTY(Category = "Fishing | State", VisibleAnywhere)
-	TArray<TSubclassOf<AFish>> MoochedFish;
+	TArray<UFishItem> MoochedFish;
 
 	UPROPERTY(Category = "Fishing | State", VisibleAnywhere, BlueprintGetter = "GetHasMoochOpportunity")
 	bool HasMoochOpportunity;
@@ -75,7 +75,7 @@ class UFishingComponent : UActorComponent
 	 * Determined when fishing starts.
 	 */
 	UPROPERTY(VisibleAnywhere)
-	AFish CurrentFish;
+	UFishItem CurrentFish;
 
 	/**
 	 * Whether the player currently has an opportunity to catch a fish. (MissedTimerHandle is active)
@@ -92,7 +92,7 @@ class UFishingComponent : UActorComponent
 	 * Considers a wide range of factors (bait, conditions, etc.) to determine which fish can currently be caught.
 	 */
 	UPROPERTY(Category = "Fishing | Area", VisibleAnywhere)
-	TArray<TSubclassOf<AFish>> CurrentCatchableFish;
+	TArray<UFishItem> CurrentCatchableFish;
 
 	void UpdateCatchableFish()
 	{
@@ -104,47 +104,46 @@ class UFishingComponent : UActorComponent
 		if (CurrentFishingHole == nullptr)
 			return;
 
-		for (TSubclassOf<AFish> FishClass : CurrentFishingHole.CatchableFish)
+		for (auto& FishItem : CurrentFishingHole.CatchableFish)
 		{
-			auto FishDefault = FishClass.GetDefaultObject();
-			if (CurrentBait != nullptr && !FishDefault.RequiredBaits.Contains(CurrentBait))
+			auto Data = FishItem.FishData;
+
+			if (CurrentBait != nullptr && !Data.PreferredBaits.Contains(CurrentBait))
 				continue;
 
-			for (UFishCondition Condition : FishDefault.Conditions)
+			for (UFishCondition Condition : Data.Conditions)
 			{
 				if (Condition.Mute)
 					continue;
 
 				if (Condition == nullptr)
 				{
-					throw(f"Fish {FishClass.DefaultObject.GetName()} has a null FishCondition!");
+					throw(f"Fish {FishItem.GetItemName()} has a null FishCondition!");
 					continue;
 				}
 
 				if (CurrentIgnoredConditions.Contains(Condition.GetClass()))
 				{
-					Print(f"An ability is ignoring condition: {Condition.Name} for fish: {FishClass.DefaultObject.ActorNameOrLabel}", 0.005f, FLinearColor::Yellow);
+					Print(f"An ability is ignoring condition: {Condition.Name} for fish: {FishItem.BaseData.ItemName}", 0.0f, FLinearColor::Yellow);
 					continue;
 				}
 				if (!Condition.IsSatisfied(Character, FishingComponent, TimeManager, WeatherManager))
 				{
-					PrintWarning(f"{Condition.Name} not satisfied for fish: {FishClass.DefaultObject.ActorNameOrLabel}", 0.005f);
+					PrintWarning(f"{Condition.Name} not satisfied for fish: {FishItem.BaseData.ItemName}", 0.0f);
 					return;
 				}
 			}
 
-			CurrentCatchableFish.Add(FishClass);
-			for (auto Fish : CurrentCatchableFish)
+			CurrentCatchableFish.Add(FishItem);
+			for (auto Item : CurrentCatchableFish)
 			{
-				if (Fish.DefaultObject.Rarity > EFishRarity::Prismatic)
+				if (Item.FishData.Rarity > EFishRarity::Prismatic)
 				{
-					Print(f"A rare \"{FishClass.DefaultObject.ActorNameOrLabel}\" is available!", 0.01f, FLinearColor::Green);
+					Print(f"A rare \"{Item.BaseData.ItemName}\" is available!", 0.0f, FLinearColor::Green);
 				}
 			}
 		}
 	}
-
-	bool temp = false;
 
 	/* Events */
 
@@ -265,7 +264,7 @@ class UFishingComponent : UActorComponent
 		else
 		{
 			CurrentFish = SelectFishWeighted();
-			NewBiteTimer = CurrentFish.BiteTime;
+			NewBiteTimer = CurrentFish.FishData.BiteTime;
 
 			for (auto Pair : BiteTimeModifiers)
 			{
@@ -299,7 +298,7 @@ class UFishingComponent : UActorComponent
 		SetState(EFishingState::NotFishing);
 
 		CurrentFish = nullptr;
-		
+
 		BiteTimer = 0;
 		BiteTimeModifiers.Empty();
 
@@ -325,9 +324,11 @@ class UFishingComponent : UActorComponent
 			return;
 		}
 
+		FFishItemData Data = CurrentFish.FishData;
+
 		float PlayerGathering = GetFishPlayerStateBase().StatsComponent.Stats.Gathering;
-		float GatheringDiff = Math::Max(0.0f, PlayerGathering - CurrentFish.MinimumGathering);
-		float CurrentCatchRate = Math::Clamp(CurrentFish.CatchRate + GatheringDiff * 0.5f, 0.0f, 100.0f);
+		float GatheringDiff = Math::Max(0.0f, PlayerGathering - Data.MinimumGathering);
+		float CurrentCatchRate = Math::Clamp(Data.CatchRate + GatheringDiff * 0.5f, 0.0f, 100.0f);
 
 		// Chance to escape - uses Catch Rate 0-100
 		float CatchRoll = Math::RandRange(0.0f, 100.0f);
@@ -340,21 +341,19 @@ class UFishingComponent : UActorComponent
 
 		if (CurrentFish != nullptr)
 		{
-			if (CurrentFish.Rarity > EFishRarity::Aetherial) // TODO: check if Thaliak's Favor is unlocked
+			if (Data.Rarity > EFishRarity::Aetherial) // TODO: check if Thaliak's Favor is unlocked
 			{
-				Print(f"You've hooked a rare \"{CurrentFish.ActorNameOrLabel}\"!", 3, FLinearColor::Green);
+				Print(f"You've hooked a rare \"{CurrentFish.BaseData.ItemName}\"!", 3, FLinearColor::Green);
 				Tokens.Add(FName("Angler's Art"), 1);
 				StatusEffects.Add(FName("Angler's Art"), 1); // TODO: separate system with data assets so I can display the icon.
 			}
 		}
 
-		// Store locally before StopFishing clears 'CurrentFish'
-		AFish CaughtFish = CurrentFish;
-		//UCollectionComponent::Get(Character.PlayerState).AddToCollection(CaughtFish.Item);
+		// UCollectionComponent::Get(Character.PlayerState).AddToCollection(CaughtFish.Item);
 
-		if (CaughtFish.IsMoochable)
+		if (Data.IsMoochable)
 		{
-			CurrentMoochableFish = CaughtFish.GetClass();
+			CurrentMoochableFish = CurrentFish;
 		}
 		else
 		{
@@ -362,28 +361,29 @@ class UFishingComponent : UActorComponent
 			MoochedFish.Empty();
 		}
 
+		// Store locally before StopFishing clears 'CurrentFish'
+		UFishItem CaughtFish = CurrentFish;
 		StopFishing();
 
 		BP_Hook(CaughtFish);
 	}
 
 	UPROPERTY()
-	TSubclassOf<AFish> CurrentMoochableFish;
+	UFishItem CurrentMoochableFish;
 
 	/**
 	 * Selects a fish to be caught using weighted random selection based on fish rarity.
 	 */
-	AFish SelectFishWeighted()
+	UFishItem SelectFishWeighted()
 	{
-		AFish ResultFish = nullptr;
+		UFishItem ResultFish = nullptr;
 
 		// Determine the fish that will bite when fishing starts
 		// Weighted random selection using AFish::GetCatchRate(Rarity) -> 0..100
 		float TotalWeight = 0.0f;
-		for (TSubclassOf<AFish> FishClass : CurrentCatchableFish)
+		for (auto& FishItem : CurrentCatchableFish)
 		{
-			auto FishDef = FishClass.GetDefaultObject();
-			float Weight = Fish::GetRarityWeight(FishDef);
+			float Weight = Fish::GetRarityWeight(FishItem);
 			if (Weight < 0.0f)
 				Weight = 0.0f;
 			TotalWeight += Weight;
@@ -392,23 +392,22 @@ class UFishingComponent : UActorComponent
 		// Fallback to uniform random if something went wrong or all weights are zero
 		if (TotalWeight <= 0.0f)
 		{
-			CurrentFish = CurrentCatchableFish[Math::RandRange(0, CurrentCatchableFish.Num() - 1)].GetDefaultObject();
+			CurrentFish = CurrentCatchableFish[Math::RandRange(0, CurrentCatchableFish.Num() - 1)];
 			Print("All fish have zero catch rate weights; selecting uniformly at random.", 2.5f, FLinearColor::Yellow);
 		}
 		else
 		{
 			float Roll = Math::RandRange(0.0f, TotalWeight);
 			float Accum = 0.0f;
-			for (TSubclassOf<AFish> FishClass : CurrentCatchableFish)
+			for (auto& FishItem : CurrentCatchableFish)
 			{
-				auto FishDef = FishClass.GetDefaultObject();
-				float Weight = Fish::GetRarityWeight(FishDef);
+				float Weight = Fish::GetRarityWeight(FishItem);
 				if (Weight < 0.0f)
 					Weight = 0.0f;
 				Accum += Weight;
 				if (Roll <= Accum)
 				{
-					ResultFish = FishDef;
+					ResultFish = FishItem;
 					return ResultFish;
 				}
 			}
@@ -438,7 +437,7 @@ class UFishingComponent : UActorComponent
 		Fish.SetLifeSpan(3);
 
 		auto State = Cast<AFishPlayerState>(Cast<AFishCharacter>(GetOwner()).PlayerState);
-		State.InventoryComponent.AddItem(Fish.Item);
+		State.InventoryComponent.AddItem(Fish.Item, FInventoryInstanceData(Fish.SizeData), 1);
 
 		OnFishCaught.Broadcast(Fish);
 	}
@@ -447,7 +446,7 @@ class UFishingComponent : UActorComponent
 	 * Called when a fish is successfully hooked and the player begins reeling it in.
 	 */
 	UFUNCTION(BlueprintEvent, DisplayName = "Hook Fish")
-	void BP_Hook(AFish CaughtFish)
+	void BP_Hook(UFishItem CaughtFish)
 	{}
 
 	UFUNCTION()
@@ -457,14 +456,14 @@ class UFishingComponent : UActorComponent
 			return;
 
 		MoochedFish.Empty();
-		
+
 		Print("The fish got away!", 2.5f, FLinearColor::Yellow);
 		BP_Missed(CurrentFish);
 		StopFishing();
 	}
 
 	UFUNCTION(BlueprintEvent, DisplayName = "Missed Fish")
-	void BP_Missed(AFish MissedFish)
+	void BP_Missed(UFishItem MissedFish)
 	{}
 
 	UFUNCTION(BlueprintEvent, DisplayName = "Start Fishing")
