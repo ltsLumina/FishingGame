@@ -108,7 +108,7 @@ class UFishingComponent : UActorComponent
 		{
 			auto Data = FishItem.FishData;
 
-			if (CurrentBait != nullptr && !Data.PreferredBaits.Contains(CurrentBait))
+			if (CurrentBait == nullptr || !Data.PreferredBaits.Contains(CurrentBait)) // if no bait or wrong bait, continue
 				continue;
 
 			for (UFishCondition Condition : Data.Conditions)
@@ -417,24 +417,29 @@ class UFishingComponent : UActorComponent
 	}
 
 	UFUNCTION(Server)
-	void SpawnFish_Server(TSubclassOf<AFish> FishClass)
+	void SpawnFish_Server(TSubclassOf<AFish> FishClass, UFishItem FishItem)
 	{
 		FVector SpawnLocation = GetOwner().GetActorLocation() + GetOwner().GetActorForwardVector() * 100;
 		auto Fish = SpawnActor(FishClass, SpawnLocation);
 		Fish.SetLifeSpan(3);
 		Fish.SetOwner(GetOwner());
+
+		Fish.Spawn(FishItem);
 		Fish.OnCaught(Cast<AFishCharacter>(GetOwner()));
 
-		SpawnFish_Client(FishClass);
+		SpawnFish_Client(FishClass, FishItem);
 	}
 
 	UFUNCTION(Client)
-	void SpawnFish_Client(TSubclassOf<AFish> FishClass)
+	void SpawnFish_Client(TSubclassOf<AFish> FishClass, UFishItem FishItem)
 	{
 		FVector SpawnLocation = GetOwner().GetActorLocation() + GetOwner().GetActorForwardVector() * 100;
 		AFish Fish = SpawnActor(FishClass, SpawnLocation);
 		Fish.SetActorHiddenInGame(true); // The locally spawned fish is just for data purposes; the server-spawned one is used for visuals.
 		Fish.SetLifeSpan(3);
+		Fish.SetOwner(GetOwner());
+		
+		Fish.Spawn(FishItem);
 
 		auto State = Cast<AFishPlayerState>(Cast<AFishCharacter>(GetOwner()).PlayerState);
 		State.InventoryComponent.AddItem(Fish.Item, FInventoryInstanceData(Fish.SizeData), 1);

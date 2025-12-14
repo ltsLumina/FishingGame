@@ -4,7 +4,7 @@
 class USpecificFish : UQuestObjective
 {
 	UPROPERTY(Category = "Quest | Objective", DisplayName = "Fish")
-	TSubclassOf<AFish> FishClass; // TODO: Change to FishItem later?
+	UFishItem Fish; // TODO: Change to FishItem later?
 
 	UPROPERTY(Category = "Quest | Objective", Meta = (UIMin = "1", UIMax = "100", Delta = "1"))
 	int Quantity = 1;
@@ -16,8 +16,7 @@ class USpecificFish : UQuestObjective
 	bool IsSatisfied(AFishCharacter User)
 	{
 		UInventoryComponent Inventory = UInventoryComponent::Get(User.PlayerState);
-		UFishItem Item = FishClass.DefaultObject.Item;
-		auto BaseData = Item.BaseData;
+		auto BaseData = Fish.BaseData;
 
 		int CurrentQuantity = Inventory.GetItemQuantity(BaseData.ID);
 		bool bMeetsQuantity = CurrentQuantity >= Quantity;

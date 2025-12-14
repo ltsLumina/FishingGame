@@ -29,10 +29,11 @@ class UQuest : UPrimaryDataAsset
 
         for (auto& Objective : Objectives)
         {
-            auto Obj = Cast<USpecificFish>(Objective);
-            int Quantity = Obj.Quantity;
-            FText FishName = Obj.FishClass.DefaultObject.Item.BaseData.ItemName;
-            bool IsLarge = Obj.IsLarge;
+            auto FishObjective = Cast<USpecificFish>(Objective);
+
+            int Quantity = FishObjective.Quantity;
+            FText FishName = FishObjective.Fish.GetItemName();
+            bool IsLarge = FishObjective.IsLarge;
             FString LargeText = IsLarge ? "(L)" : "";
 
             FString Step = FString(f"• Catch {Quantity}x {FishName} {LargeText}");

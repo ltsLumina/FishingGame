@@ -8,6 +8,18 @@ class UItem : UPrimaryDataAsset
 	UFUNCTION(Category = "Item | Info", BlueprintPure)
 	FName GetID()
 	{
+		if (BaseData.ID == n"default_item" || BaseData.ID.IsNone())
+		{
+			if (GetItemName().ToString().Len() > 0)
+			{
+				BaseData.ID = GenerateItemID(GetItemName());
+			}
+			else
+			{
+				PrintError("Item has no name set, cannot generate ID!");
+			}
+		}
+
 		return BaseData.ID;
 	}
 
@@ -50,4 +62,12 @@ UFUNCTION(Category = "Utility", BlueprintPure)
 FName GenerateItemID(FText ItemName)
 {
 	return FName(ItemName.ToString().ToLower().Replace(" ", "_"));
+}
+
+UFUNCTION(Category = "Utility", BlueprintPure)
+FText GenerateItemName(FString Filename)
+{
+	FString Chopped = Filename.RightChop(3); // removes BP_/DA_ prefixes
+	FString WithSpaces = Chopped.Replace("_", " ");
+	return FText::FromString(WithSpaces.ToDisplayName());
 }

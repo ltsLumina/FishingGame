@@ -5,12 +5,6 @@ class UFishItem : UItem
 	FFishItemData FishData;
 
 	UFUNCTION(Category = "Fish | Info", BlueprintPure)
-	TSubclassOf<AFish> GetFishClass()
-	{
-		return FishData.FishClass;
-	}
-
-	UFUNCTION(Category = "Fish | Info", BlueprintPure)
 	int GetRecommendedLevel()
 	{
 		return FishData.RecommendedLevel;
@@ -74,21 +68,21 @@ class UFishItem : UItem
 USTRUCT(Meta = (HiddenByDefault))
 struct FFishItemData
 {
-	UPROPERTY(Category = "Fish | Info", SaveGame)
-	TSubclassOf<AFish> FishClass;
+	UPROPERTY(Category = "Fish | Info")
+	UStaticMesh Mesh;
 
 	/**
 	 * Time it takes for this fish to bite (in seconds).
 	 */
 	UPROPERTY(Category = "Fish | Info", Meta = (Units = "s", UIMin = "5.0", UIMax = "30.0", Delta = "0.5"))
-	float BiteTime = 5; // NOT IN DATA, KEEP
+	float BiteTime = 5;
 
 	/**
 	 * Chance to catch this (0-100).
 	 * If the catch fails, the fish escapes.
 	 */
 	UPROPERTY(Category = "Fish | Info", Meta = (UIMin = "0.0", UIMax = "100.0", Delta = "0.5", Units = "%"))
-	float CatchRate = 95.0f; // NOT IN DATA, KEEP
+	float CatchRate = 95.0f;
 
 	/**
 	 * Recommended player level to catch this fish.
@@ -98,13 +92,13 @@ struct FFishItemData
 	int RecommendedLevel = 1;
 
 	UPROPERTY(Category = "Fish | Info", Meta = (UIMin = "0", UIMax = "1000", Delta = "1"))
-	int MinimumGathering = 0; // NOT IN DATA, KEEP
+	int MinimumGathering = 0;
 
 	/**
 	 * Experience points awarded when this fish is caught.
 	 */
 	UPROPERTY(Category = "Fish | Info", Meta = (UIMin = "0", UIMax = "1000", Delta = "1"))
-	float ExperienceValue = 10; // NOT IN DATA, KEEP
+	float ExperienceValue = 10;
 
 	/**
 	 * Which area types this fish can be found in.
@@ -116,17 +110,17 @@ struct FFishItemData
 	UPROPERTY(Category = "Fish | Info", SaveGame)
 	EFishRarity Rarity = EFishRarity::Basic;
 
+	UPROPERTY(Category = "Fish | Info", Meta = (UIMin = "0.0", UIMax = "100.0", Delta = "0.5", Units = "%", EditCondition = "Rarity == EFishRarity::Legendary", EditConditionHides))
+	float LegendaryWeight = 100.0f;
+
+	UPROPERTY(Category = "Fish | Info", EditDefaultsOnly, DisplayName = "Moochable")
+	bool IsMoochable;
+
 	UPROPERTY(Category = "Fish | Info", SaveGame)
 	TArray<UBait> PreferredBaits;
 
-	UPROPERTY(Category = "Fish | Info", Meta = (UIMin = "0.0", UIMax = "100.0", Delta = "0.5", Units = "%", EditCondition = "Rarity == EFishRarity::Legendary", EditConditionHides))
-	float LegendaryWeight = 100.0f;														 // NOT IN DATA, KEEP
-
-	UPROPERTY(Category = "Fish | Info", EditDefaultsOnly, DisplayName = "Moochable") // NOT IN DATA, KEEP
-	bool IsMoochable;
-
 	UPROPERTY(Category = "Fish | Info", EditInline)
-	TArray<UFishCondition> Conditions; // NOT IN DATA, KEEP
+	TArray<UFishCondition> Conditions;
 
 	/**
 	 * Sell price to vendors.
@@ -137,7 +131,7 @@ struct FFishItemData
 	/**
 	 * Size span of the fish (min and max size in cm).
 	 */
-	UPROPERTY(Category = "Fish | Physical", Meta = (Units = "cm")) // NOT IN DATA, KEEP
+	UPROPERTY(Category = "Fish | Physical", Meta = (Units = "cm"))
 	FVector2D SizeSpan = FVector2D(5.0f, 15.0f);
 }
 
@@ -172,5 +166,5 @@ UFUNCTION(BlueprintPure, Category = "Fish | Info")
 int GetVendorValue(FFishSizeData SizeData, UFishItem FishItem)
 {
 	auto Data = FishItem.FishData;
-	return Math::RoundToInt((SizeData.Size + SizeData.Weight) * 2 * Math::Max(1,float(Data.Rarity))); // Simple formula: (size + weight) * 2 * rarity
+	return Math::RoundToInt((SizeData.Size + SizeData.Weight) * 2 * Math::Max(1, float(Data.Rarity))); // Simple formula: (size + weight) * 2 * rarity
 }

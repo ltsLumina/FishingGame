@@ -141,6 +141,26 @@ class UInventoryComponent : UFishComponentBase
 		return true;
 	}
 
+	/**
+	 * Removes an item from the inventory by its slot.
+	 * @param Slot The inventory slot to remove.
+	 * @param ItemFilter Optional filter to only remove if the item is in the filter list.
+	 */
+	UFUNCTION()
+	bool RemoveItemBySlot(UInventorySlot Slot, TArray<TSubclassOf<UItem>> ItemFilter = TArray<TSubclassOf<UItem>>())
+	{
+		for (int i = 0; i < Items.Num(); i++)
+		{
+			if (Items[i] == Slot && (ItemFilter.Num() == 0 || ItemFilter.Contains(Slot.Item.GetClass())))
+			{
+				Items[i] = nullptr;  // Clear the slot instead of removing it
+				OnInventoryChanged.Broadcast(Slot.Item.BaseData.ID, Slot, EInventoryChangeType::Removed);
+				return true;
+			}
+		}
+		return false;
+	}
+
 	UFUNCTION(Category = "Inventory | Bait")
 	void AddBait(UBait Bait, int Quantity = 1)
 	{
@@ -164,11 +184,11 @@ class UInventoryComponent : UFishComponentBase
 	}
 
 	UFUNCTION(Category = "Inventory", BlueprintPure, Meta = (CompactNodeTitle = "Contains", Keywords = "has,find"))
-	bool Contains(TSubclassOf<AFish> FishClass)
+	bool Contains(FName ID)
 	{
-		for (auto& Pair : Items)
+		for (auto& Slot : Items)
 		{
-			if (Cast<UFishItem>(Pair).FishData.FishClass == FishClass)
+			if (Slot.Item.GetID() == ID)
 			{
 				return true;
 			}
@@ -180,9 +200,12 @@ class UInventoryComponent : UFishComponentBase
 	int GetItemQuantity(FName ID)
 	{
 		int Quantity = 0;
-		for (auto& Pair : Items)
+		for (auto& Slot : Items)
 		{
-			if (Pair.Item.BaseData.ID == ID)
+			if (Slot == nullptr)
+				continue;
+			
+			if (Slot.Item.BaseData.ID == ID)
 			{
 				Quantity++;
 			}

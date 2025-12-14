@@ -44,7 +44,7 @@ class AFishCharacter : AFishEntity
 		FText CurrentFish = FishingComponent.CurrentFish != nullptr ? FishingComponent.CurrentFish.BaseData.ItemName : FText::FromString("None");
 
 		float ExperiencePoints = XPComponent.ExperienceData.CurrentXP;
-		float ToNextLevel = XPComponent.GetXPToLevelUp();
+		float ToNextLevel = XPComponent.GetNextLevelXP();
 		ExperienceLevel = XPComponent.ExperienceData.Level;
 		float BiteTimer = FishingComponent.BiteTimer;
 		TArray<FString> MoochedFishNames;
@@ -55,7 +55,7 @@ class AFishCharacter : AFishEntity
 		FString Joined = FString::Join(MoochedFishNames, ",");
 		FText FishingHole = IsValid(FishingComponent.CurrentFishingHole) ? FishingComponent.CurrentFishingHole.HoleName : FText::FromString("None");
 
-		InfoText = FText::FromString(f"{FishingState :n}\n{CurrentFish}\nLevel {ExperienceLevel} ({ExperiencePoints}/{Math::FloorToInt(ToNextLevel)})\n{RoundTo(BiteTimer, 2)}s\n{Joined}\n{FishingHole}");
+		InfoText = FText::FromString(f"{FishingState :n}\n{CurrentFish}\nLevel {ExperienceLevel} ({ExperiencePoints:.0}/{ToNextLevel:.0})\n{RoundTo(BiteTimer, 2)}s\n{Joined}\n{FishingHole}");
 		TextRender.SetText(InfoText);
 
 		BP_Tick(DeltaSeconds);

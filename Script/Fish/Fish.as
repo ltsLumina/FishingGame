@@ -39,34 +39,18 @@ class AFish : AActor
     UPROPERTY(Category = "Fish")
     UFishItem Item;
 
-    UPROPERTY(Category = "Fish", VisibleInstanceOnly)
+    UPROPERTY(Category = "Fish", NotVisible)
     FFishSizeData SizeData;
-
-    UPROPERTY(Category = "Fish")
-    FString ValidationMsg;
-
-    UFUNCTION(BlueprintOverride)
-    void ConstructionScript()
-    {
-        if (Item == nullptr)
-        {
-            ValidationMsg = "Fish Item data must be assigned in the Fish Blueprint!";
-            return;
-        }
-    }
 
     default bReplicates = true;
 
-    FFishItemData GetFishData()
+    void Spawn(UFishItem InItem)
     {
-        return Item.FishData;
-    }
+        Item = InItem;
 
-    UFUNCTION(BlueprintOverride)
-    void BeginPlay()
-    {
-        check(Item != nullptr, "FishData must be assigned in the Fish Blueprint!");
-        auto Data = GetFishData();
+        auto Data = Item.FishData;
+        
+        Mesh.SetStaticMesh(Data.Mesh);
 
         if (Data.PreferredBaits.Num() == 0)
         {
@@ -97,7 +81,7 @@ class AFish : AActor
 
     void OnCaught(AFishCharacter Catcher)
     {
-        auto FishData = GetFishData();
+        auto FishData = Item.FishData;
 
 		FString SizeInformation = SizeData.IsTiny ? "Tiny" : (SizeData.IsLarge ? "Large" : "Normal");
 		FString HookInformation = f"{Item.GetItemName()} \nSize: {SizeData.Size} cm \nWeight: {SizeData.Weight} kg \nType: {FishData.FishType} \nRarity: {FishData.Rarity} \nSize Category: {SizeInformation}";
