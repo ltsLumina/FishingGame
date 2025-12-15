@@ -2,6 +2,8 @@
 
 A small MMO-style fishing game with proximity voice chat and basic multiplayer features.
 
+[![wakatime](https://wakatime.com/badge/user/018b0c84-c3a0-4f65-b3b0-741d40b02439/project/0cd9e477-5c5d-4e74-8408-d3bfe1552ab0.svg)](https://wakatime.com/badge/user/018b0c84-c3a0-4f65-b3b0-741d40b02439/project/0cd9e477-5c5d-4e74-8408-d3bfe1552ab0)
+
 # planned features
 
 ## crafted fishing rods - "spectral rods"
