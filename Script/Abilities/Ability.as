@@ -40,6 +40,9 @@ class UAbility : UObject
 	UFUNCTION()
 	bool CommitAbility(UAbilityData AbilityData, AFishCharacter Instigator)
 	{
+		check(AbilityData != nullptr, "AbilityData cannot be null in CommitAbility.");
+		check(Instigator != nullptr, "Instigator cannot be null in CommitAbility.");
+
 		if (!AbilityData.CanUse(Instigator))
 		{
 			PrintWarning("Ability conditions not met for: " + AbilityData.Details.Name.ToString());
@@ -50,25 +53,29 @@ class UAbility : UObject
 
 		auto CostType = AbilityData.Details.Cost.Type;
 
-		if (CostType == ECostType::None)
-        {
-
-        }
-
-		if (CostType == ECostType::MP)
+		switch (CostType)
 		{
-			if (Params.Mana < AbilityData.Details.Cost.Amount)
-			{
-				PrintWarning("Not enough MP to use ability: " + AbilityData.Details.Name.ToString());
+			case ECostType::None:
+				// No cost to pay
+				break;
+
+			case ECostType::MP:
+				if (Params.Mana < AbilityData.Details.Cost.Amount)
+				{
+					PrintWarning("Not enough MP to use ability: " + AbilityData.Details.Name.ToString());
+					return false;
+				}
+
+				Params.Mana -= AbilityData.Details.Cost.Amount;
+				break;
+				
+			case ECostType::Other:
+				PrintWarning("Ability uses 'Other' cost type, which is not implemented yet: " + AbilityData.Details.Name.ToString());
+				break;
+
+			default:
+				PrintError("Unknown cost type in CommitAbility for ability: " + AbilityData.Details.Name.ToString());
 				return false;
-			}
-
-			Params.Mana -= AbilityData.Details.Cost.Amount;
-		}
-
-		if (CostType == ECostType::Other)
-		{
-			PrintWarning("Ability uses 'Other' cost type, which is not implemented yet: " + AbilityData.Details.Name.ToString());
 		}
 
         // If all checks passed, invoke the ability and its cooldown, and trigger global cooldown

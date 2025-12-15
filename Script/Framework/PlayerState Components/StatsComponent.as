@@ -1,5 +1,8 @@
 class UStatsComponent : UFishComponentBase
 {
+    UPROPERTY(Category = "Rod")
+    UFishingRod EquippedRod;
+
     UPROPERTY(Category = "Stats", SaveGame)
     FStats Stats;
 

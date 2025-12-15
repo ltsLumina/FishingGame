@@ -339,6 +339,11 @@ class UFishingComponent : UActorComponent
 			return;
 		}
 
+		// by this point, the fish is successfully hooked
+
+		//TODO: fishing rod ability effects
+		//Character.AbilityHandler.InvokeAbility(Character.State.StatsComponent.EquippedRod.Details.Ability); // TODO: Fishing Rod effects are essentially just abilities, but invoked automatically on hook.
+
 		if (CurrentFish != nullptr)
 		{
 			if (Data.Rarity > EFishRarity::Aetherial && UAbilityHandlerComponent::Get(Character).HasAbilityByName("Thaliak's Favor"))
@@ -361,6 +366,7 @@ class UFishingComponent : UActorComponent
 
 		// Store locally before StopFishing clears 'CurrentFish'
 		UFishItem CaughtFish = CurrentFish;
+		PreviouslyCaughtFish = CurrentFish;
 		StopFishing();
 
 		BP_Hook(CaughtFish);
@@ -368,6 +374,9 @@ class UFishingComponent : UActorComponent
 
 	UPROPERTY()
 	UFishItem CurrentMoochableFish;
+
+	UPROPERTY()
+	UFishItem PreviouslyCaughtFish;
 
 	/**
 	 * Selects a fish to be caught using weighted random selection based on fish rarity.
