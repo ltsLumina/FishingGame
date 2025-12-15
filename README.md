@@ -36,6 +36,7 @@ for all players who are fishing in the hole.
 # style & theme
 - low poly, toon shaded, cartoony
 - not quite webfishing, but in that same vain
+- [maybe like this?](https://games.tiscali.cz/tv/coven-of-the-chicken-foot-oznameni-89739)
 
 ## Setup / How to Run
 
