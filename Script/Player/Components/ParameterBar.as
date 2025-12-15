@@ -1,10 +1,10 @@
 class UParameterBar : UFishComponentBase
 {
-	UPROPERTY(Category = "Parameter Bar", VisibleAnywhere)
-	float MP = 500;
+	UPROPERTY(Category = "Parameter Bar", VisibleAnywhere, BlueprintReadOnly)
+	float Mana = 500;
 
-	UPROPERTY(Category = "Parameter Bar", VisibleAnywhere)
-	float MaxMP = 500;
+	UPROPERTY(Category = "Parameter Bar", VisibleAnywhere, BlueprintReadOnly)
+	float MaxMana = 500;
 
 	UPROPERTY(Category = "Parameter Bar", EditAnywhere)
 	float RegenerationRate = 5.0f;
@@ -22,7 +22,7 @@ class UParameterBar : UFishComponentBase
 	{
 		Super::BeginPlay();
 
-		MP = MaxMP;
+		Mana = MaxMana;
 	}
 
 	void LatePlay() override
@@ -53,7 +53,7 @@ class UParameterBar : UFishComponentBase
 		// While fishing: accumulate regeneration into StoredMP (don't apply to MP yet).
 		if (IsFishing)
 		{
-			float FreeSpace = Math::Max(0.0f, MaxMP - MP - StoredMP);
+			float FreeSpace = Math::Max(0.0f, MaxMana - Mana - StoredMP);
 			if (FreeSpace > 0.0f)
 				StoredMP = Math::Min(StoredMP + DeltaSeconds * RegenerationRate, StoredMP + FreeSpace);
 		}
@@ -62,25 +62,60 @@ class UParameterBar : UFishComponentBase
 			// If we were storing regen while fishing, grant it now.
 			if (StoredMP > 0.0f)
 			{
-				MP = Math::Min(MP + StoredMP, MaxMP);
+				Mana = Math::Min(Mana + StoredMP, MaxMana);
 				StoredMP = 0.0f;
 			}
 
 			// Normal regeneration when not fishing.
-			if (MP < MaxMP)
-				MP = Math::Min(MP + DeltaSeconds * RegenerationRate, MaxMP);
+			if (Mana < MaxMana)
+				Mana = Math::Min(Mana + DeltaSeconds * RegenerationRate, MaxMana);
 		}
 
 		// Update time till full based on current effective MP (including stored regen).
-		float EffectiveMP = Math::Min(MP + StoredMP, MaxMP);
-		float TimeToFullSeconds = (MaxMP - EffectiveMP) / RegenerationRate;
+		float EffectiveMP = Math::Min(Mana + StoredMP, MaxMana);
+		float TimeToFullSeconds = (MaxMana - EffectiveMP) / RegenerationRate;
 		TimeTillFullMP = FTimespan::FromSeconds(TimeToFullSeconds);
 	}
 
 	UFUNCTION(NotBlueprintCallable)
 	void OnLevelUp(int NewLevel)
 	{
-		MP = MPPerLevelCurve.GetFloatValue(NewLevel);
-		MaxMP = MPPerLevelCurve.GetFloatValue(NewLevel);
+		Mana = MPPerLevelCurve.GetFloatValue(NewLevel);
+		MaxMana = MPPerLevelCurve.GetFloatValue(NewLevel);
+	}
+
+	UFUNCTION(BlueprintPure)
+	bool HasEnoughMana(float CostAmount)
+	{
+		return Mana >= CostAmount;
+	}
+
+	UFUNCTION(BlueprintPure, DisplayName = "Has Enough Mana")
+	bool HasEnoughManaByData(UAbilityData& AbilityData)
+	{
+		return HasEnoughMana(AbilityData.Details.Cost.Amount);
+	}
+
+	UFUNCTION(BlueprintPure)
+	float GetManaPercentage()
+	{
+		return Mana / MaxMana;
+	}
+
+	UFUNCTION()
+	bool ConsumeMana(float Amount)
+	{
+		if (HasEnoughMana(Amount))
+		{
+			Mana -= Amount;
+			return true;
+		}
+		return false;
+	}
+
+	UFUNCTION()
+	void RestoreMana(float Amount)
+	{
+		Mana = Math::Min(Mana + Amount, MaxMana);
 	}
 };

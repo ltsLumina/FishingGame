@@ -100,20 +100,14 @@ class UHotbarSlot : UUserWidget
 			return false;
 
 		AFishCharacter Character = GetFishCharacterBase();
+		auto Param = UParameterBar::Get(Character);
+		UAbilityHandlerComponent AbilityHandler = Character.AbilityHandler;
 
 		bool CanUse = AbilityData.CanUse(Character);
+		bool HasMP = Param.HasEnoughMana(AbilityData.Details.Cost.Amount);
+		bool HasAbility = AbilityHandler.HasAbility(AbilityData);
 
-		auto StatusComp = UParameterBar::Get(Character);
-		bool HasMP = StatusComp.MP >= AbilityData.Details.Cost.Amount;
-
-		bool LevelRequirementMet = false;
-		auto PlayerState = Cast<AFishPlayerState>(Character.PlayerState);
-		if (PlayerState != nullptr)
-		{
-			LevelRequirementMet = PlayerState.ExperienceComponent.ExperienceData.Level >= AbilityData.Details.UnlockLevel;
-		}
-
-		return CanUse && HasMP && LevelRequirementMet;
+		return CanUse && HasMP && HasAbility;
 	}
 
 	UFUNCTION(BlueprintPure)

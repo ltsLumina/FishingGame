@@ -46,7 +46,6 @@ class UExperienceComponent : UFishComponentBase
 		Super::LatePlay();
 		BP_LatePlay();
 
-		OnLevelUp.AddUFunction(this, n"HandleLevelUp");
 		Character.FishingComponent.OnFishCaught.AddUFunction(this, n"OnFishCaught");
 	}
 
@@ -55,7 +54,7 @@ class UExperienceComponent : UFishComponentBase
 	{}
 
 	UFUNCTION(NotBlueprintCallable)
-	void OnFishCaught(AFish Fish)
+	private void OnFishCaught(AFish Fish)
 	{
 		GainExperience(Fish.Item.FishData.ExperienceValue);
 	}
@@ -88,29 +87,6 @@ class UExperienceComponent : UFishComponentBase
 	UFUNCTION(BlueprintEvent, DisplayName = "Level Up")
 	void BP_OnLevelUp(int NewLevel)
 	{}
-
-	UFUNCTION(NotBlueprintCallable)
-	void HandleLevelUp(int NewLevel)
-	{
-		// Check for ability unlocks
-		UAbilityHandlerComponent AbilityHandler = UAbilityHandlerComponent::Get(Character);
-		if (AbilityHandler != nullptr)
-		{
-			UDataTable AbilityUnlockTable = AbilityHandler.AbilityUnlockTable;
-			if (AbilityUnlockTable != nullptr)
-			{
-				TArray<FAbilityUnlockInfo> UnlockInfos;
-				AbilityUnlockTable.GetAllRows(UnlockInfos);
-				for (FAbilityUnlockInfo UnlockInfo : UnlockInfos)
-				{
-					if (UnlockInfo.UnlockLevel == NewLevel)
-					{
-						AbilityHandler.GrantAbility(UnlockInfo.Ability);
-					}
-				}
-			}
-		}
-	}
 
 	UFUNCTION(Category = "Save Game")
 	bool SaveExperience()

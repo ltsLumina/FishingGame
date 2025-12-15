@@ -311,8 +311,6 @@ class UInventoryComponent : UFishComponentBase
 			}
 		}
 
-		Print("Loaded inventory with " + Items.Num() + " items.");
-
 		return true;
 	}
 };

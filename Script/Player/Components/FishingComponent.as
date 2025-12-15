@@ -341,15 +341,13 @@ class UFishingComponent : UActorComponent
 
 		if (CurrentFish != nullptr)
 		{
-			if (Data.Rarity > EFishRarity::Aetherial) // TODO: check if Thaliak's Favor is unlocked
+			if (Data.Rarity > EFishRarity::Aetherial && UAbilityHandlerComponent::Get(Character).HasAbilityByName("Thaliak's Favor"))
 			{
-				Print(f"You've hooked a rare \"{CurrentFish.BaseData.ItemName}\"!", 3, FLinearColor::Green);
+				Print(f"You've hooked a rare \"{CurrentFish.BaseData.ItemName}\"!\nA stack of Angler's Art has been granted.", 3, FLinearColor::Green);
 				Tokens.Add(FName("Angler's Art"), 1);
 				StatusEffects.Add(FName("Angler's Art"), 1); // TODO: separate system with data assets so I can display the icon.
 			}
 		}
-
-		// UCollectionComponent::Get(Character.PlayerState).AddToCollection(CaughtFish.Item);
 
 		if (Data.IsMoochable)
 		{

@@ -57,13 +57,13 @@ class UAbility : UObject
 
 		if (CostType == ECostType::MP)
 		{
-			if (Params.MP < AbilityData.Details.Cost.Amount)
+			if (Params.Mana < AbilityData.Details.Cost.Amount)
 			{
 				PrintWarning("Not enough MP to use ability: " + AbilityData.Details.Name.ToString());
 				return false;
 			}
 
-			Params.MP -= AbilityData.Details.Cost.Amount;
+			Params.Mana -= AbilityData.Details.Cost.Amount;
 		}
 
 		if (CostType == ECostType::Other)

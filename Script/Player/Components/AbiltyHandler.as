@@ -25,7 +25,7 @@ class UAbilityHandlerComponent : UFishComponentBase
 		AbilityUnlockTable.GetAllRows(UnlockInfos);
 		check(UnlockInfos.Num() > 0, "AbilityUnlockTable has no rows!");
 		check(UnlockInfos[0].Ability != nullptr, "AbilityUnlockTable has invalid AbilityData references! (IT CLEARED ITSELF AGAINNNNNNNNNNNNNNNNNNN)");
-		
+
 		for (FAbilityUnlockInfo Info : UnlockInfos)
 		{
 			if (Info.UnlockLevel <= 1) // Starting abilities
@@ -34,6 +34,8 @@ class UAbilityHandlerComponent : UFishComponentBase
 				GrantAbility(AbilityData);
 			}
 		}
+
+		BP_BeginPlay();
 	}
 
 	UFUNCTION(BlueprintEvent, DisplayName = "Begin Play")
@@ -43,16 +45,36 @@ class UAbilityHandlerComponent : UFishComponentBase
 	void LatePlay() override
 	{
 		Super::LatePlay();
+
+		UExperienceComponent::Get(State).OnLevelUp.AddUFunction(this, n"OnLevelUp");
+
 		BP_LatePlay();
 	}
 
+	UFUNCTION(NotBlueprintCallable)
+	void OnLevelUp(int NewLevel)
+	{
+		TArray<FAbilityUnlockInfo> UnlockInfos;
+		AbilityUnlockTable.GetAllRows(UnlockInfos);
+
+		for (FAbilityUnlockInfo Info : UnlockInfos)
+		{
+			if (Info.UnlockLevel == NewLevel)
+			{
+				UAbilityData AbilityData = Info.Ability;
+				GrantAbility(AbilityData);
+			}
+		}
+	}
+
 	UFUNCTION(BlueprintEvent, DisplayName = "Late Play")
-	void BP_LatePlay() {}
+	void BP_LatePlay()
+	{}
 
 	UFUNCTION(NotBlueprintCallable)
 	void InvokeAbility(UAbilityData Ability)
 	{
-		//Print("Ability invoked: " + Ability.GetName());
+		// Print("Ability invoked: " + Ability.GetName());
 
 		Invoke(Ability);
 	}
@@ -95,6 +117,25 @@ class UAbilityHandlerComponent : UFishComponentBase
 		}
 	}
 
+	UFUNCTION(Category = "Abilities", BlueprintPure)
+	bool HasAbility(UAbilityData AbilityData)
+	{
+		return Abilities.Contains(AbilityData);
+	}
+
+	UFUNCTION(Category = "Abilities", BlueprintPure, DisplayName = "Has Ability")
+	bool HasAbilityByName(FString AbilityName)
+	{
+		for (UAbilityData AbilityData : Abilities)
+		{
+			if (AbilityData.Details.Name.ToString() == AbilityName)
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
 	UFUNCTION(Category = "Save Game")
 	bool SaveAbilities()
 	{
@@ -111,6 +152,7 @@ class UAbilityHandlerComponent : UFishComponentBase
 				}
 			}
 		}
+
 		SaveGame.UnlockedAbilities = UnlockedAbilities;
 		return Gameplay::SaveGameToSlot(SaveGame, "PlayerAbilities", 0);
 	}
@@ -118,7 +160,9 @@ class UAbilityHandlerComponent : UFishComponentBase
 	UFUNCTION(Category = "Save Game")
 	bool LoadAbilities()
 	{
+#if EDITOR
 		Gameplay::DeleteGameInSlot("PlayerAbilities", 0); // TEMP DELETE
+#endif
 
 		auto SaveGame = Gameplay::LoadGameFromSlot("PlayerAbilities", 0);
 		if (SaveGame == nullptr)
@@ -131,7 +175,10 @@ class UAbilityHandlerComponent : UFishComponentBase
 		for (FAbilityUnlockInfo UnlockInfo : LoadedSave.UnlockedAbilities)
 		{
 			if (!Abilities.Contains(UnlockInfo.Ability))
+			{
 				GrantAbility(UnlockInfo.Ability);
+				Print("Loaded ability from save: " + UnlockInfo.Ability.Details.Name.ToString(), 3.0f, FLinearColor::Green);
+			}
 		}
 
 		return true;

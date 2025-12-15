@@ -57,9 +57,6 @@ struct FAbilityDetails
 	UPROPERTY(Meta = (MultiLine))
 	FText Effect;
 
-	UPROPERTY(Meta = (UIMin = "1", UIMax = "50"))
-	int UnlockLevel = 1;
-
 	UPROPERTY()
 	UTexture2D Icon;
 
