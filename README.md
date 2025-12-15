@@ -28,6 +28,9 @@ for all players who are fishing in the hole.
 - polymarket type beat
 - bet on whether you will catch a certain fish in X amount of attempts.
 
+## playable instruments
+- guitar for sure
+
 # style & theme
 - low poly, toon shaded, cartoony
 - not quite webfishing, but in that same vain
