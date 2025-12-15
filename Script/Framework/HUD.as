@@ -12,7 +12,7 @@ class AFishHUD : AHUD
 #if EDITOR
 		System::SetTimer(this, n"LoadDelay", 0.5f, false);
 #else
-		System::SetTimer(this, n"LoadDelay", 3f, false);
+		System::SetTimer(this, n"LoadDelay", 3.0f, false);
 #endif
 		BP_BeginPlay();
 	}
