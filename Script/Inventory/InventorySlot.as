@@ -9,17 +9,28 @@ class UInventorySlot : UObject
     UFUNCTION(Category = "Inventory", BlueprintPure)
     FFishSizeData GetFishSizeData()
     {
-        return InstanceData.FishSizeData;
+        return InstanceData.SizeData;
     }
 }
 
 struct FInventoryInstanceData
 {
     UPROPERTY(Category = "Inventory", SaveGame)
-    FFishSizeData FishSizeData;
+    FFishSizeData SizeData;
 
-    FInventoryInstanceData(FFishSizeData InFishSizeData)
+    UPROPERTY(Category = "Inventory", SaveGame)
+	EFishTag Tag;
+
+    FInventoryInstanceData(FFishSizeData InFishSizeData, EFishTag InTag = EFishTag::None)
     {
-        FishSizeData = InFishSizeData;
+        SizeData = InFishSizeData;
+        Tag = InTag;
     }
+}
+
+enum EFishTag
+{
+    None,
+    Umbral,
+    Astral
 }

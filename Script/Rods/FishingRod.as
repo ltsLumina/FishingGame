@@ -23,7 +23,4 @@ struct FRodDetails
 
     UPROPERTY()
     UAbilityData Ability;
-
-    UPROPERTY()
-    UQuest UnlockQuest;
 };

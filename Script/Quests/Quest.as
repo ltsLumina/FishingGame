@@ -52,9 +52,15 @@ struct FQuestReward
     UPROPERTY(Category = "Quest | Reward")
     int32 Experience = 100;
 
-    UPROPERTY(Category = "Quest | Reward", Meta=(InlineEditConditionToggle))
+    UPROPERTY(Category = "Quest | Reward", Meta=(InlineEditConditionToggle), BlueprintHidden)
     bool GrantsItem;
 
     UPROPERTY(Category = "Quest | Reward", Meta=(EditCondition="GrantsItem"))
     TMap<UBait, int> Items;
+
+    UPROPERTY(Category = "Quest | Reward", Meta=(InlineEditConditionToggle), BlueprintHidden)
+    bool GrantsFishingRod;
+
+    UPROPERTY(Category = "Quest | Reward", Meta=(EditCondition="GrantsFishingRod"))
+    UFishingRod FishingRod;
 }

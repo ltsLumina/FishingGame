@@ -449,7 +449,7 @@ class UFishingComponent : UActorComponent
 		Fish.Spawn(FishItem);
 
 		auto State = Cast<AFishPlayerState>(Cast<AFishCharacter>(GetOwner()).PlayerState);
-		State.InventoryComponent.AddItem(Fish.Item, FInventoryInstanceData(Fish.SizeData), 1);
+		State.InventoryComponent.AddItem(Fish.Item, FInventoryInstanceData(Fish.SizeData, Fish.Tag), 1);
 
 		OnFishCaught.Broadcast(Fish);
 	}
