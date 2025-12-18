@@ -12,14 +12,14 @@ class AFishCharacter : AFishEntity
 		Super::BeginPlay();
 
 		AbilityHandler = UAbilityHandlerComponent::Get(this); // using BP child so I need to get it here.
-		FishingComponent = UFishingComponent::Get(this); // using BP child so I need to get it here.
+		FishingComponent = UFishingComponent::Get(this);	  // using BP child so I need to get it here.
 
 		BP_BeginPlay();
 	}
 
 	UFUNCTION(BlueprintEvent, DisplayName = "Begin Play")
-    void BP_BeginPlay()
-    {}
+	void BP_BeginPlay()
+	{}
 
 	FText InfoText;
 	int ExperienceLevel;
@@ -77,6 +77,12 @@ class AFishCharacter : AFishEntity
 	UFUNCTION(BlueprintEvent)
 	void HotbarSlotPressed(int SlotIndex)
 	{}
+
+	UFUNCTION(Meta = (ExpandBoolAsExecs = "ReturnValue"), Category = "Pawn", DisplayName = "Is Locally Controlled")
+	bool IsLocallyControlled_FishChar()
+	{
+		return IsLocallyControlled();
+	}
 };
 
 UFUNCTION(BlueprintPure)
@@ -115,4 +121,20 @@ bool IsEditor()
 #else
 	return false;
 #endif
+}
+
+UFUNCTION(Category = "Editor", Meta=(ExpandBoolAsExecs="ReturnValue", Keywords="editor,pc,platform"), DisplayName="Is Editor")
+bool IsEditor_Expanded()
+{
+#if EDITOR
+	return true;
+#else
+	return false;
+#endif
+}
+
+UFUNCTION(Meta = (ExpandBoolAsExecs = "ReturnValue"), Category = "Pawn", DisplayName = "Is Locally Controlled")
+bool IsLocallyControlled_Static(APawn Pawn)
+{
+	return Pawn.IsLocallyControlled();
 }

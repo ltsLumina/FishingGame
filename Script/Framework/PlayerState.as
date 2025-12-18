@@ -1,5 +1,3 @@
-event void FOnStatsLoadingComplete(bool bSuccess);
-
 class AFishPlayerState : APlayerState
 {
 	UPROPERTY(Category = "Components", VisibleInstanceOnly)

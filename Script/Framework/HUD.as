@@ -9,22 +9,19 @@ class AFishHUD : AHUD
 	UFUNCTION(BlueprintOverride)
 	void BeginPlay()
 	{
-#if EDITOR
-		System::SetTimer(this, n"LoadDelay", 0.5f, false);
-#else
-		System::SetTimer(this, n"LoadDelay", 3.0f, false);
-#endif
 		BP_BeginPlay();
+
+		System::SetTimer(this, n"LatePlay", 0.2f, false);
 	}
 
 	UFUNCTION(NotBlueprintCallable)
-	void LoadDelay()
+	void LatePlay()
 	{
-		HUDWidget = WidgetBlueprint::CreateWidget(HUDWidgetClass, Gameplay::GetPlayerController(0));
+		HUDWidget = WidgetBlueprint::CreateWidget(HUDWidgetClass, GetOwningPlayerController());
 		HUDWidget.AddToViewport();
 
-		Widget::SetInputMode_GameAndUIEx(Gameplay::GetPlayerController(0), HUDWidget, EMouseLockMode::LockInFullscreen);
-		Gameplay::GetPlayerController(0).bShowMouseCursor = true;
+		Widget::SetInputMode_GameAndUIEx(GetOwningPlayerController(), HUDWidget, EMouseLockMode::LockInFullscreen);
+		GetOwningPlayerController().bShowMouseCursor = true;
 
 		AddNotification("Welcome to Fishing Game!", 3.5f);
 	}
