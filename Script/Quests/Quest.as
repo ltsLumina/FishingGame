@@ -62,5 +62,5 @@ struct FQuestReward
     bool GrantsFishingRod;
 
     UPROPERTY(Category = "Quest | Reward", Meta=(EditCondition="GrantsFishingRod"))
-    UFishingRod FishingRod;
+    URodData FishingRod;
 }

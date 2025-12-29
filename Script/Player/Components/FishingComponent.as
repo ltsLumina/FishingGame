@@ -2,7 +2,7 @@ event void FOnStateChange(EFishingState NewState);
 event void FOnSelectBait(UBait Bait);
 event void FOnFishCaught(AFish Fish);
 
-class UFishingComponent : UActorComponent
+class UFishingComponent : UFishComponentBase
 {
 	UPROPERTY(Category = "Fishing | State", VisibleAnywhere, BlueprintReadOnly)
 	EFishingState CurrentState = EFishingState::NotFishing;
@@ -108,7 +108,13 @@ class UFishingComponent : UActorComponent
 		{
 			auto Data = FishItem.FishData;
 
-			if (CurrentBait == nullptr || !Data.PreferredBaits.Contains(CurrentBait)) // if no bait or wrong bait, continue
+			if (CurrentBait == nullptr)
+				continue;
+
+			if (!Data.PreferredBaits.Contains(CurrentBait))
+				continue;
+
+			if (Data.MinimumGathering > Stats::GetStats(Character).Gathering || Data.MinimumPerception > Stats::GetStats(Character).Perception)
 				continue;
 
 			for (UFishCondition Condition : Data.Conditions)
@@ -121,7 +127,6 @@ class UFishingComponent : UActorComponent
 					throw(f"Fish {FishItem.GetItemName()} has a null FishCondition!");
 					continue;
 				}
-
 				if (CurrentIgnoredConditions.Contains(Condition.GetClass()))
 				{
 					Print(f"An ability is ignoring condition: {Condition.Name} for fish: {FishItem.BaseData.ItemName}", 0.0f, FLinearColor::Yellow);
@@ -160,22 +165,21 @@ class UFishingComponent : UActorComponent
 
 	FTimerHandle MissedTimerHandle;
 
-	AFishCharacter Character;
 	UFishingComponent FishingComponent;
 	ATimeManager TimeManager;
 	AWeatherManager WeatherManager;
 
 	UFUNCTION(BlueprintOverride)
-	void BeginPlay()
+	void BeginPlay() override
 	{
-		System::SetTimer(this, n"LatePlay", 0.2f, false);
-
+		Super::BeginPlay();
 		BP_BeginPlay();
 	}
 
-	UFUNCTION(NotBlueprintCallable)
-	void LatePlay()
+	void LatePlay() override
 	{
+		Super::LatePlay();
+
 		Character = Cast<AFishCharacter>(GetOwner());
 		FishingComponent = Character.FishingComponent;
 		TimeManager = Gameplay::GetActorOfClass(ATimeManager);
@@ -326,7 +330,7 @@ class UFishingComponent : UActorComponent
 
 		FFishItemData Data = CurrentFish.FishData;
 
-		float PlayerGathering = GetFishPlayerStateBase().StatsComponent.Stats.Gathering;
+		float PlayerGathering = GetFishPlayerStateBase().StatsComponent.ModifiedStats.Gathering;
 		float GatheringDiff = Math::Max(0.0f, PlayerGathering - Data.MinimumGathering);
 		float CurrentCatchRate = Math::Clamp(Data.CatchRate + GatheringDiff * 0.5f, 0.0f, 100.0f);
 
@@ -341,8 +345,8 @@ class UFishingComponent : UActorComponent
 
 		// by this point, the fish is successfully hooked
 
-		//TODO: fishing rod ability effects
-		//Character.AbilityHandler.InvokeAbility(Character.State.StatsComponent.EquippedRod.Details.Ability); // TODO: Fishing Rod effects are essentially just abilities, but invoked automatically on hook.
+		// TODO: fishing rod ability effects
+		// Character.AbilityHandler.InvokeAbility(Character.State.StatsComponent.EquippedRod.Details.Ability); // TODO: Fishing Rod effects are essentially just abilities, but invoked automatically on hook.
 
 		if (CurrentFish != nullptr)
 		{
@@ -445,10 +449,9 @@ class UFishingComponent : UActorComponent
 		Fish.SetActorHiddenInGame(true); // The locally spawned fish is just for data purposes; the server-spawned one is used for visuals.
 		Fish.SetLifeSpan(3);
 		Fish.SetOwner(GetOwner());
-		
+
 		Fish.Spawn(FishItem);
 
-		auto State = Cast<AFishPlayerState>(Cast<AFishCharacter>(GetOwner()).PlayerState);
 		State.InventoryComponent.AddItem(Fish.Item, FInventoryInstanceData(Fish.SizeData, Fish.Tag), 1);
 
 		OnFishCaught.Broadcast(Fish);

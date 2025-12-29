@@ -94,6 +94,9 @@ struct FFishItemData
 	UPROPERTY(Category = "Fish | Info", Meta = (UIMin = "0", UIMax = "1000", Delta = "1"))
 	int MinimumGathering = 0;
 
+	UPROPERTY(Category = "Fish | Info", Meta = (UIMin = "0", UIMax = "1000", Delta = "1"))
+	int MinimumPerception = 0;
+
 	/**
 	 * Experience points awarded when this fish is caught.
 	 */

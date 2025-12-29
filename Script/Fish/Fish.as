@@ -52,6 +52,9 @@ UCLASS(Abstract, NotPlaceable, ClassGroup = "Fishing", Meta = (PrioritizeCategor
 class AFish : AActor
 {
 	UPROPERTY(DefaultComponent, RootComponent)
+	USceneComponent Root;
+
+	UPROPERTY(DefaultComponent)
 	UStaticMeshComponent Mesh;
 
 	UPROPERTY(Category = "Fish")

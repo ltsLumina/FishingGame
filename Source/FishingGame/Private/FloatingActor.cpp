@@ -4,8 +4,6 @@
 #include "FloatingActor.h"
 #include "Components/BillboardComponent.h"
 #include "Components/SceneComponent.h"
-#include "GameFramework/Character.h"
-#include "Kismet/GameplayStatics.h"
 
 // Sets default values
 AFloatingActor::AFloatingActor()
@@ -33,15 +31,54 @@ void AFloatingActor::BeginPlay()
 void AFloatingActor::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	
-	AddActorWorldOffset(FVector::OneVector * Speed * DeltaTime);
-	UE_LOG(LogTemp, Warning, TEXT("Floating Actor Tick"));
-
-	// set timer for 1 second, then log
-	FTimerHandle TimerHandle;
-	GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this]
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Floating Actor Timer Triggered"));
-	}, 1.0f, true);
 }
+
+void AFloatingActor::AdvancedDisplay(int32 Integer, float AdvancedVariable)
+{
+}
+
+FString AFloatingActor::WithoutCompactTitle(bool InBool)
+{
+	return "Hello World";
+}
+
+FString AFloatingActor::WithCompactTitle(bool InBool)
+{
+	return "Hello World";
+}
+
+void AFloatingActor::FunctionDisplayName()
+{
+}
+
+bool AFloatingActor::TryPetDog(const FName Name)
+{
+	return true;
+}
+
+bool AFloatingActor::IsValidStaticMesh() const
+{
+	return true;
+}
+
+void AFloatingActor::SwitchAnimalByName(FString Name, EAnimalType& Animal)
+{
+}
+
+bool AFloatingActor::ExpandBoolAsExecsFunction()
+{
+	return true;
+}
+
+void AFloatingActor::IsAboveFreezing(float Temperature, bool& bFreezing)
+{
+}
+
+bool AFloatingActor::NativeEvent_Implementation()
+{
+	return true;
+}
+
+
+
 
