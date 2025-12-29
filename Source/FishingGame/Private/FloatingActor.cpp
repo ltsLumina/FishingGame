@@ -72,6 +72,7 @@ bool AFloatingActor::ExpandBoolAsExecsFunction()
 
 void AFloatingActor::IsAboveFreezing(float Temperature, bool& bFreezing)
 {
+	
 }
 
 bool AFloatingActor::NativeEvent_Implementation()
