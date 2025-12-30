@@ -28,6 +28,16 @@ struct FInventoryInstanceData
     }
 }
 
+// TODO: update InventoryInstanceData to use this instead of embedding size and tag directly
+struct FFishInstanceData
+{
+    UPROPERTY(Category = "Fish", SaveGame)
+    FFishSizeData SizeData;
+
+    UPROPERTY(Category = "Fish", SaveGame)
+    EFishTag Tag;
+}
+
 enum EFishTag
 {
     None,

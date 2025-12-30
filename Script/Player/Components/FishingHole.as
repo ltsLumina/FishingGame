@@ -1,6 +1,6 @@
 event void FOnSpectralShift();
 
-UCLASS(ClassGroup="Fishing")
+UCLASS(ClassGroup = "Fishing")
 class UFishingHoleComponent : UActorComponent
 {
 	UPROPERTY(Category = "Fishing | Area", DisplayName = "Name")
@@ -10,13 +10,16 @@ class UFishingHoleComponent : UActorComponent
 	UPROPERTY(Category = "Fishing | Area")
 	TArray<UFishItem> CatchableFish;
 
+	UPROPERTY(Category = "Fishing | Area")
+	TArray<AFishCharacter> NearbyPlayers;
+
 	UPROPERTY(Category = "Fishing | Area", VisibleInstanceOnly)
 	bool IsSpectral;
 
 	UPROPERTY(Category = "Events")
 	FOnSpectralShift OnSpectralShift;
 
-	APawn Character;
+	AFishCharacter Character;
 	UFishingComponent FishingComponent;
 
 	UFUNCTION(BlueprintOverride)
@@ -58,6 +61,8 @@ class UFishingHoleComponent : UActorComponent
 		if (FishingComponent == nullptr)
 			return;
 
+		NearbyPlayers.AddUnique(Character);
+
 		FishingComponent.OnSelectBait.AddUFunction(this, n"UpdateCatchableFish");
 
 		FishingComponent.CurrentFishingHole = this;
@@ -81,15 +86,22 @@ class UFishingHoleComponent : UActorComponent
 		if (FishingComponent == nullptr)
 			return;
 
+		Character.State.StatsComponent.UndoStatModifiers();
+
+		NearbyPlayers.RemoveSingleSwap(Character);
+
 		FishingComponent.OnSelectBait.UnbindObject(this);
 
-		FishingComponent.CurrentFishingHole = nullptr; 
+		FishingComponent.CurrentFishingHole = nullptr;
 		FishingComponent.UpdateCatchableFish();
 	}
 
-	UFUNCTION(Meta=(AdvancedDisplay="bOverride", ReturnDisplayName="Success"))
+	UFUNCTION(Meta = (AdvancedDisplay = "bOverride", ReturnDisplayName = "Success"))
 	bool TrySpectralShift(UBait Bait, bool bOverride = false)
 	{
+		if (IsSpectral) // acts as a cooldown
+			return false;
+
 		if (!bOverride && !Bait.IsSpectral)
 			return false;
 
@@ -101,7 +113,8 @@ class UFishingHoleComponent : UActorComponent
 		}
 
 		IsSpectral = RollPercentChance(Bait::GetSpectralChance(Bait));
-		if (!IsSpectral) return false;
+		if (!IsSpectral)
+			return false;
 
 		FishingComponent.UpdateCatchableFish();
 		Print("The fishing hole has spectral shifted!", 5.0f, FLinearColor::Purple);
@@ -113,5 +126,6 @@ class UFishingHoleComponent : UActorComponent
 	}
 
 	UFUNCTION(BlueprintEvent)
-	void BP_SpectralShift() { }
+	void BP_SpectralShift()
+	{}
 }

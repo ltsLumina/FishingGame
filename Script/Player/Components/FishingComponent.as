@@ -452,7 +452,10 @@ class UFishingComponent : UFishComponentBase
 
 		Fish.Spawn(FishItem);
 
-		State.InventoryComponent.AddItem(Fish.Item, FInventoryInstanceData(Fish.SizeData, Fish.Tag), 1);
+		for (int i = 0; i < State.StatsComponent.ModifiedStats.CatchMultiplier; i++)
+		{
+			State.InventoryComponent.AddItem(Fish.Item, FInventoryInstanceData(Fish.SizeData, Fish.Tag), 1);
+		}
 
 		OnFishCaught.Broadcast(Fish);
 	}

@@ -23,16 +23,32 @@ float FromPercent(float Percent)
     return Percent * 100.0f;
 }
 
-UFUNCTION(BlueprintPure, Category = "Math")
-float AddPercent(float BaseValue, float PercentToAdd)
+UFUNCTION(BlueprintPure, Category = "Math", Meta=(CompactNodeTitle="Add %"))
+float AddPercentMultiplicative(float& BaseValue, float PercentToAdd)
 {
-    return BaseValue * (1.0f + ToPercent(PercentToAdd));
+    BaseValue += (BaseValue * ToPercent(PercentToAdd));
+    return BaseValue;
 }
 
-UFUNCTION(BlueprintPure, Category = "Math")
-float SubtractPercent(float BaseValue, float PercentToSubtract)
+UFUNCTION(BlueprintPure, Category = "Math", Meta=(CompactNodeTitle="Add %"))
+float AddPercentAdditive(float& BaseValue, float PercentToAdd)
 {
-    return BaseValue * (1.0f - ToPercent(PercentToSubtract));
+    BaseValue += ToPercent(PercentToAdd);
+    return BaseValue;
+}
+
+UFUNCTION(BlueprintPure, Category = "Math", Meta=(CompactNodeTitle="Subtract %"))
+float SubtractPercentMultiplicative(float& BaseValue, float PercentToSubtract)
+{
+    BaseValue -= (BaseValue * ToPercent(PercentToSubtract));
+    return BaseValue;
+}
+
+UFUNCTION(BlueprintPure, Category = "Math", Meta=(CompactNodeTitle="Subtract %"))
+float SubtractPercentAdditive(float& BaseValue, float PercentToSubtract)
+{
+    BaseValue -= ToPercent(PercentToSubtract);
+    return BaseValue;
 }
 
 /**

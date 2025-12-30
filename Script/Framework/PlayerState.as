@@ -1,18 +1,18 @@
 class AFishPlayerState : APlayerState
 {
-	UPROPERTY(Category = "Components", VisibleInstanceOnly)
+	UPROPERTY(Category = "Components", NotVisible)
 	UStatsComponent StatsComponent;
 
-	UPROPERTY(Category = "Components", VisibleInstanceOnly)
+	UPROPERTY(Category = "Components", NotVisible)
 	UInventoryComponent InventoryComponent;
 
-	UPROPERTY(Category = "Components", VisibleInstanceOnly)
+	UPROPERTY(Category = "Components", NotVisible)
 	UExperienceComponent ExperienceComponent;
 
-	UPROPERTY(Category = "Components", VisibleInstanceOnly)
+	UPROPERTY(Category = "Components", NotVisible)
 	UQuestComponent QuestComponent;
 
-	UPROPERTY(Category = "Components", VisibleInstanceOnly)
+	UPROPERTY(Category = "Components", NotVisible)
 	UCollectionComponent CollectionComponent;
 
 	UFUNCTION(BlueprintOverride)
@@ -30,7 +30,7 @@ class AFishPlayerState : APlayerState
 
 		BP_BeginPlay();
 
-		System::SetTimer(this, n"LatePlay", 0.2f, false);
+		System::SetTimer(this, n"LatePlay", 0.3f, false);
 	}
 
 	UFUNCTION(BlueprintEvent, DisplayName = "Begin Play")

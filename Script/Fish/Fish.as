@@ -29,17 +29,37 @@ namespace Fish
 		}
 	}
 
-	FFishSizeData GenerateSizeData(FFishItemData Data)
+	float GetRarityWeight(EFishRarity Rarity)
+	{
+		switch (Rarity)
+		{
+			case EFishRarity::Basic:
+				return Fish::BASIC_WEIGHT;
+			case EFishRarity::Aetherial:
+				return Fish::AETHERIAL_WEIGHT;
+			case EFishRarity::Prismatic:
+				return Fish::PRISMATIC_WEIGHT;
+			case EFishRarity::Seraphic:
+				return Fish::SERAPHIC_WEIGHT;
+			case EFishRarity::Iridescent:
+				return Fish::IRIDESCENT_WEIGHT;
+			default:
+				return 100.0f;
+		}
+	}
+
+	UFUNCTION(BlueprintPure, Category = "Fish | Info")
+	FFishSizeData GenerateSizeData(FFishItemData FishItemData)
 	{
 		// Randomize size and weight within span
-		float Size = Math::RandRange(Data.SizeSpan.X, Data.SizeSpan.Y);
+		float Size = Math::RandRange(FishItemData.SizeSpan.X, FishItemData.SizeSpan.Y);
 		float Weight = Size * 0.1f; // Simple formula: weight is 10% of size
 
 		Size = RoundTo(Size, 2);
 		Weight = RoundTo(Weight, 2);
 
-		float SpanMin = Data.SizeSpan.X;
-		float SpanMax = Data.SizeSpan.Y;
+		float SpanMin = FishItemData.SizeSpan.X;
+		float SpanMax = FishItemData.SizeSpan.Y;
 		float SpanRange = Math::Max(0.0001f, SpanMax - SpanMin); // avoid division by zero
 		float Normalized = (Size - SpanMin) / SpanRange;
 
@@ -47,15 +67,16 @@ namespace Fish
 		bool IsTiny = Normalized < 0.25f;
 		bool IsLarge = Normalized > 0.75f;
 
-		int VendorValue = Math::RoundToInt((Size + Weight) * 2 * Math::Max(1, float(Data.Rarity))); // Simple formula: (size + weight) * 2 * rarity
+		int VendorValue = Math::RoundToInt((Size + Weight) * 2 * Math::Max(1, float(FishItemData.Rarity))); // Simple formula: (size + weight) * 2 * rarity
 		return FFishSizeData(Size, Weight, IsTiny, IsLarge, VendorValue);
 	}
 
-	FInventoryInstanceData GenerateInstanceData(FFishItemData Data) // non static version for use in BP
+	UFUNCTION(BlueprintPure, Category = "Fish | Info")
+	FInventoryInstanceData GenerateInstanceData(FFishItemData FishItemData) // non static version for use in BP
 	{
 		FInventoryInstanceData InstanceData;
 		InstanceData.Tag = Fish::Tag::GetRandomTag();
-		InstanceData.SizeData = Fish::GenerateSizeData(Data);
+		InstanceData.SizeData = Fish::GenerateSizeData(FishItemData);
 		return InstanceData;
 	}
 

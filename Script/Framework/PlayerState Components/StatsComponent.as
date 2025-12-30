@@ -1,59 +1,19 @@
 event void FOnRodEquipped(UFishingRod NewRod);
 event void FOnRodUnequipped(UFishingRod OldRod);
 
-namespace FishingRod
+#if EDITOR
+struct FDebugTraitInfo
 {
-	UFishingRod GenerateRod(UObject Outer, URodData RodData)
-	{
-		UFishingRod NewRod = NewObject(Outer, UFishingRod);
-		NewRod.Data = RodData;
-		NewRod.Traits = RodData.Traits.IsCurated ? RodData.Traits.CuratedTraits : RollTraits(NewRod);
-		return NewRod;
-	}
+	UPROPERTY()
+	FString TraitName;
 
-	TArray<TSubclassOf<UTrait>> RollTraits(UFishingRod Rod)
-	{
-		auto Data = Rod.Data;
-		auto Traits = Data.Traits;
+	UPROPERTY()
+	FString Description;
 
-		int TraitCount = 0;
-		auto TraitCountProbabilities = Traits.TraitCountChances;
-
-		float Total = 0.0f;
-		for (float Value : TraitCountProbabilities)
-			Total += Value;
-
-		if (Total > 0.0f)
-		{
-			float RandomRoll = Math::RandRange(0.0f, Total);
-			float CumulativeChance = 0.0f;
-			for (int i = 0; i < TraitCountProbabilities.Num(); i++)
-			{
-				CumulativeChance += TraitCountProbabilities[i];
-				if (RandomRoll <= CumulativeChance)
-				{
-					TraitCount = i;
-					break;
-				}
-			}
-		}
-
-		TArray<TSubclassOf<UTrait>> SelectedTraits;
-
-		TArray<TSubclassOf<UTrait>> AvailableTraits = Traits.PossibleTraits;
-		for (int i = 0; i < TraitCount; i++)
-		{
-			if (AvailableTraits.Num() == 0)
-				break;
-
-			int RandomIndex = Math::RandRange(0, AvailableTraits.Num() - 1);
-			SelectedTraits.Add(AvailableTraits[RandomIndex]);
-			AvailableTraits.RemoveAt(RandomIndex);
-		}
-
-		return SelectedTraits;
-	}
+	UPROPERTY()
+	FString Effect;
 }
+#endif
 
 class UStatsComponent : UFishComponentBase
 {
@@ -62,6 +22,11 @@ class UStatsComponent : UFishComponentBase
 
 	UPROPERTY(Category = "Rod", VisibleInstanceOnly)
 	UFishingRod EquippedRod;
+
+#if EDITOR
+	UPROPERTY(Category = "Rod", VisibleInstanceOnly)
+	TArray<FDebugTraitInfo> TraitInfos;
+#endif
 
 	UPROPERTY(Category = "Stats", SaveGame)
 	FStats ModifiedStats; // Stats including rod modifiers
@@ -96,8 +61,9 @@ class UStatsComponent : UFishComponentBase
 
 		RodlessStats = FStats(); // initialize base stats
 
-		// temporary: equip default rod with random traits
-		EquipRod(FishingRod::GenerateRod(this, DefaultRodData));
+		if (EquippedRod == nullptr && !Gameplay::DoesSaveGameExist("PlayerStats", 0))
+			EquipRod(FishingRod::GenerateRod(this, DefaultRodData));
+
 		OnRodEquipped.AddUFunction(this, n"HandleRodEquipped");
 		OnRodUnequipped.AddUFunction(this, n"HandleRodUnequipped");
 	}
@@ -109,13 +75,33 @@ class UStatsComponent : UFishComponentBase
 	UFUNCTION(NotBlueprintCallable)
 	void HandleRodEquipped(UFishingRod NewRod)
 	{
-		ModifiedStats = Stats::ApplyStats(RodlessStats, NewRod.Data.BaseStats);
+#if EDITOR
+		TArray<FString> TraitNames;
+		Print(f"Equipped rod: {EquippedRod.Data.Name} with {EquippedRod.Traits.Num()} traits.", 3.0f, FLinearColor::Green);
+		for (auto& TraitClass : EquippedRod.Traits)
+		{
+			auto Trait = TraitClass.GetDefaultObject();
+
+			FDebugTraitInfo Info;
+			Info.TraitName = Trait.TraitName.ToString();
+			Info.Description = Trait.Description.ToString();
+			Info.Effect = Trait.Effect.ToString();
+
+			TraitNames.Add(Info.TraitName);
+			TraitInfos.Add(Info);
+		}
+		Print("Traits: " + String::JoinStringArray(TraitNames, ", "), 3.0f, FLinearColor::Green);
+#endif
 	}
 
 	UFUNCTION(NotBlueprintCallable)
 	void HandleRodUnequipped(UFishingRod OldRod)
 	{
 		ModifiedStats = RodlessStats;
+
+#if EDITOR
+		TraitInfos.Empty();
+#endif
 	}
 
 	void EquipRod(UFishingRod NewRod)
@@ -134,21 +120,10 @@ class UStatsComponent : UFishComponentBase
 			for (auto& TraitClass : EquippedRod.Traits)
 			{
 				auto Trait = TraitClass.GetDefaultObject();
-				Trait.ApplyTrait(Character, NewRod);
+				Trait.ApplyTrait(Character, this, ModifiedStats, Character.FishingComponent, Character.FishingComponent.CurrentFishingHole, NewRod);
 			}
 
 			OnRodEquipped.Broadcast(EquippedRod);
-
-			// debug print
-
-			Print(f"Equipped rod: {EquippedRod.Data.Name} with {EquippedRod.Traits.Num()} traits.", 5.0f, FLinearColor::Green);
-			TArray<FString> TraitNames;
-			for (auto& TraitClass : EquippedRod.Traits)
-			{
-				auto Trait = TraitClass.GetDefaultObject();
-				TraitNames.Add(Trait.TraitName.ToString());
-			}
-			Print("Traits: " + String::JoinStringArray(TraitNames, ", "), 5.0f, FLinearColor::Green);
 		}
 	}
 
@@ -169,12 +144,85 @@ class UStatsComponent : UFishComponentBase
 		return false;
 	}
 
+	UFUNCTION(Category = "Stats")
+	void AddStat(EStat Stat, float Amount)
+	{
+		switch (Stat)
+		{
+			case EStat::Gathering:
+				ModifiedStats.Gathering += int(Amount);
+				break;
+			case EStat::Perception:
+				ModifiedStats.Perception += int(Amount);
+				break;
+			case EStat::CastSpeed:
+				AddPercentAdditive(ModifiedStats.CastSpeed, Amount);
+				break;
+			case EStat::ReelSpeed:
+				AddPercentAdditive(ModifiedStats.ReelSpeed, Amount);
+				break;
+			case EStat::CatchMultiplier:
+				ModifiedStats.CatchMultiplier += int(Amount);
+				break;
+		}
+	}
+
+	private FStats PreviousStats;
+
+	UFUNCTION(Category = "Stats")
+	FTimerHandle SetStatForDuration(EStat Stat, float Value, float Duration)
+	{
+		PreviousStats = ModifiedStats;
+
+		switch (Stat)
+		{
+			case EStat::Gathering:
+				Stats::SetGathering(ModifiedStats, int(Value));
+				break;
+			case EStat::Perception:
+				Stats::SetPerception(ModifiedStats, int(Value));
+				break;
+			case EStat::CastSpeed:
+				Stats::SetCastSpeed(ModifiedStats, Value);
+				break;
+			case EStat::ReelSpeed:
+				Stats::SetReelSpeed(ModifiedStats, Value);
+				break;
+			case EStat::CatchMultiplier:
+				Stats::SetCatchMultiplier(ModifiedStats, int(Value));
+				break;
+		}
+
+		return System::SetTimer(this, n"UndoStatModifiers", Duration, false);
+	}
+
+	UFUNCTION(Category = "Stats")
+	FTimerHandle AddStatForDuration(EStat Stat, float Amount, float Duration)
+	{
+		PreviousStats = ModifiedStats;
+		
+		AddStat(Stat, Amount);
+
+		return System::SetTimer(this, n"UndoStatModifiers", Duration, false);
+	}
+
+	UFUNCTION(NotBlueprintCallable)
+	void UndoStatModifiers()
+	{
+		// TODO: This will break in the future when stats change while the timer is active. E.g. switching rods.
+		ModifiedStats = PreviousStats;
+
+		EquipRod(EquippedRod); // re-apply rod traits to ensure correct stats, hopefully
+	}
+
 	UFUNCTION(Category = "Data")
 	bool SaveStats()
 	{
 		auto SaveGame = NewObject(this, UStatsSaveGame);
 		SaveGame.SavedStats = ModifiedStats;
 		SaveGame.SavedGil = Gil;
+		SaveGame.SavedRod = EquippedRod.Data;
+		SaveGame.SavedRodTraits = EquippedRod.Traits;
 		return Gameplay::SaveGameToSlot(SaveGame, "PlayerStats", 0);
 	}
 
@@ -192,27 +240,40 @@ class UStatsComponent : UFishComponentBase
 		ModifiedStats = LoadedSave.SavedStats;
 		Gil = LoadedSave.SavedGil;
 
+		auto LoadedRod = FishingRod::GenerateRod(this, LoadedSave.SavedRod);
+		LoadedRod.Traits = LoadedSave.SavedRodTraits; // traits are saved separately to preserve randomization
+		EquipRod(LoadedRod);
+
+		// Print(f"Loaded rod ({LoadedSave.SavedRod.GetName()}) with " + LoadedSave.SavedRodTraits.Num() + " traits from save.", 2.0f, FLinearColor::Green);
 		return true;
 	}
 };
 
 struct FStats
 {
-	UPROPERTY(Category = "Stats", SaveGame)
+	UPROPERTY(Category = "Stats")
 	int Gathering = 100;
 
 	// higher chance of catching rare fish
-	UPROPERTY(Category = "Stats", SaveGame)
+	UPROPERTY(Category = "Stats")
 	int Perception = 100;
 
-	UPROPERTY(Category = "Stats")
+	/**
+	 * Multiplier for cast speed (e.g. 1.25 = +25% cast speed)
+	 * Stacks additively.
+	 */
+	UPROPERTY(Category = "Stats", Transient)
 	float CastSpeed = 1;
 
-	UPROPERTY(Category = "Stats")
+	/**
+	 * Multiplier for reel speed (e.g. 1.25 = +25% reel speed)
+	 * Stacks additively.
+	 */
+	UPROPERTY(Category = "Stats", Transient)
 	float ReelSpeed = 1;
 
 	// amount of fish caught per cast
-	UPROPERTY(Category = "Stats")
+	UPROPERTY(Category = "Stats", Transient)
 	int CatchMultiplier = 1;
 }
 
@@ -279,7 +340,7 @@ namespace Stats
 		NewStats.Perception += InRodStats.Perception;
 		NewStats.ReelSpeed *= InRodStats.ReelSpeed;
 		NewStats.CastSpeed *= InRodStats.CastSpeed;
-		NewStats.CatchMultiplier += InRodStats.CatchMultiplier;
+		NewStats.CatchMultiplier *= InRodStats.CatchMultiplier;
 		return NewStats;
 	}
 
@@ -315,6 +376,10 @@ namespace Stats
 		return Stats.CastSpeed;
 	}
 
+	/**
+	 * Sets the Cast Speed stat.
+	 * Expects a decimal value (e.g. 1.25 for +25% Cast Speed).
+	 */
 	UFUNCTION(Category = "Stats")
 	float SetCastSpeed(FStats & Stats, float Amount)
 	{
@@ -328,10 +393,27 @@ namespace Stats
 		return Stats.ReelSpeed;
 	}
 
+	/**
+	 * Sets the Reel Speed stat.
+	 * Expects a decimal value (e.g. 1.25 for +25% Reel Speed).
+	 */
 	UFUNCTION(Category = "Stats")
 	float SetReelSpeed(FStats & Stats, float Amount)
 	{
 		Stats.ReelSpeed = Amount;
 		return Stats.ReelSpeed;
+	}
+
+	UFUNCTION(Category = "Stats", BlueprintPure)
+	int GetCatchMultiplier(const FStats& Stats)
+	{
+		return Stats.CatchMultiplier;
+	}
+
+	UFUNCTION(Category = "Stats")
+	int SetCatchMultiplier(FStats & Stats, int Amount)
+	{
+		Stats.CatchMultiplier = Amount;
+		return Stats.CatchMultiplier;
 	}
 }
