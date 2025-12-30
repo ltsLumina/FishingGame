@@ -27,7 +27,7 @@ struct FRodTraits
 	UPROPERTY(Category = "Traits")
 	bool IsCurated;
 
-	UPROPERTY(Category = "Traits", Meta=(EditCondition="IsCurated", EditConditionHides))
+	UPROPERTY(Category = "Traits", Meta = (EditCondition = "IsCurated", EditConditionHides))
 	TArray<TSubclassOf<UTrait>> CuratedTraits;
 
 	/**
@@ -35,7 +35,7 @@ struct FRodTraits
 	 * Key: Index of trait count (0 to 4)
 	 * Value: Weight for random selection (0-100, percentage chance)
 	 */
-	UPROPERTY(Category = "Traits", Meta=(EditCondition="!IsCurated", EditConditionHides))
+	UPROPERTY(Category = "Traits", Meta = (EditCondition = "!IsCurated", EditConditionHides))
 	TArray<float> TraitCountChances;
 
 	/**
@@ -44,7 +44,7 @@ struct FRodTraits
 	 * Value: Weight for random selection (0-100, percentage chance)
 	 * @see UFishingRod
 	 */
-	UPROPERTY(Category = "Traits", Meta=(EditCondition="!IsCurated", EditConditionHides))
+	UPROPERTY(Category = "Traits", Meta = (EditCondition = "!IsCurated", EditConditionHides))
 	TArray<TSubclassOf<UTrait>> PossibleTraits;
 };
 
@@ -102,33 +102,40 @@ class UTrait : UPrimaryDataAsset
 	{
 		return Stats::GetStatsComponent(Character);
 	}
-	
+
 	/**
 	 * Auto converts from whole number to decimal for percentage-based stats.
 	 * @param Amount The amount to adjust by, e.g. 5 for +5% Cast Speed.
 	 */
 	UFUNCTION()
-	void AdjustStat(FStats& PlayerStats, FName StatName, float Amount)
+	void AdjustStat(FStats& PlayerStats, EStat Stat, float Amount)
 	{
-		if (StatName == "Gathering")
+		switch (Stat)
 		{
-			PlayerStats.Gathering += int(Amount);
-		}
-		else if (StatName == "Perception")
-		{
-			PlayerStats.Perception += int(Amount);
-		}
-		else if (StatName == "CastSpeed")
-		{
-			PlayerStats.CastSpeed *= (1 + Amount / 100);
-		}
-		else if (StatName == "ReelSpeed")
-		{
-			PlayerStats.ReelSpeed *= (1 + Amount / 100);
-		}
-		else if (StatName == "CatchMultiplier")
-		{
-			PlayerStats.CatchMultiplier += int(Amount);
+			case EStat::Gathering:
+				PlayerStats.Gathering += int(Amount);
+				break;
+			case EStat::Perception:
+				PlayerStats.Perception += int(Amount);
+				break;
+			case EStat::CastSpeed:
+				PlayerStats.CastSpeed = AddPercent(PlayerStats.CastSpeed, Amount);
+				break;
+			case EStat::ReelSpeed:
+				PlayerStats.ReelSpeed = AddPercent(PlayerStats.ReelSpeed, Amount);
+				break;
+			case EStat::CatchMultiplier:
+				PlayerStats.CatchMultiplier += int(Amount);
+				break;
 		}
 	}
+}
+
+enum EStat
+{
+	Gathering,
+	Perception,
+	CastSpeed,
+	ReelSpeed,
+	CatchMultiplier
 }

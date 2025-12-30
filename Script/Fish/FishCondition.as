@@ -9,7 +9,7 @@ class UFishCondition : UObject
     bool Mute;
 
     UFUNCTION(BlueprintEvent)
-    bool IsSatisfied(AFishCharacter User, UFishingComponent FishingComponent, ATimeManager TimeManager, AWeatherManager WeatherManager)
+    bool IsSatisfied(AFishCharacter User, UFishingComponent FishingComponent, UFishingHoleComponent FishingHole, ATimeManager TimeManager, AWeatherManager WeatherManager)
     {
         return true;
     }

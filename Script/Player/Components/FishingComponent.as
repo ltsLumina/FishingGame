@@ -132,7 +132,7 @@ class UFishingComponent : UFishComponentBase
 					Print(f"An ability is ignoring condition: {Condition.Name} for fish: {FishItem.BaseData.ItemName}", 0.0f, FLinearColor::Yellow);
 					continue;
 				}
-				if (!Condition.IsSatisfied(Character, FishingComponent, TimeManager, WeatherManager))
+				if (!Condition.IsSatisfied(Character, FishingComponent, CurrentFishingHole, TimeManager, WeatherManager))
 				{
 					PrintWarning(f"{Condition.Name} not satisfied for fish: {FishItem.BaseData.ItemName}", 0.0f);
 					return;

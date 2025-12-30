@@ -1,3 +1,5 @@
+event void FOnSpectralShift();
+
 UCLASS(ClassGroup="Fishing")
 class UFishingHoleComponent : UActorComponent
 {
@@ -8,6 +10,12 @@ class UFishingHoleComponent : UActorComponent
 	UPROPERTY(Category = "Fishing | Area")
 	TArray<UFishItem> CatchableFish;
 
+	UPROPERTY(Category = "Fishing | Area", VisibleInstanceOnly)
+	bool IsSpectral;
+
+	UPROPERTY(Category = "Events")
+	FOnSpectralShift OnSpectralShift;
+
 	APawn Character;
 	UFishingComponent FishingComponent;
 
@@ -15,12 +23,6 @@ class UFishingHoleComponent : UActorComponent
 	void BeginPlay()
 	{
 		System::SetTimerForNextTick(this, "ValidateCatchableFish");
-	}
-
-	UFUNCTION(BlueprintOverride)
-	void Tick(float DeltaSeconds)
-	{
-		
 	}
 
 	UFUNCTION(NotBlueprintCallable)
@@ -63,7 +65,7 @@ class UFishingHoleComponent : UActorComponent
 	}
 
 	UFUNCTION(NotBlueprintCallable)
-	void UpdateCatchableFish(UBait Bait)
+	void UpdateCatchableFish(UBait _)
 	{
 		FishingComponent.UpdateCatchableFish();
 	}
@@ -84,4 +86,32 @@ class UFishingHoleComponent : UActorComponent
 		FishingComponent.CurrentFishingHole = nullptr; 
 		FishingComponent.UpdateCatchableFish();
 	}
+
+	UFUNCTION(Meta=(AdvancedDisplay="bOverride", ReturnDisplayName="Success"))
+	bool TrySpectralShift(UBait Bait, bool bOverride = false)
+	{
+		if (!bOverride && !Bait.IsSpectral)
+			return false;
+
+		if (bOverride)
+		{
+			IsSpectral = true;
+			FishingComponent.UpdateCatchableFish();
+			return true;
+		}
+
+		IsSpectral = RollPercentChance(Bait::GetSpectralChance(Bait));
+		if (!IsSpectral) return false;
+
+		FishingComponent.UpdateCatchableFish();
+		Print("The fishing hole has spectral shifted!", 5.0f, FLinearColor::Purple);
+
+		OnSpectralShift.Broadcast();
+		BP_SpectralShift();
+
+		return IsSpectral;
+	}
+
+	UFUNCTION(BlueprintEvent)
+	void BP_SpectralShift() { }
 }
