@@ -33,6 +33,9 @@ for all players who are fishing in the hole.~~
 ## playable instruments
 - guitar for sure
 
+## alcohol / drinking
+- apparently this is why fishing is fun, according to Adam
+
 # style & theme
 - low poly, toon shaded, cartoony
 - not quite webfishing, but in that same vain
