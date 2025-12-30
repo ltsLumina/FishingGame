@@ -24,12 +24,18 @@ struct FRodDetails
 
 struct FRodTraits
 {
+	UPROPERTY(Category = "Traits")
+	bool IsCurated;
+
+	UPROPERTY(Category = "Traits", Meta=(EditCondition="IsCurated", EditConditionHides))
+	TArray<TSubclassOf<UTrait>> CuratedTraits;
+
 	/**
 	 * Chance to get a certain number of traits on this rod.
 	 * Key: Index of trait count (0 to 4)
 	 * Value: Weight for random selection (0-100, percentage chance)
 	 */
-	UPROPERTY(Category = "Traits")
+	UPROPERTY(Category = "Traits", Meta=(EditCondition="!IsCurated", EditConditionHides))
 	TArray<float> TraitCountChances;
 
 	/**
@@ -38,7 +44,7 @@ struct FRodTraits
 	 * Value: Weight for random selection (0-100, percentage chance)
 	 * @see UFishingRod
 	 */
-	UPROPERTY(Category = "Traits")
+	UPROPERTY(Category = "Traits", Meta=(EditCondition="!IsCurated", EditConditionHides))
 	TArray<TSubclassOf<UTrait>> PossibleTraits;
 };
 

@@ -29,12 +29,41 @@ namespace Fish
 		}
 	}
 
+	FFishSizeData GenerateSizeData(FFishItemData Data)
+	{
+		// Randomize size and weight within span
+		float Size = Math::RandRange(Data.SizeSpan.X, Data.SizeSpan.Y);
+		float Weight = Size * 0.1f; // Simple formula: weight is 10% of size
+
+		Size = RoundTo(Size, 2);
+		Weight = RoundTo(Weight, 2);
+
+		float SpanMin = Data.SizeSpan.X;
+		float SpanMax = Data.SizeSpan.Y;
+		float SpanRange = Math::Max(0.0001f, SpanMax - SpanMin); // avoid division by zero
+		float Normalized = (Size - SpanMin) / SpanRange;
+
+		// considered Tiny if in lowest 25% of the span, Large if in highest 25%
+		bool IsTiny = Normalized < 0.25f;
+		bool IsLarge = Normalized > 0.75f;
+
+		int VendorValue = Math::RoundToInt((Size + Weight) * 2 * Math::Max(1, float(Data.Rarity))); // Simple formula: (size + weight) * 2 * rarity
+		return FFishSizeData(Size, Weight, IsTiny, IsLarge, VendorValue);
+	}
+
+	FInventoryInstanceData GenerateInstanceData(FFishItemData Data) // non static version for use in BP
+	{
+		FInventoryInstanceData InstanceData;
+		InstanceData.Tag = Fish::Tag::GetRandomTag();
+		InstanceData.SizeData = Fish::GenerateSizeData(Data);
+		return InstanceData;
+	}
+
 	namespace Tag
 	{
 		const float UMBRAL_CHANCE = 0.05f;
 		const float ASTRAL_CHANCE = 0.05f;
 
-		UFUNCTION(BlueprintPure, Category = "Fish | Tag")
 		EFishTag GetRandomTag()
 		{
 			float Roll = Math::RandRange(0.0f, 1.0f);
@@ -82,26 +111,30 @@ class AFish : AActor
 			return;
 		}
 
-		// Randomize size and weight within span
-		float Size = Math::RandRange(Data.SizeSpan.X, Data.SizeSpan.Y);
-		float Weight = Size * 0.1f; // Simple formula: weight is 10% of size
-
-		Size = RoundTo(Size, 2);
-		Weight = RoundTo(Weight, 2);
-
-		float SpanMin = Data.SizeSpan.X;
-		float SpanMax = Data.SizeSpan.Y;
-		float SpanRange = Math::Max(0.0001f, SpanMax - SpanMin); // avoid division by zero
-		float Normalized = (Size - SpanMin) / SpanRange;
-
-		// considered Tiny if in lowest 25% of the span, Large if in highest 25%
-		bool IsTiny = Normalized < 0.25f;
-		bool IsLarge = Normalized > 0.75f;
-
-		int VendorValue = Math::RoundToInt((Size + Weight) * 2 * Math::Max(1, float(Data.Rarity))); // Simple formula: (size + weight) * 2 * rarity
-
-		SizeData = FFishSizeData(Size, Weight, IsTiny, IsLarge, VendorValue);
+		SizeData = Fish::GenerateSizeData(Data);
 		Tag = Fish::Tag::GetRandomTag();
+	}
+
+	UFUNCTION(BlueprintPure, Category = "Fish | Info")
+	FFishSizeData GenerateSizeData() // non static version for use in BP
+	{
+		return Fish::GenerateSizeData(Item.FishData);
+	}
+
+	UFUNCTION(BlueprintPure, Category = "Fish | Info")
+	EFishTag GetRandomTag() // non static version for use in BP
+	{
+		return Fish::Tag::GetRandomTag();
+	}
+
+	/**
+	 * Generates instance data for this fish based on its item data.
+	 * @return The generated instance data, with randomized size and tag based on the fish item data.
+	 */
+	UFUNCTION(BlueprintPure, Category = "Fish | Info")
+	FInventoryInstanceData GenerateInstanceData() // non static version for use in BP
+	{
+		return Fish::GenerateInstanceData(Item.FishData);
 	}
 
 	void OnCaught(AFishCharacter Catcher)

@@ -1,6 +1,60 @@
 event void FOnRodEquipped(UFishingRod NewRod);
 event void FOnRodUnequipped(UFishingRod OldRod);
 
+namespace FishingRod
+{
+	UFishingRod GenerateRod(UObject Outer, URodData RodData)
+	{
+		UFishingRod NewRod = NewObject(Outer, UFishingRod);
+		NewRod.Data = RodData;
+		NewRod.Traits = RodData.Traits.IsCurated ? RodData.Traits.CuratedTraits : RollTraits(NewRod);
+		return NewRod;
+	}
+
+	TArray<TSubclassOf<UTrait>> RollTraits(UFishingRod Rod)
+	{
+		auto Data = Rod.Data;
+		auto Traits = Data.Traits;
+
+		int TraitCount = 0;
+		auto TraitCountProbabilities = Traits.TraitCountChances;
+
+		float Total = 0.0f;
+		for (float Value : TraitCountProbabilities)
+			Total += Value;
+
+		if (Total > 0.0f)
+		{
+			float RandomRoll = Math::RandRange(0.0f, Total);
+			float CumulativeChance = 0.0f;
+			for (int i = 0; i < TraitCountProbabilities.Num(); i++)
+			{
+				CumulativeChance += TraitCountProbabilities[i];
+				if (RandomRoll <= CumulativeChance)
+				{
+					TraitCount = i;
+					break;
+				}
+			}
+		}
+
+		TArray<TSubclassOf<UTrait>> SelectedTraits;
+
+		TArray<TSubclassOf<UTrait>> AvailableTraits = Traits.PossibleTraits;
+		for (int i = 0; i < TraitCount; i++)
+		{
+			if (AvailableTraits.Num() == 0)
+				break;
+
+			int RandomIndex = Math::RandRange(0, AvailableTraits.Num() - 1);
+			SelectedTraits.Add(AvailableTraits[RandomIndex]);
+			AvailableTraits.RemoveAt(RandomIndex);
+		}
+
+		return SelectedTraits;
+	}
+}
+
 class UStatsComponent : UFishComponentBase
 {
 	UPROPERTY(Category = "Rod", EditDefaultsOnly)
@@ -43,8 +97,7 @@ class UStatsComponent : UFishComponentBase
 		RodlessStats = FStats(); // initialize base stats
 
 		// temporary: equip default rod with random traits
-		EquipRod(GenerateRod(DefaultRodData));
-
+		EquipRod(FishingRod::GenerateRod(this, DefaultRodData));
 		OnRodEquipped.AddUFunction(this, n"HandleRodEquipped");
 		OnRodUnequipped.AddUFunction(this, n"HandleRodUnequipped");
 	}
@@ -63,57 +116,6 @@ class UStatsComponent : UFishComponentBase
 	void HandleRodUnequipped(UFishingRod OldRod)
 	{
 		ModifiedStats = RodlessStats;
-	}
-
-	UFishingRod GenerateRod(URodData RodData)
-	{
-		UFishingRod NewRod = NewObject(this, UFishingRod);
-		NewRod.Data = RodData;
-		NewRod.Traits = RollTraits(NewRod);
-		return NewRod;
-	}
-
-	TArray<TSubclassOf<UTrait>> RollTraits(UFishingRod Rod)
-	{
-		auto Data = Rod.Data;
-		auto Traits = Data.Traits;
-
-		int TraitCount = 0;
-        auto TraitCountProbabilities = Traits.TraitCountChances;
-
-        float Total = 0.0f;
-        for (float Value : TraitCountProbabilities)
-            Total += Value;
-
-        if (Total > 0.0f)
-        {
-            float RandomRoll = Math::RandRange(0.0f, Total);
-            float CumulativeChance = 0.0f;
-            for (int i = 0; i < TraitCountProbabilities.Num(); i++)
-            {
-                CumulativeChance += TraitCountProbabilities[i];
-                if (RandomRoll <= CumulativeChance)
-                {
-                    TraitCount = i;
-                    break;
-                }
-            }
-        }		
-
-		TArray<TSubclassOf<UTrait>> SelectedTraits;
-
-		TArray<TSubclassOf<UTrait>> AvailableTraits = Traits.PossibleTraits;
-        for (int i = 0; i < TraitCount; i++)
-        {
-            if (AvailableTraits.Num() == 0)
-                break;
-
-            int RandomIndex = Math::RandRange(0, AvailableTraits.Num() - 1);
-            SelectedTraits.Add(AvailableTraits[RandomIndex]);
-            AvailableTraits.RemoveAt(RandomIndex);
-        }
-
-		return SelectedTraits;
 	}
 
 	void EquipRod(UFishingRod NewRod)
@@ -228,7 +230,7 @@ namespace Stats
 	 * @param bModified If true, returns stats modified by the equipped rod; if false, returns base stats without rod modifiers.
 	 * @return The player's stats as an FStats struct.
 	 */
-	UFUNCTION(Category = "Stats", BlueprintPure, Meta = (AdvancedDisplay="bModified"))
+	UFUNCTION(Category = "Stats", BlueprintPure, Meta = (AdvancedDisplay = "bModified"))
 	FStats GetStats(AFishCharacter Character, bool bModified = true)
 	{
 		if (bModified)
@@ -288,7 +290,7 @@ namespace Stats
 	}
 
 	UFUNCTION(Category = "Stats")
-	int SetGathering(FStats& Stats, int Amount)
+	int SetGathering(FStats & Stats, int Amount)
 	{
 		Stats.Gathering = Amount;
 		return Stats.Gathering;
@@ -301,7 +303,7 @@ namespace Stats
 	}
 
 	UFUNCTION(Category = "Stats")
-	int SetPerception(FStats& Stats, int Amount)
+	int SetPerception(FStats & Stats, int Amount)
 	{
 		Stats.Perception = Amount;
 		return Stats.Perception;
@@ -314,7 +316,7 @@ namespace Stats
 	}
 
 	UFUNCTION(Category = "Stats")
-	float SetCastSpeed(FStats& Stats, float Amount)
+	float SetCastSpeed(FStats & Stats, float Amount)
 	{
 		Stats.CastSpeed = Amount;
 		return Stats.CastSpeed;
@@ -327,7 +329,7 @@ namespace Stats
 	}
 
 	UFUNCTION(Category = "Stats")
-	float SetReelSpeed(FStats& Stats, float Amount)
+	float SetReelSpeed(FStats & Stats, float Amount)
 	{
 		Stats.ReelSpeed = Amount;
 		return Stats.ReelSpeed;

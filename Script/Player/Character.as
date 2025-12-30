@@ -1,9 +1,9 @@
 class AFishCharacter : AFishEntity
 {
-	UPROPERTY(Category = "Components", NotVisible, BlueprintHidden)
+	UPROPERTY(Category = "Native Components", NotVisible)
 	UAbilityHandlerComponent AbilityHandler;
 
-	UPROPERTY(Category = "Components", NotVisible, BlueprintHidden)
+	UPROPERTY(Category = "Native Components", NotVisible)
 	UFishingComponent FishingComponent;
 
 	UFUNCTION(BlueprintOverride)

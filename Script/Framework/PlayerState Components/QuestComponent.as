@@ -190,6 +190,11 @@ class UQuestComponent : UFishComponentBase
 				State.InventoryComponent.AddBait(Pair.Key, Pair.Value);
 			}
 		}
+		if (Reward.GrantsFishingRod)
+		{
+			auto Rod = FishingRod::GenerateRod(Character, Reward.FishingRod);
+			State.StatsComponent.EquipRod(Rod); // todo: add to inventory instead
+		}
 
 		QuestLog.Remove(Quest.QuestID);
 		CompletedQuests.Add(Quest.QuestID);
