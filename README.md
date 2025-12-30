@@ -19,10 +19,10 @@ collection has a check for whether each tag has been caught
 
 shop has a list of baits to buy, and a copy of your inventory to sell from.
 
-## spectral bait
+## ~~spectral bait~~
 reminiscent of blind well in D2
-- makes a given fishing hole glow, granting quicker cast/reel times, and enabling special fish to be caught
-for all players who are fishing in the hole.
+- ~~makes a given fishing hole glow, granting quicker cast/reel times, and enabling special fish to be caught
+for all players who are fishing in the hole.~~
 - spectral bait is very rare/expensive.
 - brings players from all over to this spot to hang out
 
