@@ -6,13 +6,13 @@ A small MMO-style fishing game with proximity voice chat.
 
 # planned features
 
-## crafted fishing rods - "spectral rods"
-- provide unique effects while fishing, e.g., double hook
-- earned by completing a complicated/difficult quest-line, i.e., feast of famine
+## ~~crafted fishing rods - "spectral rods"~~
+- ~~provide unique effects while fishing, e.g., double hook~~
+- ~~earned by completing a complicated/difficult quest-line, i.e., feast of famine~~
 
-## collect fish with different tags
-- astral
-- umbral
+## ~~collect fish with different tags~~
+- ~~astral~~
+- ~~umbral~~
 - etc.
 the tag is a unique identifier that affects its (perceived) value
 collection has a check for whether each tag has been caught
