@@ -1,27 +1,35 @@
 class UFishWidget : UUserWidget
 {
-    UPROPERTY(BlueprintReadOnly)
-    AFishCharacter Character;
-    
-    UPROPERTY(BlueprintReadOnly)
-    AFishPlayerState PlayerState;
+	UPROPERTY(BlueprintReadOnly, NotVisible)
+	AFishCharacter Character;
+
+	UPROPERTY(BlueprintReadOnly, NotVisible)
+	AFishPlayerState PlayerState;
 
 	UFUNCTION(BlueprintOverride)
 	void Construct()
 	{
-        Character = Cast<AFishCharacter>(GetOwningPlayerPawn());
-        PlayerState = Cast<AFishPlayerState>(Character.PlayerState);
+		Character = Cast<AFishCharacter>(GetOwningPlayerPawn());
+		PlayerState = Cast<AFishPlayerState>(Character.PlayerState);
 
-        if (Character == nullptr || PlayerState == nullptr)
-            System::SetTimer(this, n"Construct", 0.1f, false);
+		if (Character == nullptr || PlayerState == nullptr)
+		{
+			System::SetTimer(this, n"Construct", 0.1f, false);
+			return;
+		}
 
 		OnVisibilityChanged.AddUFunction(this, n"HandleVisibilityChanged");
 		OnVisibilityChanged.AddUFunction(this, n"OnVisibilityChangedEvent");
 
 		BP_Construct();
+		ConstructFadeIn();
 	}
 
-	UFUNCTION()
+	UFUNCTION(BlueprintEvent)
+	void ConstructFadeIn()
+	{ }
+
+	UFUNCTION(NotBlueprintCallable)
 	private void HandleVisibilityChanged(ESlateVisibility InVisibility)
 	{
 		switch (InVisibility)
@@ -35,10 +43,10 @@ class UFishWidget : UUserWidget
 			case ESlateVisibility::Collapsed:
 			case ESlateVisibility::Hidden:
 				BecameHidden(InVisibility);
-                break;
+				break;
 		}
 
-        OnVisibilityChangedEvent(InVisibility);
+		OnVisibilityChangedEvent(InVisibility);
 	}
 
 	/**
@@ -52,12 +60,10 @@ class UFishWidget : UUserWidget
 		if (IsVisible())
 		{
 			SetVisibility(Hidden);
-			BecameHidden(Hidden);
 		}
 		else
 		{
 			SetVisibility(Visible);
-			BecameVisible(Visible);
 		}
 	}
 

@@ -116,6 +116,16 @@ class UQuestComponent : UFishComponentBase
 	{
 		return QuestLog.Contains(Quest.QuestID);
 	}
+	UFUNCTION(Category = "Quest", BlueprintPure, Keywords="contains", DisplayName = "Has Quest (Out)", Meta=(ReturnDisplayName="Has Quest"))
+	bool HasQuestOut(UQuest Quest, FQuestEntry&out FoundEntry)
+	{
+		if (QuestLog.Contains(Quest.QuestID))
+		{
+			FoundEntry = QuestLog[Quest.QuestID];
+			return true;
+		}
+		return false;
+	}
 
 	UFUNCTION(Category = "Quest")
 	void BeginQuest(UQuest Quest)

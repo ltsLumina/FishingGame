@@ -1,12 +1,4 @@
 /**
- * A utility class for percentage calculations.
- */
-class UPercent
-{
-
-}
-
-/**
  * Converts a value to a percentage (decimal)
  * @param Value The whole value to convert to a percentage (to decimal)
  * @return The percentage value (as a decimal, e.g. 0.25 for 25%)

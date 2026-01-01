@@ -1,6 +1,6 @@
 class AFishEntity : ACharacter
 {
-	UPROPERTY()
+	UPROPERTY(NotVisible)
     AFishPlayerState State;
 	AFishCharacter Character;
 

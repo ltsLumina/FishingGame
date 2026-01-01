@@ -15,6 +15,23 @@ struct FDebugTraitInfo
 }
 #endif
 
+enum EStat
+{
+	Gathering,
+	Perception,
+	/**
+	 * Multiplier for cast speed (e.g. 1.25 = +25% cast speed)
+	 * Stacks additively.
+	 */
+	CastSpeed,
+	/**
+	 * Multiplier for reel speed (e.g. 1.25 = +25% reel speed)
+	 * Stacks additively.
+	 */
+	ReelSpeed,
+	CatchMultiplier
+}
+
 class UStatsComponent : UFishComponentBase
 {
 	UPROPERTY(Category = "Rod", EditDefaultsOnly)

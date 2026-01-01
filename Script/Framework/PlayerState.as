@@ -79,6 +79,9 @@ class AFishPlayerState : APlayerState
 	}
 };
 
+/**
+ * Gets the AFishPlayerState of the local player.
+ */
 UFUNCTION(BlueprintPure, Category = "PlayerState")
 AFishPlayerState GetFishPlayerStateBase()
 {
