@@ -16,9 +16,6 @@ class AFishNPC : AFishEntity
 	UBoxComponent ClickBox;
 
 	UPROPERTY(DefaultComponent)
-	UTextRenderComponent Nametag;
-
-	UPROPERTY(DefaultComponent)
 	UBillboardComponent QuestBillboard;
 
 	UPROPERTY(Category = "NPC | Info", DisplayName = "ID", EditDefaultsOnly)
@@ -65,8 +62,8 @@ class AFishNPC : AFishEntity
 	{
 		NPC_ID = FName(NPCName.ToString().ToLower().Replace(" ", "_"));
 
-		Nametag.SetText(NPCName);
-		Nametag.SetAbsolute(bNewAbsoluteLocation = false, bNewAbsoluteRotation = true, bNewAbsoluteScale = false);
+		//Nametag.SetText(NPCName);
+		//Nametag.SetAbsolute(bNewAbsoluteLocation = false, bNewAbsoluteRotation = true, bNewAbsoluteScale = false);
 
 		QuestBillboard.SetHiddenInGame(false);
 		QuestBillboard.SetVisibility(HasQuests);
@@ -243,40 +240,32 @@ class AFishNPC : AFishEntity
 
 	// - SAVE/LOAD -
 
-	UFUNCTION(Category = "Save Game")
-	bool SaveQuests()
-	{
-		auto SaveGame = NewObject(this, UNPCSaveGame);
-		for (auto& Entry : AvailableQuests)
-		{
-			SaveGame.AvailableQuests.Add(Entry);
-		}
-		return Gameplay::SaveGameToSlot(SaveGame, f"{NPC_ID}_Quests", 0);
-	}
-
-	UFUNCTION(Category = "Save Game")
+	UFUNCTION()
 	bool LoadQuests()
 	{
-#if EDITOR
-		Gameplay::DeleteGameInSlot(f"{NPC_ID}_Quests", 0); // TEMP DELETE
-#endif
-
-		auto SaveGame = Gameplay::LoadGameFromSlot(f"{NPC_ID}_Quests", 0);
+		auto SaveGame = Gameplay::LoadGameFromSlot("PlayerQuestLog", 0);
 		if (SaveGame == nullptr)
 			return false;
 
-		auto LoadedSave = Cast<UNPCSaveGame>(SaveGame);
+		auto LoadedSave = Cast<UQuestSaveGame>(SaveGame);
 		if (LoadedSave == nullptr)
 			return false;
 
-		AvailableQuests.Empty();
-		for (auto& Entry : LoadedSave.AvailableQuests)
+		for (auto& CompletedQuestID : LoadedSave.SavedCompletedQuests)
 		{
-			AvailableQuests.Add(Entry);
-			Print("Loaded Quest: " + Entry.Quest.QuestID.ToString(), 3.0f, FLinearColor::Green);
+			for (int i = AvailableQuests.Num() - 1; i >= 0; i--)
+			{
+				if (AvailableQuests[i].Quest.QuestID == CompletedQuestID)
+				{
+					AvailableQuests.RemoveAt(i);
+					Print("Removed Completed Quest: " + CompletedQuestID.ToString(), 3.0f, FLinearColor::Green);
+				}
+			}
 		}
 
-		System::SetTimer(this, n"SetQuestSprite", 0.3f, false);
+		if (AvailableQuests.Num() > 0) 
+			System::SetTimer(this, n"SetQuestSprite", 0.3f, false);
+
 		return true;
 	}
 
@@ -284,7 +273,8 @@ class AFishNPC : AFishEntity
 	private void SetQuestSprite()
 	{
 		FQuestEntry Entry;
-		UQuestComponent::Get(State).QuestLog.Find(AvailableQuests[0].Quest.QuestID, Entry);
+		auto QuestComp = State.QuestComponent;
+		QuestComp.QuestLog.Find(AvailableQuests[0].Quest.QuestID, Entry);
 		if (!IsValid(Entry.Quest))
 		{
 			UTexture2D Texture;
@@ -305,11 +295,5 @@ class AFishNPC : AFishEntity
 			QuestIcons.Find(n"unsatisfied", Texture);
 			QuestBillboard.SetSprite(Texture);
 		}
-	}
-
-	UFUNCTION(Category = "Save Game")
-	void ResetQuests()
-	{
-		Gameplay::DeleteGameInSlot(f"{NPC_ID}_Quests", 0);
 	}
 };

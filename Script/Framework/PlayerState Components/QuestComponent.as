@@ -114,6 +114,7 @@ class UQuestComponent : UFishComponentBase
 	UFUNCTION(Category = "Quest", BlueprintPure, Keywords="contains")
 	bool HasQuest(UQuest Quest)
 	{
+		if (Quest == nullptr) PrintError("HasQuest called with null Quest.", 5.0f);
 		return QuestLog.Contains(Quest.QuestID);
 	}
 	UFUNCTION(Category = "Quest", BlueprintPure, Keywords="contains", DisplayName = "Has Quest (Out)", Meta=(ReturnDisplayName="Has Quest"))
@@ -229,6 +230,7 @@ class UQuestComponent : UFishComponentBase
 	{
 		auto SaveGame = NewObject(this, UQuestSaveGame);
 		SaveGame.SavedQuestLog = QuestLog;
+		SaveGame.SavedCompletedQuests = CompletedQuests;
 		return Gameplay::SaveGameToSlot(SaveGame, "PlayerQuestLog", 0);
 	}
 
@@ -244,22 +246,23 @@ class UQuestComponent : UFishComponentBase
 			return false;
 
 		QuestLog = LoadedSave.SavedQuestLog;
-		SavedQuestLog = LoadedSave.SavedQuestLog;
+		CompletedQuests = LoadedSave.SavedCompletedQuests;
+
+		Debug_SavedQuestLog = LoadedSave.SavedQuestLog;
 
 		System::SetTimer(this, n"DelayedLoad", 0.3f, false);
 		return true;
 	}
 
-	TMap<FName, FQuestEntry> SavedQuestLog;
+	TMap<FName, FQuestEntry> Debug_SavedQuestLog;
 
 	UFUNCTION()
 	void DelayedLoad()
 	{
-		for (auto& Pair : SavedQuestLog)
+		for (auto& Pair : Debug_SavedQuestLog)
 		{
 			//BeginQuest(Pair.Value.Quest);
 			Print(f"Loaded Quest: {Pair.Value.Quest.QuestID}", 3.0f, FLinearColor::Green);
 		}
 	}
-
 };

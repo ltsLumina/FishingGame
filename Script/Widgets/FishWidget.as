@@ -1,15 +1,26 @@
 class UFishWidget : UUserWidget
 {
+	/**
+	 * The fish character that owns this widget.
+	 * Will always point to the local player's character on the local machine, and be null on remote clients.
+	 */
 	UPROPERTY(BlueprintReadOnly, NotVisible)
 	AFishCharacter Character;
 
+	/**
+	 * The fish player state that owns this widget.
+	 * Will always point to the local player's state on the local machine, and be null on remote clients.
+	 */
 	UPROPERTY(BlueprintReadOnly, NotVisible)
 	AFishPlayerState PlayerState;
 
 	UFUNCTION(BlueprintOverride)
 	void Construct()
 	{
-		Character = Cast<AFishCharacter>(GetOwningPlayerPawn());
+		bool HasOwningPlayerPawn = GetOwningPlayerPawn() != nullptr;
+		if (HasOwningPlayerPawn) Character = Cast<AFishCharacter>(GetOwningPlayerPawn());
+		else Character = GetFishCharacterBase(0);
+		
 		PlayerState = Cast<AFishPlayerState>(Character.PlayerState);
 
 		if (Character == nullptr || PlayerState == nullptr)

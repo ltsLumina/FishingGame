@@ -133,6 +133,13 @@ class UStatsComponent : UFishComponentBase
 
 		if (EquippedRod != nullptr)
 		{
+			// Print(f"Character: {Character != nullptr}", 10.0f, FLinearColor::Red);
+			// Print(f"StatsComponent: {this != nullptr}", 10.0f, FLinearColor::Red);
+			// Print(f"ModifiedStats: {ModifiedStats}", 10.0f, FLinearColor::Red);
+			// Print(f"FishingComponent: {Character.FishingComponent != nullptr}", 10.0f, FLinearColor::Red);
+			// Print(f"CurrentFishingHole: {Character.FishingComponent.CurrentFishingHole != nullptr}", 10.0f, FLinearColor::Red);
+			// Print(f"NewRod: {NewRod != nullptr}", 10.0f, FLinearColor::Red);
+
 			// apply rod stat modifiers
 			for (auto& TraitClass : EquippedRod.Traits)
 			{
@@ -244,15 +251,15 @@ class UStatsComponent : UFishComponentBase
 	}
 
 	UFUNCTION(Category = "Data")
-	bool LoadStats()
+	ELoadResult LoadStats()
 	{
 		auto SaveGame = Gameplay::LoadGameFromSlot("PlayerStats", 0);
 		if (SaveGame == nullptr)
-			return false;
+			return ELoadResult::SuccessNoData;
 
 		auto LoadedSave = Cast<UStatsSaveGame>(SaveGame);
 		if (LoadedSave == nullptr)
-			return false;
+			return ELoadResult::Failure;
 
 		ModifiedStats = LoadedSave.SavedStats;
 		Gil = LoadedSave.SavedGil;
@@ -262,7 +269,7 @@ class UStatsComponent : UFishComponentBase
 		EquipRod(LoadedRod);
 
 		// Print(f"Loaded rod ({LoadedSave.SavedRod.GetName()}) with " + LoadedSave.SavedRodTraits.Num() + " traits from save.", 2.0f, FLinearColor::Green);
-		return true;
+		return ELoadResult::Success;
 	}
 };
 

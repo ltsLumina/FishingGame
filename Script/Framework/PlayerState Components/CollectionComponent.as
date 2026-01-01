@@ -45,6 +45,7 @@ class UCollectionComponent : UFishComponentBase
         return false;
     }
 
+    //TODO: what was I thinking lol. The inventory might be empty when you load, so this would fail to load anything.
     UFUNCTION()
     bool LoadCollection()
     {

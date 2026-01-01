@@ -1,8 +1,11 @@
 UCLASS(Abstract)
 class UFishComponentBase : UActorComponent
 {
-	AFishPlayerState State;
+	UPROPERTY(BlueprintReadOnly, NotVisible)
 	AFishCharacter Character;
+	
+	UPROPERTY(BlueprintReadOnly, NotVisible)
+	AFishPlayerState State;
 
 	UFUNCTION(BlueprintOverride)
 	void BeginPlay()

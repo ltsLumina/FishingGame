@@ -63,7 +63,7 @@ class AFishController : APlayerController
         System::SetTimer(this, n"ResetClick", ClickCooldown, false);
 
 		FHitResult Hit;
-		GetHitResultUnderCursorByChannel(ETraceTypeQuery::Visibility, false, Hit);
+		GetHitResultUnderCursorByChannel(ETraceTypeQuery::TraceTypeQuery3, false, Hit); // TraceTypeQuery3 = Selection
 		if (Hit.bBlockingHit)
 		{
 			auto HitNPC = Cast<AFishNPC>(Hit.GetActor());

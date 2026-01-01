@@ -1,5 +1,8 @@
 class AFishPlayerState : APlayerState
 {
+	UPROPERTY(Category = "Player Info", VisibleAnywhere)
+	FText Title = FText::FromString("Angler");
+
 	UPROPERTY(Category = "Components", NotVisible)
 	UStatsComponent StatsComponent;
 
@@ -40,19 +43,35 @@ class AFishPlayerState : APlayerState
 	UFUNCTION(NotBlueprintCallable)
 	void LatePlay()
 	{
-		if (StatsComponent.LoadStats()) Print("Stats loaded from save.", 3.0f, FLinearColor::Green);
-		else Print("No stats save found.", 3.0f, FLinearColor::Yellow);
+		// Load all components' data from save files.
 
-		if (InventoryComponent.LoadInventory()) Print("Inventory loaded from save.", 3.0f, FLinearColor::Green);
+		switch (StatsComponent.LoadStats())
+		{
+			case ELoadResult::Success:
+				Print("Stats loaded from save.", 3.0f, FLinearColor::Green);
+				break;
+			case ELoadResult::SuccessNoData:
+				Print("No stats save found.", 3.0f, FLinearColor::Yellow);
+				break;
+			case ELoadResult::Failure:
+				PrintError("Failed to load stats from save.", 25.0f);
+				break;
+		}
+
+		if (InventoryComponent.LoadInventory())
+			Print("Inventory loaded from save.", 3.0f, FLinearColor::Green);
 		else Print("No inventory save found.", 3.0f, FLinearColor::Yellow);
 
-		if (ExperienceComponent.LoadExperience()) Print("Experience loaded from save.", 3.0f, FLinearColor::Green);
+		if (ExperienceComponent.LoadExperience())
+			Print("Experience loaded from save.", 3.0f, FLinearColor::Green);
 		else Print("No experience save found.", 3.0f, FLinearColor::Yellow);
 
-		if (QuestComponent.LoadQuests()) Print("Quests loaded from save.", 3.0f, FLinearColor::Green);
+		if (QuestComponent.LoadQuests())
+			Print("Quests loaded from save.", 3.0f, FLinearColor::Green);
 		else Print("No quests save found.", 3.0f, FLinearColor::Yellow);
 
-		if (CollectionComponent.LoadCollection()) Print("Collection loaded from save.", 3.0f, FLinearColor::Green);
+		if (CollectionComponent.LoadCollection())
+			Print("Collection loaded from save.", 3.0f, FLinearColor::Green);
 		else Print("No collection save found.", 3.0f, FLinearColor::Yellow);
 	}
 
@@ -63,6 +82,7 @@ class AFishPlayerState : APlayerState
 		InventoryComponent.SaveInventory();
 		ExperienceComponent.SaveExperience();
 		QuestComponent.SaveQuests();
+		// TODO: THIS NO LONGER APPLIES.
 		// Collection is not saved -- it uses the inventory's data to rebuild itself on load.
 	}
 
@@ -78,6 +98,13 @@ class AFishPlayerState : APlayerState
 		PrintWarning("Player state reset: all save data deleted.", 5.0f);
 	}
 };
+
+enum ELoadResult
+{
+	Success,
+	SuccessNoData,
+	Failure
+}
 
 /**
  * Gets the AFishPlayerState of the local player.

@@ -2,7 +2,7 @@ event void FOnLevelUp(int NewLevel);
 
 class UExperienceComponent : UFishComponentBase
 {
-	UPROPERTY(Category = "Stats", SaveGame)
+	UPROPERTY(Category = "Stats", SaveGame, Replicated)
 	FExperienceData ExperienceData;
 
 	UPROPERTY(Category = "Stats", BlueprintGetter = "GetXPToLevelUp", VisibleInstanceOnly)
@@ -29,6 +29,8 @@ class UExperienceComponent : UFishComponentBase
 
 	UPROPERTY(Category = "Events")
 	FOnLevelUp OnLevelUp;
+
+	default bReplicates = true;
 
 	UFUNCTION(BlueprintOverride)
 	void BeginPlay()
@@ -73,7 +75,7 @@ class UExperienceComponent : UFishComponentBase
 		}
 	}
 
-	UFUNCTION()
+	UFUNCTION(Server)
 	void LevelUp()
 	{
 		ExperienceData.Level++;
@@ -114,7 +116,7 @@ class UExperienceComponent : UFishComponentBase
 
 struct FExperienceData
 {
-	UPROPERTY(Category = "Stats", DisplayName = "Level", VisibleInstanceOnly, SaveGame)
+	UPROPERTY(Category = "Stats", DisplayName = "Level", VisibleInstanceOnly, SaveGame, Replicated)
 	int Level = 1;
 
 	UPROPERTY(Category = "Stats", DisplayName = "XP", VisibleInstanceOnly, SaveGame)
