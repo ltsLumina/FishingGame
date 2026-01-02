@@ -9,6 +9,8 @@ class UAbilityHandlerComponent : UFishComponentBase
 	UPROPERTY(Category = "Abilities", EditDefaultsOnly, BlueprintReadOnly)
 	UDataTable AbilityUnlockTable;
 
+	TArray<FAbilityUnlockInfo> UnlockInfos;
+
 	UPROPERTY(Category = "Abilities | Events")
 	FOnAbilityGranted OnAbilityGranted;
 
@@ -20,7 +22,6 @@ class UAbilityHandlerComponent : UFishComponentBase
 		Super::PostInitialize(InCharacter, InPlayerState, InInitializationTime);
 		Abilities.Empty();
 
-		TArray<FAbilityUnlockInfo> UnlockInfos;
 		AbilityUnlockTable.GetAllRows(UnlockInfos);
 		check(UnlockInfos.Num() > 0, "AbilityUnlockTable has no rows!");
 		check(UnlockInfos[0].Ability != nullptr, "AbilityUnlockTable has invalid AbilityData references! (IT CLEARED ITSELF AGAINNNNNNNNNNNNNNNNNNN)");
@@ -29,8 +30,8 @@ class UAbilityHandlerComponent : UFishComponentBase
 		{
 			if (Info.UnlockLevel <= 1) // Starting abilities
 			{
-				UAbilityData AbilityData = Info.Ability;
-				GrantAbility(AbilityData);
+				auto LoadedAbility = LoadAbility(Info.Ability);
+				GrantAbility(LoadedAbility);
 			}
 		}
 
@@ -40,15 +41,12 @@ class UAbilityHandlerComponent : UFishComponentBase
 	UFUNCTION(NotBlueprintCallable)
 	void OnLevelUp(int NewLevel)
 	{
-		TArray<FAbilityUnlockInfo> UnlockInfos;
-		AbilityUnlockTable.GetAllRows(UnlockInfos);
-
 		for (FAbilityUnlockInfo Info : UnlockInfos)
 		{
 			if (Info.UnlockLevel == NewLevel)
 			{
-				UAbilityData AbilityData = Info.Ability;
-				GrantAbility(AbilityData);
+				auto LoadedAbility = LoadAbility(Info.Ability);
+				GrantAbility(LoadedAbility);
 			}
 		}
 	}
@@ -105,6 +103,13 @@ class UAbilityHandlerComponent : UFishComponentBase
 		return Abilities.Contains(AbilityData);
 	}
 
+	UFUNCTION(Category = "Abilities", BlueprintPure, DisplayName = "Has Ability (Soft Ref)")
+	bool HasAbilitySoft(TSoftObjectPtr<UAbilityData> AbilityDataPtr)
+	{
+		auto AbilityData = LoadAbility(AbilityDataPtr);
+		return Abilities.Contains(AbilityData);
+	}
+
 	UFUNCTION(Category = "Abilities", BlueprintPure, DisplayName = "Has Ability")
 	bool HasAbilityByName(FString AbilityName)
 	{
@@ -122,15 +127,16 @@ class UAbilityHandlerComponent : UFishComponentBase
 	bool SaveAbilities()
 	{
 		auto SaveGame = NewObject(this, UAbilitySaveGame);
+
 		TArray<FAbilityUnlockInfo> UnlockedAbilities;
-		if (AbilityUnlockTable != nullptr)
+		for (UAbilityData AbilityData : Abilities)
 		{
-			AbilityUnlockTable.GetAllRows(UnlockedAbilities);
-			for (int i = UnlockedAbilities.Num() - 1; i >= 0; i--)
+			for (FAbilityUnlockInfo Info : UnlockInfos)
 			{
-				if (!Abilities.Contains(UnlockedAbilities[i].Ability))
+				if (Info.Ability == AbilityData)
 				{
-					UnlockedAbilities.RemoveAt(i);
+					UnlockedAbilities.Add(Info);
+					break;
 				}
 			}
 		}
@@ -144,6 +150,7 @@ class UAbilityHandlerComponent : UFishComponentBase
 	{
 #if EDITOR
 		Gameplay::DeleteGameInSlot("PlayerAbilities", 0); // TEMP DELETE
+		PrintWarning("Deleted PlayerAbilities save for testing.", 5.0f);
 #endif
 
 		auto SaveGame = Gameplay::LoadGameFromSlot("PlayerAbilities", 0);
@@ -156,13 +163,26 @@ class UAbilityHandlerComponent : UFishComponentBase
 
 		for (FAbilityUnlockInfo UnlockInfo : LoadedSave.UnlockedAbilities)
 		{
-			if (!Abilities.Contains(UnlockInfo.Ability))
+			if (!HasAbilitySoft(UnlockInfo.Ability))
 			{
-				GrantAbility(UnlockInfo.Ability);
-				Print("Loaded ability from save: " + UnlockInfo.Ability.Details.Name.ToString(), 3.0f, FLinearColor::Green);
+				auto LoadedAbility = LoadAbility(UnlockInfo.Ability);
+				GrantAbility(LoadedAbility);
+				Print("Loaded ability from save: " + LoadedAbility.Details.Name.ToString(), 3.0f, FLinearColor::Green);
 			}
 		}
 
 		return true;
 	}
 };
+
+UAbilityData LoadAbility(TSoftObjectPtr<UAbilityData> SoftAbilityData)
+{
+	auto LoadedAblity = System::LoadAsset_Blocking(SoftAbilityData);
+	if (!IsValid(LoadedAblity))
+	{
+		PrintError("AbilityHandlerComponent LoadAbility: Failed to load ability data asset from soft reference!");
+		return nullptr;
+	}
+
+	return Cast<UAbilityData>(LoadedAblity);
+}

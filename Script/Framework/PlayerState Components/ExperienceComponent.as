@@ -36,7 +36,7 @@ class UExperienceComponent : UFishComponentBase
 						float InInitializationTime) override
 	{
 		Super::PostInitialize(InCharacter, InPlayerState, InInitializationTime);
-		
+
 		Character.FishingComponent.OnFishCaught.AddUFunction(this, n"OnFishCaught");
 	}
 
@@ -60,15 +60,28 @@ class UExperienceComponent : UFishComponentBase
 		}
 	}
 
-	UFUNCTION(Server)
+	UFUNCTION()
 	void LevelUp()
 	{
+		Server_LevelUp();
+	}
+
+	UFUNCTION(Server, NotBlueprintCallable)
+	void Server_LevelUp()
+	{
 		ExperienceData.Level++;
-		OnLevelUp.Broadcast(ExperienceData.Level);
 		
-		Notifications::AddNotification(f"You reached level {ExperienceData.Level}!");
-		
+		Client_LevelUp(ExperienceData.Level);
+	}
+
+	UFUNCTION(Client, NotBlueprintCallable)
+	void Client_LevelUp(int NewLevel)
+	{
+		OnLevelUp.Broadcast(NewLevel);
+
 		BP_OnLevelUp(ExperienceData.Level);
+
+		Notifications::AddNotification(f"You reached level {NewLevel}!");
 	}
 
 	UFUNCTION(BlueprintEvent, DisplayName = "Level Up")
@@ -111,7 +124,7 @@ struct FExperienceData
 struct FAbilityUnlockInfo
 {
 	UPROPERTY(Category = "Ability", SaveGame)
-	UAbilityData Ability;
+	TSoftObjectPtr<UAbilityData> Ability;
 
 	UPROPERTY(Category = "Ability", Meta = (UIMin = "1", UIMax = "100"), SaveGame)
 	int UnlockLevel = 1;

@@ -1,20 +1,6 @@
 event void FOnRodEquipped(UFishingRod NewRod);
 event void FOnRodUnequipped(UFishingRod OldRod);
 
-#if EDITOR
-struct FDebugTraitInfo
-{
-	UPROPERTY()
-	FString TraitName;
-
-	UPROPERTY()
-	FString Description;
-
-	UPROPERTY()
-	FString Effect;
-}
-#endif
-
 enum EStat
 {
 	Gathering,
@@ -64,13 +50,13 @@ class UStatsComponent : UFishComponentBase
 						float InInitializationTime) override
 	{
 		Super::PostInitialize(InCharacter, InPlayerState, InInitializationTime);
-		
+
 		RodlessStats = FStats(); // initialize base stats
 
 		if (EquippedRod == nullptr && !Gameplay::DoesSaveGameExist("PlayerStats", 0))
 		{
 			EquipRod(FishingRod::GenerateRod(this, DefaultRodData));
-			//Print(f"StatsComponent 84: Equip Rod Called.", 10.0f, FLinearColor::LucBlue);
+			// Print(f"StatsComponent 84: Equip Rod Called.", 10.0f, FLinearColor::LucBlue);
 		}
 
 		OnRodEquipped.AddUFunction(this, n"HandleRodEquipped");
@@ -172,52 +158,125 @@ class UStatsComponent : UFishComponentBase
 		}
 	}
 
-	private FStats PreviousStats;
+	private TArray<FStatModification> ActiveModifications;
+	private int NextModificationIndex = 0;
 
 	UFUNCTION(Category = "Stats")
 	FTimerHandle SetStatForDuration(EStat Stat, float Value, float Duration)
 	{
-		PreviousStats = ModifiedStats;
-
+		// Store the current value so we can revert to it
+		float PreviousValue;
 		switch (Stat)
 		{
 			case EStat::Gathering:
+				PreviousValue = ModifiedStats.Gathering;
 				Stats::SetGathering(ModifiedStats, int(Value));
 				break;
 			case EStat::Perception:
+				PreviousValue = ModifiedStats.Perception;
 				Stats::SetPerception(ModifiedStats, int(Value));
 				break;
 			case EStat::CastSpeed:
+				PreviousValue = ModifiedStats.CastSpeed;
 				Stats::SetCastSpeed(ModifiedStats, Value);
 				break;
 			case EStat::ReelSpeed:
+				PreviousValue = ModifiedStats.ReelSpeed;
 				Stats::SetReelSpeed(ModifiedStats, Value);
 				break;
 			case EStat::CatchMultiplier:
+				PreviousValue = ModifiedStats.CatchMultiplier;
 				Stats::SetCatchMultiplier(ModifiedStats, int(Value));
 				break;
 		}
 
-		return System::SetTimer(this, n"UndoStatModifiers", Duration, false);
+		// Track this modification
+		FStatModification Modification;
+		NextModificationIndex++;
+		Modification.Index = NextModificationIndex;
+		Modification.Stat = Stat;
+		Modification.bIsAdditive = false;
+		Modification.PreviousValue = PreviousValue;
+		Modification.TimerHandle = System::SetTimer(this, n"UndoStatModification", Duration, false);
+		ActiveModifications.Add(Modification);
+
+		return Modification.TimerHandle;
+	}
+
+	/**
+	 * Adds to a stat for a limited duration, then reverts the change.
+	 * @ID Optional ID to identify this modification for later removal.
+	 */
+	UFUNCTION(Category = "Stats", Meta = (AdvancedDisplay = "ID"))
+	FTimerHandle AddStatForDuration(EStat Stat, float Amount, float Duration, FName ID = NAME_None)
+	{
+		AddStat(Stat, Amount);
+
+		FStatModification Modification;
+
+		NextModificationIndex++;
+		Modification.TimerHandle = System::SetTimer(this, n"UndoStatModification", Duration, false);
+		
+		Modification = FStatModification(ID, NextModificationIndex, Stat, true, Amount);
+		ActiveModifications.Add(Modification);
+
+		return Modification.TimerHandle;
 	}
 
 	UFUNCTION(Category = "Stats")
-	FTimerHandle AddStatForDuration(EStat Stat, float Amount, float Duration)
+	void ClearStatModification(FName ModificationID)
 	{
-		PreviousStats = ModifiedStats;
-
-		AddStat(Stat, Amount);
-
-		return System::SetTimer(this, n"UndoStatModifiers", Duration, false);
+		if (ModificationID == NAME_None)
+			PrintWarning("ClearStatModification called with invalid ModificationID.", 5.0f);
+		
+		for (int i = 0; i < ActiveModifications.Num(); i++)
+		{
+			if (ActiveModifications[i].ID == ModificationID)
+			{
+				System::ClearAndInvalidateTimerHandle(ActiveModifications[i].TimerHandle);
+				ActiveModifications.RemoveAt(i);
+				return;
+			}
+		}
 	}
 
 	UFUNCTION(NotBlueprintCallable)
-	void UndoStatModifiers()
+	void UndoStatModification()
 	{
-		// TODO: This will break in the future when stats change while the timer is active. E.g. switching rods.
-		ModifiedStats = PreviousStats;
+		if (ActiveModifications.Num() == 0)
+			return;
 
-		EquipRod(EquippedRod); // re-apply rod traits to ensure correct stats, hopefully
+		FStatModification Mod = ActiveModifications[0]; // FIFO (first in, first out) - not the australian thing lol
+
+		if (Mod.bIsAdditive)
+		{
+			// Reverse the additive modification
+			AddStat(Mod.Stat, -Mod.Amount);
+		}
+		else
+		{
+			// Restore the previous value
+			switch (Mod.Stat)
+			{
+				case EStat::Gathering:
+					Stats::SetGathering(ModifiedStats, int(Mod.PreviousValue));
+					break;
+				case EStat::Perception:
+					Stats::SetPerception(ModifiedStats, int(Mod.PreviousValue));
+					break;
+				case EStat::CastSpeed:
+					Stats::SetCastSpeed(ModifiedStats, Mod.PreviousValue);
+					break;
+				case EStat::ReelSpeed:
+					Stats::SetReelSpeed(ModifiedStats, Mod.PreviousValue);
+					break;
+				case EStat::CatchMultiplier:
+					Stats::SetCatchMultiplier(ModifiedStats, int(Mod.PreviousValue));
+					break;
+			}
+		}
+
+		ActiveModifications.RemoveAt(0);
 	}
 
 	UFUNCTION(Category = "Data")
@@ -256,6 +315,12 @@ class UStatsComponent : UFishComponentBase
 	}
 };
 
+UFUNCTION(Category = "Stats", BlueprintPure)
+int GetGil()
+{
+	return GetFishCharacterBase().FishState.StatsComponent.Gil;
+}
+
 struct FStats
 {
 	UPROPERTY(Category = "Stats")
@@ -283,6 +348,56 @@ struct FStats
 	UPROPERTY(Category = "Stats", Transient)
 	int CatchMultiplier = 1;
 }
+
+struct FStatModification
+{
+	UPROPERTY()
+	FName ID;
+
+	UPROPERTY()
+	int Index;
+
+	UPROPERTY()
+	EStat Stat;
+
+	UPROPERTY()
+	bool bIsAdditive;
+
+	UPROPERTY()
+	float Amount;		 // Used for additive modifications
+
+	UPROPERTY()
+	float PreviousValue; // Used for set modifications
+
+	/**
+	 * Handle to the timer that will call UndoStatModification when the duration expires.
+	 */
+	UPROPERTY()
+	FTimerHandle TimerHandle;
+
+	FStatModification(FName InID = NAME_None, int InIndex = 0, EStat InStat = EStat::Gathering, bool InbIsAdditive = true, float InAmount = 0.0f)
+	{
+		this.ID = InID;
+		this.Index = Index;
+		this.Stat = Stat;
+		this.bIsAdditive = bIsAdditive;
+		this.Amount = Amount;
+	}
+}
+
+#if EDITOR
+struct FDebugTraitInfo
+{
+	UPROPERTY()
+	FString TraitName;
+
+	UPROPERTY()
+	FString Description;
+
+	UPROPERTY()
+	FString Effect;
+}
+#endif
 
 namespace Stats
 {
@@ -330,29 +445,7 @@ namespace Stats
 	}
 
 	UFUNCTION(Category = "Stats", BlueprintPure)
-	UStatsComponent GetStatsComponent(AFishCharacter Character)
-	{
-		return UStatsComponent::Get(Character.PlayerState);
-	}
-
-	/**
-	 * Applies rod stats to player stats and returns the combined result.
-	 * @note Does not modify the input stats, it simply returns a new FStats struct.
-	 */
-	UFUNCTION(Category = "Stats")
-	FStats ApplyStats(FStats InPlayerStats, FStats InRodStats)
-	{
-		FStats NewStats = InPlayerStats;
-		NewStats.Gathering += InRodStats.Gathering;
-		NewStats.Perception += InRodStats.Perception;
-		NewStats.ReelSpeed *= InRodStats.ReelSpeed;
-		NewStats.CastSpeed *= InRodStats.CastSpeed;
-		NewStats.CatchMultiplier *= InRodStats.CatchMultiplier;
-		return NewStats;
-	}
-
-	UFUNCTION(Category = "Stats", BlueprintPure)
-	int GetGathering(const FStats& Stats)
+	int GetGathering(FStats & Stats)
 	{
 		return Stats.Gathering;
 	}
@@ -365,7 +458,7 @@ namespace Stats
 	}
 
 	UFUNCTION(Category = "Stats", BlueprintPure)
-	int GetPerception(const FStats& Stats)
+	int GetPerception(FStats & Stats)
 	{
 		return Stats.Perception;
 	}
@@ -378,7 +471,7 @@ namespace Stats
 	}
 
 	UFUNCTION(Category = "Stats", BlueprintPure)
-	float GetCastSpeed(const FStats& Stats)
+	float GetCastSpeed(FStats & Stats)
 	{
 		return Stats.CastSpeed;
 	}
@@ -395,7 +488,7 @@ namespace Stats
 	}
 
 	UFUNCTION(Category = "Stats", BlueprintPure)
-	float GetReelSpeed(const FStats& Stats)
+	float GetReelSpeed(FStats & Stats)
 	{
 		return Stats.ReelSpeed;
 	}
@@ -412,7 +505,7 @@ namespace Stats
 	}
 
 	UFUNCTION(Category = "Stats", BlueprintPure)
-	int GetCatchMultiplier(const FStats& Stats)
+	int GetCatchMultiplier(FStats & Stats)
 	{
 		return Stats.CatchMultiplier;
 	}

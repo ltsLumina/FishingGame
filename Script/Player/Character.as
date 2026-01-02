@@ -119,7 +119,7 @@ bool IsEditor()
 #endif
 }
 
-UFUNCTION(Category = "Editor", Meta=(ExpandBoolAsExecs="ReturnValue", Keywords="editor,pc,platform"), DisplayName="Is Editor")
+UFUNCTION(Category = "Editor", Meta = (ExpandBoolAsExecs = "ReturnValue", Keywords = "editor,pc,platform"), DisplayName = "Is Editor")
 bool IsEditor_Expanded()
 {
 #if EDITOR
@@ -133,4 +133,24 @@ UFUNCTION(Meta = (ExpandBoolAsExecs = "ReturnValue"), Category = "Pawn", Display
 bool IsLocallyControlled_Static(APawn Pawn)
 {
 	return Pawn.IsLocallyControlled();
+}
+
+UFUNCTION(Category = "Stats", Meta=(AdvancedDisplay="ID"))
+mixin void AddStatForDuration(AFishCharacter Self, EStat Stat, float Amount, float Duration, FName ID = NAME_None)
+{
+	UStatsComponent StatsComponent = UStatsComponent::Get(Self.PlayerState);
+	if (StatsComponent != nullptr)
+	{
+		StatsComponent.AddStatForDuration(Stat, Amount, Duration, ID);
+	}
+}
+
+UFUNCTION(Category = "Stats")
+mixin void ClearStatModification(AFishCharacter Self, FName ModificationID)
+{
+	UStatsComponent StatsComponent = UStatsComponent::Get(Self.PlayerState);
+	if (StatsComponent != nullptr)
+	{
+		StatsComponent.ClearStatModification(ModificationID);
+	}
 }

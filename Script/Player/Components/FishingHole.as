@@ -16,6 +16,9 @@ class UFishingHoleComponent : UActorComponent
 	UPROPERTY(Category = "Fishing | Area", VisibleInstanceOnly)
 	bool IsSpectral;
 
+	UPROPERTY(Category = "Fishing | Area", EditAnywhere)
+	TArray<TSubclassOf<UTrait>> SpectralTraits;
+
 	UPROPERTY(Category = "Events")
 	FOnSpectralShift OnSpectralShift;
 
@@ -86,7 +89,11 @@ class UFishingHoleComponent : UActorComponent
 		if (FishingComponent == nullptr)
 			return;
 
-		Character.FishState.StatsComponent.UndoStatModifiers();
+		if (IsSpectral)
+		{
+			Character.FishState.StatsComponent.ClearStatModification(n"SpectralCastSpeed");
+			Character.FishState.StatsComponent.ClearStatModification(n"SpectralReelSpeed");
+		}
 
 		NearbyPlayers.RemoveSingleSwap(Character);
 
@@ -109,6 +116,11 @@ class UFishingHoleComponent : UActorComponent
 		{
 			IsSpectral = true;
 			FishingComponent.UpdateCatchableFish();
+			
+			Print("The fishing hole has spectral shifted!", 5.0f, FLinearColor::Purple);
+
+			OnSpectralShift.Broadcast();
+			BP_SpectralShift();
 			return true;
 		}
 
