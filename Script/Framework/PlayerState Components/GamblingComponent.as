@@ -27,18 +27,13 @@ class UGamblingComponent : UFishComponentBase
     UPROPERTY(Category = "Gambling")
     TArray<APlayerState> BettingPlayers;
 
-	UFUNCTION(BlueprintOverride)
-	void BeginPlay()
-	{
-		Super::BeginPlay();
-	}
-    
-	void LatePlay() override
-	{
-		Super::LatePlay();
-
+    void PostInitialize(AFishCharacter InCharacter, AFishPlayerState InPlayerState,
+                        float InInitializationTime) override
+    {
+        Super::PostInitialize(InCharacter, InPlayerState, InInitializationTime);
+        
         Character.FishingComponent.OnFishCaught.AddUFunction(this, n"OnFishCaught");
-	}
+    }
 
     UFUNCTION(NotBlueprintCallable)
     private void OnFishCaught(AFish Fish)
@@ -59,7 +54,7 @@ class UGamblingComponent : UFishComponentBase
         RequiredFish = InRequiredFish;
         FishingAttempts = InFishingAttempts;
         TotalWinnings = 0;
-        BettingPlayer = State;
+        BettingPlayer = PlayerState;
         OpponentPlayer = Against;
         
         Notifications::AddNotification(f"Betting {AmountBet}$ against {Against.GetPlayerName()} to catch a {RequiredFish} within {FishingAttempts} attempts!", 5.0f);   
@@ -74,7 +69,7 @@ class UGamblingComponent : UFishComponentBase
         TotalWinnings = 0;
         BettingPlayer = From;
         BettingPlayers.Add(From);
-        BettingPlayers.Add(State);
+        BettingPlayers.Add(PlayerState);
 
         Notifications::AddNotification(f"{From.GetPlayerName()} has challenged you to a bet of {AmountBet}$ to catch a {RequiredFish} within {FishingAttempts} attempts!", 5.0f);
     }

@@ -72,34 +72,21 @@ class AFishNPC : AFishEntity
 		InteractionDistance = Math::Sqrt((Extent.X * Extent.X) + (Extent.Y * Extent.Y));
 	}
 
-	UFUNCTION(BlueprintOverride)
-	void BeginPlay()
+	void PostInitialize(AFishCharacter InCharacter, AFishPlayerState InPlayerState,
+						float InInitializationTime) override
 	{
-		Super::BeginPlay();
-		BP_BeginPlay();
-	}
-
-	UFUNCTION(BlueprintEvent, DisplayName = "Begin Play")
-	void BP_BeginPlay()
-	{}
-
-	void LatePlay() override
-	{
-		Super::LatePlay();
-		BP_LatePlay();
-
+		Super::PostInitialize(InCharacter, InPlayerState, InInitializationTime);
+		
 		if (AvailableQuests.Num() == 0)
 			return;
 
-		auto QuestComponent = UQuestComponent::Get(State);
+		auto QuestComponent = InPlayerState.QuestComponent;
 		QuestComponent.OnQuestBegun.AddUFunction(this, n"QuestBegun");
 		QuestComponent.OnQuestProgressed.AddUFunction(this, n"QuestProgressed");
 		QuestComponent.OnQuestCompleted.AddUFunction(this, n"QuestCompleted");
-	}
 
-	UFUNCTION(BlueprintEvent, DisplayName = "Late Play")
-	void BP_LatePlay()
-	{}
+		SetQuestSprite();
+	}
 
 	// - QUESTS -
 
@@ -263,8 +250,8 @@ class AFishNPC : AFishEntity
 			}
 		}
 
-		if (AvailableQuests.Num() > 0) 
-			System::SetTimer(this, n"SetQuestSprite", 0.3f, false);
+		//if (AvailableQuests.Num() > 0) 
+		//	System::SetTimer(this, n"SetQuestSprite", 1.5f, false);
 
 		return true;
 	}
@@ -273,7 +260,7 @@ class AFishNPC : AFishEntity
 	private void SetQuestSprite()
 	{
 		FQuestEntry Entry;
-		auto QuestComp = State.QuestComponent;
+		auto QuestComp = FishState.QuestComponent;
 		QuestComp.QuestLog.Find(AvailableQuests[0].Quest.QuestID, Entry);
 		if (!IsValid(Entry.Quest))
 		{

@@ -3,45 +3,48 @@ class AFishPlayerState : APlayerState
 	UPROPERTY(Category = "Player Info", VisibleAnywhere)
 	FText Title = FText::FromString("Angler");
 
-	UPROPERTY(Category = "Components", NotVisible)
+	UPROPERTY(Category = "Components", BlueprintReadOnly, NotVisible)
 	UStatsComponent StatsComponent;
 
-	UPROPERTY(Category = "Components", NotVisible)
+	UPROPERTY(Category = "Components", BlueprintReadOnly, NotVisible)
 	UInventoryComponent InventoryComponent;
 
-	UPROPERTY(Category = "Components", NotVisible)
+	UPROPERTY(Category = "Components", BlueprintReadOnly, NotVisible)
 	UExperienceComponent ExperienceComponent;
 
-	UPROPERTY(Category = "Components", NotVisible)
+	UPROPERTY(Category = "Components", BlueprintReadOnly, NotVisible)
 	UQuestComponent QuestComponent;
 
-	UPROPERTY(Category = "Components", NotVisible)
+	UPROPERTY(Category = "Components", BlueprintReadOnly, NotVisible)
 	UCollectionComponent CollectionComponent;
 
 	UFUNCTION(BlueprintOverride)
-	void BeginPlay()
+	void ConstructionScript()
 	{
 		StatsComponent = UStatsComponent::Get(this);
 		InventoryComponent = UInventoryComponent::Get(this);
 		ExperienceComponent = UExperienceComponent::Get(this);
 		QuestComponent = UQuestComponent::Get(this);
 		CollectionComponent = UCollectionComponent::Get(this);
+	}
 
+	UFUNCTION(BlueprintOverride)
+	void BeginPlay()
+	{
 #if EDITOR
 		ResetPlayerState();
 #endif
 
 		BP_BeginPlay();
 
-		System::SetTimer(this, n"LatePlay", 0.3f, false);
+		TryLoadPlayerState();
 	}
 
 	UFUNCTION(BlueprintEvent, DisplayName = "Begin Play")
 	void BP_BeginPlay()
 	{}
 
-	UFUNCTION(NotBlueprintCallable)
-	void LatePlay()
+	void TryLoadPlayerState()
 	{
 		// Load all components' data from save files.
 
@@ -58,21 +61,57 @@ class AFishPlayerState : APlayerState
 				break;
 		}
 
-		if (InventoryComponent.LoadInventory())
-			Print("Inventory loaded from save.", 3.0f, FLinearColor::Green);
-		else Print("No inventory save found.", 3.0f, FLinearColor::Yellow);
+		switch (InventoryComponent.LoadInventory())
+		{
+			case ELoadResult::Success:
+				Print("Inventory loaded from save.", 3.0f, FLinearColor::Green);
+				break;
+			case ELoadResult::SuccessNoData:
+				Print("No inventory save found.", 3.0f, FLinearColor::Yellow);
+				break;
+			case ELoadResult::Failure:
+				PrintError("Failed to load inventory from save.", 25.0f);
+				break;
+		}
 
-		if (ExperienceComponent.LoadExperience())
-			Print("Experience loaded from save.", 3.0f, FLinearColor::Green);
-		else Print("No experience save found.", 3.0f, FLinearColor::Yellow);
+		switch (ExperienceComponent.LoadExperience())
+		{
+			case ELoadResult::Success:
+				Print("Experience loaded from save.", 3.0f, FLinearColor::Green);
+				break;
+			case ELoadResult::SuccessNoData:
+				Print("No experience save found.", 3.0f, FLinearColor::Yellow);
+				break;
+			case ELoadResult::Failure:
+				PrintError("Failed to load experience from save.", 25.0f);
+				break;
+		}
 
-		if (QuestComponent.LoadQuests())
-			Print("Quests loaded from save.", 3.0f, FLinearColor::Green);
-		else Print("No quests save found.", 3.0f, FLinearColor::Yellow);
+		switch (QuestComponent.LoadQuests())
+		{
+			case ELoadResult::Success:
+				Print("Quests loaded from save.", 3.0f, FLinearColor::Green);
+				break;
+			case ELoadResult::SuccessNoData:
+				Print("No quest log save found.", 3.0f, FLinearColor::Yellow);
+				break;
+			case ELoadResult::Failure:
+				PrintError("Failed to load quest log from save.", 25.0f);
+				break;
+		}
 
-		if (CollectionComponent.LoadCollection())
-			Print("Collection loaded from save.", 3.0f, FLinearColor::Green);
-		else Print("No collection save found.", 3.0f, FLinearColor::Yellow);
+		switch (CollectionComponent.LoadCollection())
+		{
+			case ELoadResult::Success:
+				Print("Collection loaded from save.", 3.0f, FLinearColor::Green);
+				break;
+			case ELoadResult::SuccessNoData:
+				Print("No collection save found.", 3.0f, FLinearColor::Yellow);
+				break;
+			case ELoadResult::Failure:
+				PrintError("Failed to load collection from save.", 25.0f);
+				break;
+		}
 	}
 
 	UFUNCTION(BlueprintOverride)
@@ -82,8 +121,7 @@ class AFishPlayerState : APlayerState
 		InventoryComponent.SaveInventory();
 		ExperienceComponent.SaveExperience();
 		QuestComponent.SaveQuests();
-		// TODO: THIS NO LONGER APPLIES.
-		// Collection is not saved -- it uses the inventory's data to rebuild itself on load.
+		CollectionComponent.SaveCollection();
 	}
 
 	UFUNCTION(Category = "Save Game")

@@ -15,10 +15,9 @@ class UAbilityHandlerComponent : UFishComponentBase
 	UPROPERTY(Category = "Abilities | Events")
 	FOnAbilityRevoked OnAbilityRevoked;
 
-	UFUNCTION(BlueprintOverride)
-	void BeginPlay()
+	void PostInitialize(AFishCharacter InCharacter, AFishPlayerState InPlayerState, float InInitializationTime) override
 	{
-		Super::BeginPlay();
+		Super::PostInitialize(InCharacter, InPlayerState, InInitializationTime);
 		Abilities.Empty();
 
 		TArray<FAbilityUnlockInfo> UnlockInfos;
@@ -35,20 +34,7 @@ class UAbilityHandlerComponent : UFishComponentBase
 			}
 		}
 
-		BP_BeginPlay();
-	}
-
-	UFUNCTION(BlueprintEvent, DisplayName = "Begin Play")
-	void BP_BeginPlay()
-	{}
-
-	void LatePlay() override
-	{
-		Super::LatePlay();
-
-		UExperienceComponent::Get(State).OnLevelUp.AddUFunction(this, n"OnLevelUp");
-
-		BP_LatePlay();
+		PlayerState.ExperienceComponent.OnLevelUp.AddUFunction(this, n"OnLevelUp");
 	}
 
 	UFUNCTION(NotBlueprintCallable)
@@ -66,10 +52,6 @@ class UAbilityHandlerComponent : UFishComponentBase
 			}
 		}
 	}
-
-	UFUNCTION(BlueprintEvent, DisplayName = "Late Play")
-	void BP_LatePlay()
-	{}
 
 	UFUNCTION(NotBlueprintCallable)
 	void InvokeAbility(UAbilityData Ability)

@@ -86,7 +86,7 @@ class UFishingHoleComponent : UActorComponent
 		if (FishingComponent == nullptr)
 			return;
 
-		Character.State.StatsComponent.UndoStatModifiers();
+		Character.FishState.StatsComponent.UndoStatModifiers();
 
 		NearbyPlayers.RemoveSingleSwap(Character);
 

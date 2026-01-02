@@ -8,10 +8,12 @@ class UCollectionComponent : UFishComponentBase
     UPROPERTY(Category = "Events")
     FOnCollectionChanged OnCollectionChanged;
 
-    void LatePlay() override
+    void PostInitialize(AFishCharacter InCharacter, AFishPlayerState InPlayerState,
+                        float InInitializationTime) override
     {
-        Super::LatePlay();
-        UFishingComponent::Get(Character).OnFishCaught.AddUFunction(this, n"AddToCollectionByFish");
+        Super::PostInitialize(InCharacter, InPlayerState, InInitializationTime);
+        
+        InCharacter.FishingComponent.OnFishCaught.AddUFunction(this, n"AddToCollectionByFish");
     }
 
     UFUNCTION(NotBlueprintCallable)
@@ -45,17 +47,37 @@ class UCollectionComponent : UFishComponentBase
         return false;
     }
 
-    //TODO: what was I thinking lol. The inventory might be empty when you load, so this would fail to load anything.
     UFUNCTION()
-    bool LoadCollection()
+    bool SaveCollection()
     {
-        auto SaveGame = Gameplay::LoadGameFromSlot("PlayerInventory", 0);
+        auto SaveGame = Gameplay::CreateSaveGameObject(UInventorySaveGame); // Using InventorySaveGame for simplicity, as it already has the necessary arrays.
         if (SaveGame == nullptr)
             return false;
 
+        auto InventorySave = Cast<UInventorySaveGame>(SaveGame);
+        if (InventorySave == nullptr)
+            return false;
+
+        for (UFishItem Item : CollectedItems)
+        {
+            InventorySave.SavedBaseData.Add(Item.BaseData);
+            InventorySave.SavedFishData.Add(Item.FishData);
+        }
+
+        return Gameplay::SaveGameToSlot(InventorySave, "PlayerCollection", 0);
+    }
+
+    //TODO: what was I thinking lol. The inventory might be empty when you load, so this would fail to load anything.
+    UFUNCTION()
+    ELoadResult LoadCollection()
+    {
+        auto SaveGame = Gameplay::LoadGameFromSlot("PlayerCollection", 0);
+        if (SaveGame == nullptr)
+            return ELoadResult::SuccessNoData;
+
         auto LoadedSave = Cast<UInventorySaveGame>(SaveGame);
         if (LoadedSave == nullptr)
-            return false;
+            return ELoadResult::Failure;
 
         CollectedItems.Empty();
 
@@ -70,6 +92,6 @@ class UCollectionComponent : UFishComponentBase
             }
         }
 
-        return true;
+        return ELoadResult::Success;
     }
 };

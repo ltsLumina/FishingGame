@@ -19,27 +19,6 @@ class UInventoryComponent : UFishComponentBase
 
 	default bReplicates = false;
 
-	UFUNCTION(BlueprintOverride)
-	void BeginPlay()
-	{
-		Super::BeginPlay();
-		BP_BeginPlay();
-	}
-
-	UFUNCTION(BlueprintEvent, DisplayName = "Begin Play")
-	void BP_BeginPlay()
-	{}
-
-	void LatePlay() override
-	{
-		Super::LatePlay();
-		BP_LatePlay();
-	}
-
-	UFUNCTION(BlueprintEvent, DisplayName = "Late Play")
-	void BP_LatePlay()
-	{}
-
 	UFUNCTION(Category = "Inventory")
 	void AddItem(UItem Item, FInventoryInstanceData InstanceData = FInventoryInstanceData(), int Quantity = 1)
 	{
@@ -280,15 +259,15 @@ class UInventoryComponent : UFishComponentBase
 	}
 
 	UFUNCTION()
-	bool LoadInventory()
+	ELoadResult LoadInventory()
 	{
 		auto SaveGame = Gameplay::LoadGameFromSlot("PlayerInventory", 0);
 		if (SaveGame == nullptr)
-			return false;
+			return ELoadResult::SuccessNoData;
 
 		auto LoadedSave = Cast<UInventorySaveGame>(SaveGame);
 		if (LoadedSave == nullptr)
-			return false;
+			return ELoadResult::Failure;
 
 		Items.Empty();
 
@@ -311,6 +290,6 @@ class UInventoryComponent : UFishComponentBase
 			}
 		}
 
-		return true;
+		return ELoadResult::Success;
 	}
 };

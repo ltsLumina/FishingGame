@@ -45,28 +45,13 @@ class UQuestComponent : UFishComponentBase
 	UPROPERTY(Category = "Events")
 	FOnQuestCompleted OnQuestCompleted;
 
-	UFUNCTION(BlueprintOverride)
-	void BeginPlay()
+	void PostInitialize(AFishCharacter InCharacter, AFishPlayerState InPlayerState,
+						float InInitializationTime) override
 	{
-		Super::BeginPlay();
-		BP_BeginPlay();
+		Super::PostInitialize(InCharacter, InPlayerState, InInitializationTime);
+
+		InPlayerState.InventoryComponent.OnInventoryChanged.AddUFunction(this, n"HandleInventoryChanged");
 	}
-
-	UFUNCTION(BlueprintEvent, DisplayName = "Begin Play")
-	void BP_BeginPlay()
-	{}
-
-	void LatePlay() override
-	{
-		Super::LatePlay();
-		BP_LatePlay();
-
-		State.InventoryComponent.OnInventoryChanged.AddUFunction(this, n"HandleInventoryChanged");
-	}
-
-	UFUNCTION(BlueprintEvent, DisplayName = "Late Play")
-	void BP_LatePlay()
-	{}
 
 	UFUNCTION(NotBlueprintCallable)
 	void HandleInventoryChanged(FName _0, UInventorySlot _1, EInventoryChangeType _2)
@@ -77,7 +62,7 @@ class UQuestComponent : UFishComponentBase
 		}
 	}
 
-	UFUNCTION(Category = "Quest", Keywords="AddQuest,NewQuest")
+	UFUNCTION(Category = "Quest", Keywords = "AddQuest,NewQuest")
 	bool AddEntry(UQuest Quest, FQuestEntry& OutEntry)
 	{
 		check(Quest.QuestID != NAME_None, "QuestID cannot be None when adding a quest to the log.");
@@ -97,7 +82,7 @@ class UQuestComponent : UFishComponentBase
 		return true;
 	}
 
-	UFUNCTION(Category = "Quest", Keywords="RemoveQuest,DeleteQuest")
+	UFUNCTION(Category = "Quest", Keywords = "RemoveQuest,DeleteQuest")
 	bool RemoveEntry(UQuest Quest)
 	{
 		if (!HasQuest(Quest))
@@ -111,13 +96,14 @@ class UQuestComponent : UFishComponentBase
 		return true;
 	}
 
-	UFUNCTION(Category = "Quest", BlueprintPure, Keywords="contains")
+	UFUNCTION(Category = "Quest", BlueprintPure, Keywords = "contains")
 	bool HasQuest(UQuest Quest)
 	{
-		if (Quest == nullptr) PrintError("HasQuest called with null Quest.", 5.0f);
+		if (Quest == nullptr)
+			PrintError("HasQuest called with null Quest.", 5.0f);
 		return QuestLog.Contains(Quest.QuestID);
 	}
-	UFUNCTION(Category = "Quest", BlueprintPure, Keywords="contains", DisplayName = "Has Quest (Out)", Meta=(ReturnDisplayName="Has Quest"))
+	UFUNCTION(Category = "Quest", BlueprintPure, Keywords = "contains", DisplayName = "Has Quest (Out)", Meta = (ReturnDisplayName = "Has Quest"))
 	bool HasQuestOut(UQuest Quest, FQuestEntry&out FoundEntry)
 	{
 		if (QuestLog.Contains(Quest.QuestID))
@@ -131,16 +117,16 @@ class UQuestComponent : UFishComponentBase
 	UFUNCTION(Category = "Quest")
 	void BeginQuest(UQuest Quest)
 	{
-		FQuestEntry Entry; 
-		if (!AddEntry(Quest, Entry)) return;
-		
+		FQuestEntry Entry;
+		if (!AddEntry(Quest, Entry))
+			return;
+
 		Print("Quest started!");
 
 		QuestBegun(Quest);
 		OnQuestBegun.Broadcast(Entry);
 
-		if (ProgressQuest(Quest))
-			CompleteQuest(Quest);
+		ProgressQuest(Entry.Quest); // Check for any existing progress
 	}
 
 	/**
@@ -155,7 +141,7 @@ class UQuestComponent : UFishComponentBase
 			PrintWarning("Quest not found in log: " + Quest.QuestID.ToString(), 3.0f);
 			return false;
 		}
-		
+
 		FQuestEntry Entry = QuestLog[Quest.QuestID];
 
 		int Objectives = Entry.Quest.Objectives.Num();
@@ -186,25 +172,26 @@ class UQuestComponent : UFishComponentBase
 	void CompleteQuest(UQuest Quest)
 	{
 		Print("Quest completed!", 3.0f, FLinearColor::Green);
-		
+
 		FQuestEntry Entry = QuestLog[Quest.QuestID];
 
 		// Grant rewards
 		auto Reward = Entry.Quest.Reward;
-		State.StatsComponent.GainGil(Reward.Gil);
-		State.ExperienceComponent.GainExperience(Reward.Experience);
+		PlayerState.StatsComponent.GainGil(Reward.Gil);
+		PlayerState.ExperienceComponent.GainExperience(Reward.Experience);
 		if (Reward.GrantsItem)
 		{
 			check(Reward.Items.Num() > 0, "Quest reward marked as granting item, but no items specified.");
 			for (auto& Pair : Reward.Items)
 			{
-				State.InventoryComponent.AddBait(Pair.Key, Pair.Value);
+				PlayerState.InventoryComponent.AddBait(Pair.Key, Pair.Value);
 			}
 		}
 		if (Reward.GrantsFishingRod)
 		{
 			auto Rod = FishingRod::GenerateRod(Character, Reward.FishingRod);
-			State.StatsComponent.EquipRod(Rod); // todo: add to inventory instead
+			PlayerState.StatsComponent.EquipRod(Rod); // todo: add to inventory instead
+			Print(f"QuestComponent 208: Equip Rod Called.", 10.0f, FLinearColor::LucBlue);
 		}
 
 		QuestLog.Remove(Quest.QuestID);
@@ -235,15 +222,15 @@ class UQuestComponent : UFishComponentBase
 	}
 
 	UFUNCTION(Category = "Save Game")
-	bool LoadQuests()
+	ELoadResult LoadQuests()
 	{
 		auto SaveGame = Gameplay::LoadGameFromSlot("PlayerQuestLog", 0);
 		if (SaveGame == nullptr)
-			return false;
+			return ELoadResult::SuccessNoData;
 
 		auto LoadedSave = Cast<UQuestSaveGame>(SaveGame);
 		if (LoadedSave == nullptr)
-			return false;
+			return ELoadResult::Failure;
 
 		QuestLog = LoadedSave.SavedQuestLog;
 		CompletedQuests = LoadedSave.SavedCompletedQuests;
@@ -251,7 +238,7 @@ class UQuestComponent : UFishComponentBase
 		Debug_SavedQuestLog = LoadedSave.SavedQuestLog;
 
 		System::SetTimer(this, n"DelayedLoad", 0.3f, false);
-		return true;
+		return ELoadResult::Success;
 	}
 
 	TMap<FName, FQuestEntry> Debug_SavedQuestLog;
@@ -261,7 +248,7 @@ class UQuestComponent : UFishComponentBase
 	{
 		for (auto& Pair : Debug_SavedQuestLog)
 		{
-			//BeginQuest(Pair.Value.Quest);
+			// BeginQuest(Pair.Value.Quest);
 			Print(f"Loaded Quest: {Pair.Value.Quest.QuestID}", 3.0f, FLinearColor::Green);
 		}
 	}

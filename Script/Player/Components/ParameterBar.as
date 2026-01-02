@@ -17,20 +17,14 @@ class UParameterBar : UFishComponentBase
 
 	UFishingComponent FishingComponent;
 
-	UFUNCTION(BlueprintOverride)
-	void BeginPlay()
+	void PostInitialize(AFishCharacter InCharacter, AFishPlayerState InPlayerState, float InInitializationTime) override
 	{
-		Super::BeginPlay();
-
+		Super::PostInitialize(InCharacter, InPlayerState, InInitializationTime);
+		
 		Mana = MaxMana;
-	}
-
-	void LatePlay() override
-	{
-		Super::LatePlay();
-
-		FishingComponent = UFishingComponent::Get(Character);
-		State.ExperienceComponent.OnLevelUp.AddUFunction(this, n"OnLevelUp");
+		
+		FishingComponent = Character.FishingComponent;
+		PlayerState.ExperienceComponent.OnLevelUp.AddUFunction(this, n"OnLevelUp");
 	}
 
 	/**

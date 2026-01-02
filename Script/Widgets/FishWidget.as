@@ -21,7 +21,8 @@ class UFishWidget : UUserWidget
 		if (HasOwningPlayerPawn) Character = Cast<AFishCharacter>(GetOwningPlayerPawn());
 		else Character = GetFishCharacterBase(0);
 		
-		PlayerState = Cast<AFishPlayerState>(Character.PlayerState);
+		if (IsValid(Character))
+			PlayerState = Cast<AFishPlayerState>(Character.PlayerState);
 
 		if (Character == nullptr || PlayerState == nullptr)
 		{

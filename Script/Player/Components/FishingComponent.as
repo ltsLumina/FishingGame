@@ -96,7 +96,7 @@ class UFishingComponent : UFishComponentBase
 
 	void UpdateCatchableFish()
 	{
-		if (Character == nullptr || FishingComponent == nullptr || TimeManager == nullptr || WeatherManager == nullptr)
+		if (Character == nullptr || TimeManager == nullptr || WeatherManager == nullptr)
 			return;
 
 		CurrentCatchableFish.Empty();
@@ -132,7 +132,7 @@ class UFishingComponent : UFishComponentBase
 					Print(f"An ability is ignoring condition: {Condition.Name} for fish: {FishItem.BaseData.ItemName}", 0.0f, FLinearColor::Yellow);
 					continue;
 				}
-				if (!Condition.IsSatisfied(Character, FishingComponent, CurrentFishingHole, TimeManager, WeatherManager))
+				if (!Condition.IsSatisfied(Character, this, CurrentFishingHole, TimeManager, WeatherManager))
 				{
 					PrintWarning(f"{Condition.Name} not satisfied for fish: {FishItem.BaseData.ItemName}", 0.0f);
 					return;
@@ -165,33 +165,16 @@ class UFishingComponent : UFishComponentBase
 
 	FTimerHandle MissedTimerHandle;
 
-	UFishingComponent FishingComponent;
 	ATimeManager TimeManager;
 	AWeatherManager WeatherManager;
 
-	UFUNCTION(BlueprintOverride)
-	void BeginPlay() override
+	void PostInitialize(AFishCharacter InCharacter, AFishPlayerState InPlayerState, float InInitializationTime) override
 	{
-		Super::BeginPlay();
-		BP_BeginPlay();
-	}
-
-	void LatePlay() override
-	{
-		Super::LatePlay();
-
-		Character = Cast<AFishCharacter>(GetOwner());
-		FishingComponent = Character.FishingComponent;
 		TimeManager = Gameplay::GetActorOfClass(ATimeManager);
 		WeatherManager = Gameplay::GetActorOfClass(AWeatherManager);
 
-		if (WeatherManager == nullptr)
-			System::SetTimerForNextTick(this, "LatePlay");
+		Super::PostInitialize(InCharacter, InPlayerState, InInitializationTime);
 	}
-
-	UFUNCTION(BlueprintEvent, DisplayName = "Begin Play")
-	void BP_BeginPlay()
-	{}
 
 	UFUNCTION(BlueprintOverride)
 	void Tick(float DeltaSeconds)
@@ -345,9 +328,6 @@ class UFishingComponent : UFishComponentBase
 
 		// by this point, the fish is successfully hooked
 
-		// TODO: fishing rod ability effects
-		// Character.AbilityHandler.InvokeAbility(Character.State.StatsComponent.EquippedRod.Details.Ability); // TODO: Fishing Rod effects are essentially just abilities, but invoked automatically on hook.
-
 		if (CurrentFish != nullptr)
 		{
 			if (Data.Rarity > EFishRarity::Aetherial && UAbilityHandlerComponent::Get(Character).HasAbilityByName("Thaliak's Favor"))
@@ -452,9 +432,9 @@ class UFishingComponent : UFishComponentBase
 
 		Fish.Spawn(FishItem);
 
-		for (int i = 0; i < State.StatsComponent.ModifiedStats.CatchMultiplier; i++)
+		for (int i = 0; i < PlayerState.StatsComponent.ModifiedStats.CatchMultiplier; i++)
 		{
-			State.InventoryComponent.AddItem(Fish.Item, FInventoryInstanceData(Fish.SizeData, Fish.Tag), 1);
+			PlayerState.InventoryComponent.AddItem(Fish.Item, FInventoryInstanceData(Fish.SizeData, Fish.Tag), 1);
 		}
 
 		OnFishCaught.Broadcast(Fish);

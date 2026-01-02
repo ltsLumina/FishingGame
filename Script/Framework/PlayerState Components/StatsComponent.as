@@ -60,34 +60,22 @@ class UStatsComponent : UFishComponentBase
 	UPROPERTY(Category = "Rod | Events")
 	FOnRodUnequipped OnRodUnequipped;
 
-	UFUNCTION(BlueprintOverride)
-	void BeginPlay()
+	void PostInitialize(AFishCharacter InCharacter, AFishPlayerState InPlayerState,
+						float InInitializationTime) override
 	{
-		Super::BeginPlay();
-		BP_BeginPlay();
-	}
-
-	UFUNCTION(BlueprintEvent, DisplayName = "Begin Play")
-	void BP_BeginPlay()
-	{}
-
-	void LatePlay() override
-	{
-		Super::LatePlay();
-		BP_LatePlay();
-
+		Super::PostInitialize(InCharacter, InPlayerState, InInitializationTime);
+		
 		RodlessStats = FStats(); // initialize base stats
 
 		if (EquippedRod == nullptr && !Gameplay::DoesSaveGameExist("PlayerStats", 0))
+		{
 			EquipRod(FishingRod::GenerateRod(this, DefaultRodData));
+			//Print(f"StatsComponent 84: Equip Rod Called.", 10.0f, FLinearColor::LucBlue);
+		}
 
 		OnRodEquipped.AddUFunction(this, n"HandleRodEquipped");
 		OnRodUnequipped.AddUFunction(this, n"HandleRodUnequipped");
 	}
-
-	UFUNCTION(BlueprintEvent, DisplayName = "Late Play")
-	void BP_LatePlay()
-	{}
 
 	UFUNCTION(NotBlueprintCallable)
 	void HandleRodEquipped(UFishingRod NewRod)
@@ -133,13 +121,6 @@ class UStatsComponent : UFishComponentBase
 
 		if (EquippedRod != nullptr)
 		{
-			// Print(f"Character: {Character != nullptr}", 10.0f, FLinearColor::Red);
-			// Print(f"StatsComponent: {this != nullptr}", 10.0f, FLinearColor::Red);
-			// Print(f"ModifiedStats: {ModifiedStats}", 10.0f, FLinearColor::Red);
-			// Print(f"FishingComponent: {Character.FishingComponent != nullptr}", 10.0f, FLinearColor::Red);
-			// Print(f"CurrentFishingHole: {Character.FishingComponent.CurrentFishingHole != nullptr}", 10.0f, FLinearColor::Red);
-			// Print(f"NewRod: {NewRod != nullptr}", 10.0f, FLinearColor::Red);
-
 			// apply rod stat modifiers
 			for (auto& TraitClass : EquippedRod.Traits)
 			{
@@ -224,7 +205,7 @@ class UStatsComponent : UFishComponentBase
 	FTimerHandle AddStatForDuration(EStat Stat, float Amount, float Duration)
 	{
 		PreviousStats = ModifiedStats;
-		
+
 		AddStat(Stat, Amount);
 
 		return System::SetTimer(this, n"UndoStatModifiers", Duration, false);
@@ -253,6 +234,8 @@ class UStatsComponent : UFishComponentBase
 	UFUNCTION(Category = "Data")
 	ELoadResult LoadStats()
 	{
+		// Gameplay::DeleteGameInSlot("PlayerStats", 0); // TEMPORARY TO TEST ROD EQUIPPING
+
 		auto SaveGame = Gameplay::LoadGameFromSlot("PlayerStats", 0);
 		if (SaveGame == nullptr)
 			return ELoadResult::SuccessNoData;
@@ -268,7 +251,7 @@ class UStatsComponent : UFishComponentBase
 		LoadedRod.Traits = LoadedSave.SavedRodTraits; // traits are saved separately to preserve randomization
 		EquipRod(LoadedRod);
 
-		// Print(f"Loaded rod ({LoadedSave.SavedRod.GetName()}) with " + LoadedSave.SavedRodTraits.Num() + " traits from save.", 2.0f, FLinearColor::Green);
+		Print(f"Loaded rod ({LoadedSave.SavedRod.GetName()}) with " + LoadedSave.SavedRodTraits.Num() + " traits from save.", 12.0f, FLinearColor::Green);
 		return ELoadResult::Success;
 	}
 };

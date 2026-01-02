@@ -7,19 +7,11 @@ class AFishCharacter : AFishEntity
 	UFishingComponent FishingComponent;
 
 	UFUNCTION(BlueprintOverride)
-	void BeginPlay()
+	void ConstructionScript()
 	{
-		Super::BeginPlay();
-
-		AbilityHandler = UAbilityHandlerComponent::Get(this); // using BP child so I need to get it here.
-		FishingComponent = UFishingComponent::Get(this);	  // using BP child so I need to get it here.
-
-		BP_BeginPlay();
+		AbilityHandler = UAbilityHandlerComponent::Get(this);
+		FishingComponent = UFishingComponent::Get(this);
 	}
-
-	UFUNCTION(BlueprintEvent, DisplayName = "Begin Play")
-	void BP_BeginPlay()
-	{}
 
 	FText InfoText;
 	int ExperienceLevel;
@@ -85,6 +77,10 @@ class AFishCharacter : AFishEntity
 	}
 };
 
+/**
+ * Gets the FishCharacter for the specified player index (default 0).
+ * Since GetPlayerController(0) always returns the local player, this function will also only return the local player's character.
+ */
 UFUNCTION(BlueprintPure)
 AFishCharacter GetFishCharacterBase(int PlayerIndex = 0)
 {

@@ -32,28 +32,13 @@ class UExperienceComponent : UFishComponentBase
 
 	default bReplicates = true;
 
-	UFUNCTION(BlueprintOverride)
-	void BeginPlay()
+	void PostInitialize(AFishCharacter InCharacter, AFishPlayerState InPlayerState,
+						float InInitializationTime) override
 	{
-		Super::BeginPlay();
-		BP_BeginPlay();
-	}
-
-	UFUNCTION(BlueprintEvent, DisplayName = "Begin Play")
-	void BP_BeginPlay()
-	{}
-
-	void LatePlay() override
-	{
-		Super::LatePlay();
-		BP_LatePlay();
-
+		Super::PostInitialize(InCharacter, InPlayerState, InInitializationTime);
+		
 		Character.FishingComponent.OnFishCaught.AddUFunction(this, n"OnFishCaught");
 	}
-
-	UFUNCTION(BlueprintEvent, DisplayName = "Late Play")
-	void BP_LatePlay()
-	{}
 
 	UFUNCTION(NotBlueprintCallable)
 	private void OnFishCaught(AFish Fish)
@@ -99,18 +84,18 @@ class UExperienceComponent : UFishComponentBase
 	}
 
 	UFUNCTION(Category = "Save Game")
-	bool LoadExperience()
+	ELoadResult LoadExperience()
 	{
 		auto SaveGame = Gameplay::LoadGameFromSlot("PlayerExperience", 0);
 		if (SaveGame == nullptr)
-			return false;
+			return ELoadResult::SuccessNoData;
 
 		auto LoadedSave = Cast<UExperienceSaveGame>(SaveGame);
 		if (LoadedSave == nullptr)
-			return false;
+			return ELoadResult::Failure;
 
 		ExperienceData = LoadedSave.SavedExperienceData;
-		return true;
+		return ELoadResult::Success;
 	}
 };
 
