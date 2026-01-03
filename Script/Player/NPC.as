@@ -250,9 +250,6 @@ class AFishNPC : AFishEntity
 			}
 		}
 
-		//if (AvailableQuests.Num() > 0) 
-		//	System::SetTimer(this, n"SetQuestSprite", 1.5f, false);
-
 		return true;
 	}
 

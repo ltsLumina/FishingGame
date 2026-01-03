@@ -1,3 +1,4 @@
+UCLASS(NotPlaceable, ClassGroup = "Managers", Abstract, Meta = (ShortTooltip = "Manages weather and seasons"))
 class AWeatherManager : AActor
 {
 	UPROPERTY(Category = "Weather", VisibleInstanceOnly, BlueprintReadOnly, Replicated)

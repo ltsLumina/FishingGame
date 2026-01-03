@@ -190,8 +190,7 @@ class UQuestComponent : UFishComponentBase
 		if (Reward.GrantsFishingRod)
 		{
 			auto Rod = FishingRod::GenerateRod(Character, Reward.FishingRod);
-			PlayerState.StatsComponent.EquipRod(Rod); // todo: add to inventory instead
-			Print(f"QuestComponent 208: Equip Rod Called.", 10.0f, FLinearColor::LucBlue);
+			PlayerState.InventoryComponent.EquipRod(Rod); // todo: add to inventory instead
 		}
 
 		QuestLog.Remove(Quest.QuestID);

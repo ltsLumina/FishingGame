@@ -10,11 +10,23 @@ class UFishComponentBase : UActorComponent
 	UPROPERTY(Category = "Component", BlueprintHidden, EditDefaultsOnly, meta = (AdvancedDisplay))
 	int MaxTries = 50;
 
+	UPROPERTY(BlueprintReadOnly, NotVisible)
+	bool bInitialized = false;
+
+	/**
+	 * By default, components in unreal run their BeginPlay before their owning Actor's BeginPlay has run.
+	 * This can lead to issues where the owning Actor is not fully initialized when the component's BeginPlay runs.
+	 * Setting this to true will delay initialization of the component until after the owning Actor has initialized.
+	 * @note Must be set before BeginPlay is called. (i.e., in the constructor)
+	 */
+	UPROPERTY(BlueprintHidden, NotVisible)
+	bool bWaitForOwningActorInitialized = false;
+
 	/**
 	 * Will always be valid after initialization.
 	 * @note May be null during BeginPlay depending on ComponentType.
 	 */
-	UPROPERTY(Category ="Fish Component", BlueprintReadOnly, NotVisible, DisplayName = "Character")
+	UPROPERTY(Category = "Fish Component", BlueprintReadOnly, NotVisible, DisplayName = "Character")
 	AFishCharacter Character;
 
 	/**
@@ -28,16 +40,12 @@ class UFishComponentBase : UActorComponent
 	void BeginPlay()
 	{
 		SetComponentTickEnabled(false);
-		
-		//System::SetTimerForNextTick(this, "Initialize");
-		//System::SetTimer(this, n"Initialize", 1.5f, false);
 
 		Initialize();
 	}
 
 	int Tries = 0;
 	float InitializationTime = 0.0f;
-	bool bInitialized = false;
 
 	UFUNCTION(NotBlueprintCallable)
 	private void Initialize()
@@ -75,6 +83,14 @@ class UFishComponentBase : UActorComponent
 			}
 
 			PrintError(f"FishComponentBase: ({GetName()}) timed out! \nFailed to initialize: Character or PlayerState is null after multiple attempts.");
+			return;
+		}
+
+		if (bWaitForOwningActorInitialized && !GetOwner().HasActorBegunPlay())
+		{
+			PrintWarning(f"{GetName()} is waiting for owning actor to initialize...", 3.0f);
+			Tries++;
+			System::SetTimer(this, n"Initialize", RetryDelay, false);
 			return;
 		}
 

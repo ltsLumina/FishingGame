@@ -8,7 +8,7 @@ class UFishingHoleComponent : UActorComponent
 	default HoleName = FText::FromName(GetName());
 
 	UPROPERTY(Category = "Fishing | Area")
-	TArray<UFishItem> CatchableFish;
+	TArray<TSoftObjectPtr<UFishItem>> CatchableFish;
 
 	UPROPERTY(Category = "Fishing | Area")
 	TArray<AFishCharacter> NearbyPlayers;
@@ -42,7 +42,7 @@ class UFishingHoleComponent : UActorComponent
 
 		for (int i = 0; i < CatchableFish.Num(); i++)
 		{
-			if (CatchableFish[i] == nullptr)
+			if (CatchableFish[i].IsNull())
 			{
 #if EDITOR
 				PrintError(f"Fishing Hole {HoleName} ({GetOwner().GetActorLabel()}) has null entries in its catchable fish list!");
@@ -112,24 +112,24 @@ class UFishingHoleComponent : UActorComponent
 		if (!bOverride && !Bait.IsSpectral)
 			return false;
 
-		if (bOverride)
-		{
-			IsSpectral = true;
-			FishingComponent.UpdateCatchableFish();
-			
-			Print("The fishing hole has spectral shifted!", 5.0f, FLinearColor::Purple);
-
-			OnSpectralShift.Broadcast();
-			BP_SpectralShift();
-			return true;
-		}
-
 		IsSpectral = RollPercentChance(Bait::GetSpectralChance(Bait));
-		if (!IsSpectral)
+		if (!IsSpectral && !bOverride)
 			return false;
 
-		FishingComponent.UpdateCatchableFish();
 		Print("The fishing hole has spectral shifted!", 5.0f, FLinearColor::Purple);
+
+		FishingComponent.UpdateCatchableFish();
+		for (AFishCharacter PlayerChar : NearbyPlayers)
+		{
+			//PlayerChar.FishState.StatsComponent.AddStatForDuration(EStat::CastSpeed, 50, 60.0f, n"SpectralCastSpeed");
+			//PlayerChar.FishState.StatsComponent.AddStatForDuration(EStat::ReelSpeed, 50, 60.0f, n"SpectralReelSpeed");
+
+			//for (TSubclassOf<UTrait> TraitClass : SpectralTraits)
+			//{
+			//	UTrait Trait = TraitClass.GetDefaultObject();
+			//	Trait.ApplyTrait(PlayerChar);
+			//}
+		}
 
 		OnSpectralShift.Broadcast();
 		BP_SpectralShift();

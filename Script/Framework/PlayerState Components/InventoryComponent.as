@@ -1,3 +1,5 @@
+event void FOnRodEquipped(UFishingRod NewRod);
+event void FOnRodUnequipped(UFishingRod OldRod);
 event void FOnInventoryChanged(FName ItemID, UInventorySlot Slot, EInventoryChangeType Change);
 
 enum EInventoryChangeType
@@ -8,16 +10,103 @@ enum EInventoryChangeType
 
 class UInventoryComponent : UFishComponentBase
 {
+	UPROPERTY(Category = "Rod", EditDefaultsOnly)
+	URodData DefaultRodData;
+
+	UPROPERTY(Category = "Rod", VisibleInstanceOnly)
+	UFishingRod EquippedRod;
+
+#if EDITOR
+	UPROPERTY(Category = "Rod", EditFixedSize, Meta = (TitleProperty="TraitName", EditFixedOrder))
+	TArray<FDebugTraitInfo> TraitInfos;
+#endif
+
 	UPROPERTY(Category = "Inventory", VisibleInstanceOnly)
 	TArray<UInventorySlot> Items;
 
 	UPROPERTY(Category = "Inventory", EditDefaultsOnly)
 	TMap<UBait, int> Baits;
 
+	UPROPERTY(Category = "Rod | Events")
+	FOnRodEquipped OnRodEquipped;
+
+	UPROPERTY(Category = "Rod | Events")
+	FOnRodUnequipped OnRodUnequipped;
+
 	UPROPERTY(Category = "Inventory")
 	FOnInventoryChanged OnInventoryChanged;
 
 	default bReplicates = false;
+
+	default bWaitForOwningActorInitialized = true;
+
+	void PostInitialize(AFishCharacter InCharacter, AFishPlayerState InPlayerState,
+						float InInitializationTime) override
+	{
+		Super::PostInitialize(InCharacter, InPlayerState, InInitializationTime);
+
+		OnRodEquipped.AddUFunction(this, n"HandleRodEquipped");
+		OnRodUnequipped.AddUFunction(this, n"HandleRodUnequipped");
+
+		if (EquippedRod == nullptr && !Gameplay::DoesSaveGameExist("PlayerInventory", 0))
+		{
+			EquipRod(FishingRod::GenerateRod(this, DefaultRodData));
+		}
+	}
+
+	UFUNCTION(NotBlueprintCallable)
+	void HandleRodEquipped(UFishingRod NewRod)
+	{
+#if EDITOR
+		TraitInfos.Empty();
+
+		Print(f"Equipped rod: {NewRod.Data.Name} with {NewRod.Traits.Num()} traits.", 3.0f, FLinearColor::Purple);
+		TArray<FString> TraitNames;
+		for (auto& TraitClass : NewRod.Traits)
+		{
+			auto Trait = TraitClass.GetDefaultObject();
+
+			FDebugTraitInfo Info;
+			Info.TraitName = Trait.TraitName.ToString();
+			Info.Description = Trait.Description.ToString();
+			Info.Effect = Trait.Effect.ToString();
+
+			TraitNames.Add(Info.TraitName);
+			TraitInfos.Add(Info);
+		}
+		Print("Traits: " + String::JoinStringArray(TraitNames, ", "), 3.0f, FLinearColor::Purple);
+#endif
+	}
+
+	UFUNCTION(NotBlueprintCallable)
+	void HandleRodUnequipped(UFishingRod OldRod)
+	{
+#if EDITOR
+		TraitInfos.Empty();
+#endif
+	}
+
+	void EquipRod(UFishingRod NewRod)
+	{
+		if (EquippedRod != nullptr)
+		{
+			OnRodUnequipped.Broadcast(EquippedRod);
+		}
+
+		EquippedRod = NewRod;
+
+		if (EquippedRod != nullptr)
+		{
+			// apply rod stat modifiers
+			for (auto& TraitClass : EquippedRod.Traits)
+			{
+				auto Trait = TraitClass.GetDefaultObject();
+				Trait.ApplyTrait(Character, PlayerState.StatsComponent, Character.FishingComponent);
+			}
+
+			OnRodEquipped.Broadcast(EquippedRod);
+		}
+	}
 
 	UFUNCTION(Category = "Inventory")
 	void AddItem(UItem Item, FInventoryInstanceData InstanceData = FInventoryInstanceData(), int Quantity = 1)
@@ -251,6 +340,9 @@ class UInventoryComponent : UFishComponentBase
 			}
 		}
 
+		SaveGame.SavedRod = EquippedRod.Data;
+		SaveGame.SavedRodTraits = EquippedRod.Traits;
+
 		SaveGame.SavedBaseData = SavedBaseData;
 		SaveGame.SavedFishData = SavedFishData;
 		SaveGame.SavedInstanceData = SavedInstanceData;
@@ -269,8 +361,12 @@ class UInventoryComponent : UFishComponentBase
 		if (LoadedSave == nullptr)
 			return ELoadResult::Failure;
 
-		Items.Empty();
+		auto LoadedRod = FishingRod::GenerateRod(this, LoadedSave.SavedRod);
+		LoadedRod.Traits = LoadedSave.SavedRodTraits; // traits are saved separately to preserve randomization
+		EquipRod(LoadedRod);
+		Print(f"Loaded rod ({LoadedSave.SavedRod.GetName()}) with " + LoadedSave.SavedRodTraits.Num() + " traits from save.", 3.0f, FLinearColor::Green);
 
+		Items.Empty();
 		for (int i = 0; i < LoadedSave.SavedBaseData.Num(); i++)
 		{
 			if (i < LoadedSave.SavedFishData.Num())
@@ -293,3 +389,17 @@ class UInventoryComponent : UFishComponentBase
 		return ELoadResult::Success;
 	}
 };
+
+#if EDITOR
+struct FDebugTraitInfo
+{
+	UPROPERTY(VisibleAnywhere)
+	FString TraitName;
+
+	UPROPERTY(VisibleAnywhere)
+	FString Description;
+
+	UPROPERTY(VisibleAnywhere)
+	FString Effect;
+}
+#endif

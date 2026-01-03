@@ -71,8 +71,11 @@ namespace Fish
 		return FFishSizeData(Size, Weight, IsTiny, IsLarge, VendorValue);
 	}
 
+	/**
+	 * Generates instance data for a fish item, including a random tag and size data based on its item data.
+	 */
 	UFUNCTION(BlueprintPure, Category = "Fish | Info")
-	FInventoryInstanceData GenerateInstanceData(FFishItemData FishItemData) // non static version for use in BP
+	FInventoryInstanceData GenerateInstanceData(FFishItemData FishItemData)
 	{
 		FInventoryInstanceData InstanceData;
 		InstanceData.Tag = Fish::Tag::GetRandomTag();
@@ -113,7 +116,7 @@ class AFish : AActor
 	UPROPERTY(Category = "Fish", NotVisible)
 	FFishSizeData SizeData;
 
-	UPROPERTY(Category = "Fish", VisibleAnywhere)
+	UPROPERTY(Category = "Fish", VisibleInstanceOnly)
 	EFishTag Tag;
 
 	default bReplicates = true;
@@ -146,16 +149,6 @@ class AFish : AActor
 	EFishTag GetRandomTag() // non static version for use in BP
 	{
 		return Fish::Tag::GetRandomTag();
-	}
-
-	/**
-	 * Generates instance data for this fish based on its item data.
-	 * @return The generated instance data, with randomized size and tag based on the fish item data.
-	 */
-	UFUNCTION(BlueprintPure, Category = "Fish | Info")
-	FInventoryInstanceData GenerateInstanceData() // non static version for use in BP
-	{
-		return Fish::GenerateInstanceData(Item.FishData);
 	}
 
 	void OnCaught(AFishCharacter Catcher)

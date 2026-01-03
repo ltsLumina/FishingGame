@@ -86,15 +86,21 @@ class URodData : UPrimaryDataAsset
 
 	UPROPERTY(Category = "Rod")
 	FRodTraits Traits;
+
+	default Traits.TraitCountChances.Add(20); // 0 traits
+	default Traits.TraitCountChances.Add(25); // 1 trait
+	default Traits.TraitCountChances.Add(30); // 2 traits
+	default Traits.TraitCountChances.Add(20); // 3 traits
+	default Traits.TraitCountChances.Add(5);  // 4 traits
 };
 
 struct FRodDetails
 {
 	UPROPERTY(DisplayName = "Name")
-	FText RodName;
+	FText RodName = FText::FromString("Fishing Rod");
 
 	UPROPERTY(Meta = (MultiLine))
-	FText Lore;
+	FText Lore = FText::FromString("A basic fishing rod.");
 
 	UPROPERTY()
 	UTexture2D Icon;
@@ -110,10 +116,10 @@ struct FRodTraits
 
 	/**
 	 * Chance to get a certain number of traits on this rod.
-	 * Key: Index of trait count (0 to 4)
+	 * Index: Trait count (0 to 4)
 	 * Value: Weight for random selection (0-100, percentage chance)
 	 */
-	UPROPERTY(Category = "Traits", Meta = (EditCondition = "!IsCurated", EditConditionHides))
+	UPROPERTY(Category = "Traits", Meta = (EditCondition = "!IsCurated", EditConditionHides, Units="%", UIMin=0, UIMax=100), EditFixedSize)
 	TArray<float> TraitCountChances;
 
 	/**

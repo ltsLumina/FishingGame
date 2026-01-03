@@ -1,4 +1,4 @@
-class UInventorySlot : UObject
+class UInventorySlot : UObject // TODO: Why is this a class and not a struct?
 {
     UPROPERTY(Category = "Inventory")
     UItem Item;

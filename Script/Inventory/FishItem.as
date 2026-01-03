@@ -1,4 +1,4 @@
-UCLASS(Meta = (PrioritizeCategories = "Item"))
+UCLASS(Meta = (PrioritizeCategories = "Item", AutoExpandCategories="Logic"))
 class UFishItem : UItem
 {
 	UPROPERTY(Category = "Fish", ExposeOnSpawn, SaveGame)

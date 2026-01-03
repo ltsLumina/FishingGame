@@ -106,7 +106,8 @@ class UFishingComponent : UFishComponentBase
 
 		for (auto& FishItem : CurrentFishingHole.CatchableFish)
 		{
-			auto Data = FishItem.FishData;
+			auto LoadedFishItem = System::LoadAsset_Blocking(FishItem);
+			auto Data = LoadedFishItem.FishData;
 
 			if (CurrentBait == nullptr)
 				continue;
@@ -124,22 +125,22 @@ class UFishingComponent : UFishComponentBase
 
 				if (Condition == nullptr)
 				{
-					throw(f"Fish {FishItem.GetItemName()} has a null FishCondition!");
+					throw(f"Fish {LoadedFishItem.GetItemName()} has a null FishCondition!");
 					continue;
 				}
 				if (CurrentIgnoredConditions.Contains(Condition.GetClass()))
 				{
-					Print(f"An ability is ignoring condition: {Condition.Name} for fish: {FishItem.BaseData.ItemName}", 0.0f, FLinearColor::Yellow);
+					Print(f"An ability is ignoring condition: {Condition.Name} for fish: {LoadedFishItem.BaseData.ItemName}", 0.0f, FLinearColor::Yellow);
 					continue;
 				}
 				if (!Condition.IsSatisfied(Character, this, CurrentFishingHole, TimeManager, WeatherManager))
 				{
-					PrintWarning(f"{Condition.Name} not satisfied for fish: {FishItem.BaseData.ItemName}", 0.0f);
+					PrintWarning(f"{Condition.Name} not satisfied for fish: {LoadedFishItem.BaseData.ItemName}", 0.0f);
 					return;
 				}
 			}
 
-			CurrentCatchableFish.Add(FishItem);
+			CurrentCatchableFish.Add(LoadedFishItem);
 			for (auto Item : CurrentCatchableFish)
 			{
 				if (Item.FishData.Rarity > EFishRarity::Prismatic)
@@ -434,7 +435,7 @@ class UFishingComponent : UFishComponentBase
 
 		for (int i = 0; i < PlayerState.StatsComponent.ModifiedStats.CatchMultiplier; i++)
 		{
-			PlayerState.InventoryComponent.AddItem(Fish.Item, FInventoryInstanceData(Fish.SizeData, Fish.Tag), 1);
+			PlayerState.InventoryComponent.AddItem(Fish.Item, Fish::GenerateInstanceData(Fish.Item.FishData), 1);
 		}
 
 		OnFishCaught.Broadcast(Fish);

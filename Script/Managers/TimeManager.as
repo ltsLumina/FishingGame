@@ -4,6 +4,7 @@ namespace TimeManager
     FGameTime GetGameTime() { return Gameplay::GetActorOfClass(ATimeManager).GameTime; }
 }
 
+UCLASS(NotPlaceable, ClassGroup = "Managers", Abstract, Meta = (ShortTooltip = "Manages in-game time progression and day-night cycle"))
 class ATimeManager : AActor
 {
 	UPROPERTY(DefaultComponent, RootComponent)

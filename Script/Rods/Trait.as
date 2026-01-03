@@ -20,7 +20,7 @@ class UTrait : UPrimaryDataAsset
 	 * Apply the effect of this trait to the given character.
 	 */
 	UFUNCTION(BlueprintEvent)
-	void ApplyTrait(AFishCharacter Character, UStatsComponent Stats, FStats ModifiedStats, UFishingComponent FishingComponent, UFishingHoleComponent FishingHole, UFishingRod Rod)
+	void ApplyTrait(AFishCharacter Character, UStatsComponent Stats, UFishingComponent FishingComponent)
 	{}
 
 	/**
