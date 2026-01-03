@@ -4,8 +4,8 @@
 class USpecificFish : UQuestObjective
 {
 	UPROPERTY(Category = "Quest | Objective", DisplayName = "Fish")
-	UFishItem Fish; // TODO: Change to FishItem later?
-
+	UFishItem Fish;
+	
 	UPROPERTY(Category = "Quest | Objective", Meta = (UIMin = "1", UIMax = "100", Delta = "1"))
 	int Quantity = 1;
 
@@ -24,14 +24,13 @@ class USpecificFish : UQuestObjective
 		bool bMeetsSize = false;
 		for (auto& Slot : Inventory.Items)
 		{
-			auto FishItem = Cast<UFishItem>(Slot);
-			if (FishItem == nullptr) // if its not a fish,
+			if (!Slot.IsValid())
 				continue;
 
-			if (FishItem.BaseData.ID != BaseData.ID) // wrong fish
+			if (Slot.Item.BaseData.ID != BaseData.ID) // wrong fish
 				continue;
 
-			if (Slot.GetFishSizeData().IsLarge && IsLarge)
+			if (Slot.InstanceData.FishInstanceData.SizeData.IsLarge && IsLarge)
 			{
 				bMeetsSize = true;
 				break;

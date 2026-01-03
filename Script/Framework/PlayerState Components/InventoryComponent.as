@@ -1,6 +1,6 @@
 event void FOnRodEquipped(UFishingRod NewRod);
 event void FOnRodUnequipped(UFishingRod OldRod);
-event void FOnInventoryChanged(FName ItemID, UInventorySlot Slot, EInventoryChangeType Change);
+event void FOnInventoryChanged(FName ItemID, FInventorySlot InventorySlot, EInventoryChangeType Change);
 
 enum EInventoryChangeType
 {
@@ -17,12 +17,12 @@ class UInventoryComponent : UFishComponentBase
 	UFishingRod EquippedRod;
 
 #if EDITOR
-	UPROPERTY(Category = "Rod", EditFixedSize, Meta = (TitleProperty="TraitName", EditFixedOrder))
+	UPROPERTY(Category = "Rod", EditFixedSize, Meta = (TitleProperty = "TraitName", EditFixedOrder))
 	TArray<FDebugTraitInfo> TraitInfos;
 #endif
 
-	UPROPERTY(Category = "Inventory", VisibleInstanceOnly)
-	TArray<UInventorySlot> Items;
+	UPROPERTY(Category = "Inventory", EditFixedSize, Meta = (TitleProperty = "SlotName", EditFixedOrder))
+	TArray<FInventorySlot> Items;
 
 	UPROPERTY(Category = "Inventory", EditDefaultsOnly)
 	TMap<UBait, int> Baits;
@@ -58,11 +58,18 @@ class UInventoryComponent : UFishComponentBase
 	void HandleRodEquipped(UFishingRod NewRod)
 	{
 #if EDITOR
+		Print(f"Equipped rod: {NewRod.Data.Name} with {NewRod.Traits.Num()} traits.", 3.0f, FLinearColor::Purple);
+		PrintTraitDebugInfo(NewRod);
+#endif
+	}
+
+#if EDITOR
+	void PrintTraitDebugInfo(UFishingRod Rod)
+	{
 		TraitInfos.Empty();
 
-		Print(f"Equipped rod: {NewRod.Data.Name} with {NewRod.Traits.Num()} traits.", 3.0f, FLinearColor::Purple);
 		TArray<FString> TraitNames;
-		for (auto& TraitClass : NewRod.Traits)
+		for (auto& TraitClass : Rod.Traits)
 		{
 			auto Trait = TraitClass.GetDefaultObject();
 
@@ -75,8 +82,8 @@ class UInventoryComponent : UFishComponentBase
 			TraitInfos.Add(Info);
 		}
 		Print("Traits: " + String::JoinStringArray(TraitNames, ", "), 3.0f, FLinearColor::Purple);
-#endif
 	}
+#endif
 
 	UFUNCTION(NotBlueprintCallable)
 	void HandleRodUnequipped(UFishingRod OldRod)
@@ -101,7 +108,10 @@ class UInventoryComponent : UFishComponentBase
 			for (auto& TraitClass : EquippedRod.Traits)
 			{
 				auto Trait = TraitClass.GetDefaultObject();
-				Trait.ApplyTrait(Character, PlayerState.StatsComponent, Character.FishingComponent);
+				if (!Trait.IsEnhanced)
+					Trait.ApplyTrait(Character, PlayerState.StatsComponent, Character.FishingComponent);
+				else
+					Trait.ApplyTraitEnhanced(Character, PlayerState.StatsComponent, Character.FishingComponent);
 			}
 
 			OnRodEquipped.Broadcast(EquippedRod);
@@ -109,12 +119,12 @@ class UInventoryComponent : UFishComponentBase
 	}
 
 	UFUNCTION(Category = "Inventory")
-	void AddItem(UItem Item, FInventoryInstanceData InstanceData = FInventoryInstanceData(), int Quantity = 1)
+	void AddItem(UItem Item, FInventoryInstanceData InstanceData, int Quantity = 1)
 	{
 		if (Items.Num() >= 40)
 			return;
 
-		UInventorySlot Slot;
+		FInventorySlot Slot;
 
 		for (int i = 0; i < Quantity; i++)
 		{
@@ -126,11 +136,12 @@ class UInventoryComponent : UFishComponentBase
 				Items.SetNum(SlotIndex + 1);
 			}
 
-			Slot = NewObject(this, UInventorySlot);
+			Slot.SlotName = Item.BaseData.ItemName;
 			Slot.Item = Item;
 			Slot.InstanceData = InstanceData;
 			Items[SlotIndex] = Slot;
 		}
+
 		OnInventoryChanged.Broadcast(Item.BaseData.ID, Slot, EInventoryChangeType::Added);
 	}
 
@@ -153,7 +164,7 @@ class UInventoryComponent : UFishComponentBase
 	{
 		for (int i = 0; i < Items.Num(); i++)
 		{
-			if (Items[i] == nullptr)
+			if (Items[i].Item == nullptr)
 				return i;
 		}
 		return Items.Num(); // Return next slot if no empty ones found
@@ -172,6 +183,19 @@ class UInventoryComponent : UFishComponentBase
 		return false;
 	}
 
+	UFUNCTION(Category = "Inventory", BlueprintPure)
+	bool HasFish(UFishItem FishItem)
+	{
+		for (auto& Pair : Items)
+		{
+			if (Pair.Item == FishItem)
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
 	/**
 	 * Removes an item from the inventory by its ID.
 	 * @param ID The ID of the item to remove.
@@ -183,10 +207,10 @@ class UInventoryComponent : UFishComponentBase
 		bool bRemoved = false;
 		for (int i = 0; i < Items.Num(); i++)
 		{
-			if (Items[i] != nullptr && Items[i].Item.BaseData.ID == ID)
+			if (Items[i].Item != nullptr && Items[i].Item.BaseData.ID == ID)
 			{
 				auto RemovedItem = Items[i];
-				Items[i] = nullptr; // Clear the slot instead of removing it
+				Items[i] = FInventorySlot(); // Clear the slot instead of removing it
 				bRemoved = true;
 				OnInventoryChanged.Broadcast(ID, RemovedItem, EInventoryChangeType::Removed);
 				if (!RemoveDuplicates)
@@ -199,14 +223,14 @@ class UInventoryComponent : UFishComponentBase
 	UFUNCTION(Category = "Inventory")
 	bool RemoveItemByIndex(int Index)
 	{
-		if (Index < 0 || Index >= Items.Num())
-			return false;
-
-		auto RemovedSlot = Items[Index];
-		Items[Index] = nullptr; // Clear the slot instead of removing it
-
-		OnInventoryChanged.Broadcast(RemovedSlot.Item.BaseData.ID, RemovedSlot, EInventoryChangeType::Removed);
-		return true;
+		if (Items.IsValidIndex(Index) && Items[Index].Item != nullptr)
+		{
+			auto RemovedItem = Items[Index];
+			Items[Index] = FInventorySlot(); // Clear the slot instead of removing it
+			OnInventoryChanged.Broadcast(RemovedItem.Item.BaseData.ID, RemovedItem, EInventoryChangeType::Removed);
+			return true;
+		}
+		return false;
 	}
 
 	/**
@@ -215,13 +239,13 @@ class UInventoryComponent : UFishComponentBase
 	 * @param ItemFilter Optional filter to only remove if the item is in the filter list.
 	 */
 	UFUNCTION()
-	bool RemoveItemBySlot(UInventorySlot Slot, TArray<TSubclassOf<UItem>> ItemFilter = TArray<TSubclassOf<UItem>>())
+	bool RemoveItemBySlot(FInventorySlot Slot, TArray<TSubclassOf<UItem>> ItemFilter = TArray<TSubclassOf<UItem>>())
 	{
 		for (int i = 0; i < Items.Num(); i++)
 		{
-			if (Items[i] == Slot && (ItemFilter.Num() == 0 || ItemFilter.Contains(Slot.Item.GetClass())))
+			if (Items[i].Item == Slot.Item && (ItemFilter.Num() == 0 || ItemFilter.Contains(Slot.Item.GetClass())))
 			{
-				Items[i] = nullptr; // Clear the slot instead of removing it
+				Items[i] = FInventorySlot(); // Clear the slot instead of removing it
 				OnInventoryChanged.Broadcast(Slot.Item.BaseData.ID, Slot, EInventoryChangeType::Removed);
 				return true;
 			}
@@ -248,7 +272,7 @@ class UInventoryComponent : UFishComponentBase
 	{
 		Items.Empty();
 		// Print("Cleared inventory.");
-		OnInventoryChanged.Broadcast(FName("Everything"), nullptr, EInventoryChangeType::Removed);
+		OnInventoryChanged.Broadcast(FName("Everything"), FInventorySlot(), EInventoryChangeType::Removed);
 	}
 
 	UFUNCTION(Category = "Inventory", BlueprintPure, Meta = (CompactNodeTitle = "Contains", Keywords = "has,find"))
@@ -270,7 +294,7 @@ class UInventoryComponent : UFishComponentBase
 		int Quantity = 0;
 		for (auto& Slot : Items)
 		{
-			if (Slot == nullptr)
+			if (!IsValidSlot(Slot))
 				continue;
 
 			if (Slot.Item.BaseData.ID == ID)
@@ -285,11 +309,12 @@ class UInventoryComponent : UFishComponentBase
 	int GetTotalValue()
 	{
 		int TotalValue = 0;
-		for (auto& Pair : Items)
+		for (auto& Slot : Items)
 		{
-			if (Cast<UFishItem>(Pair) == nullptr)
+			if (!IsValidSlot(Slot))
 				continue;
-			TotalValue += Cast<UFishItem>(Pair).FishData.VendorValue;
+
+			TotalValue += Slot.InstanceData.FishInstanceData.SizeData.VendorValue;
 		}
 		return TotalValue;
 	}
@@ -313,36 +338,41 @@ class UInventoryComponent : UFishComponentBase
 		}
 	}
 
+	UFUNCTION(Category = "Inventory", BlueprintPure)
+	bool IsValidSlot(FInventorySlot Slot)
+	{
+		return Slot.Item != nullptr;
+	}
+
 	bool SaveInventory()
 	{
+		TArray<TSubclassOf<UItem>> SavedItemClass;
 		TArray<FItemData> SavedBaseData;
 		TArray<FFishItemData> SavedFishData;
 		TArray<FInventoryInstanceData> SavedInstanceData;
 
 		auto SaveGame = Gameplay::CreateSaveGameObject(UInventorySaveGame);
 
-		SavedBaseData.Empty();
-		SavedFishData.Empty();
-		SavedInstanceData.Empty();
-
 		for (auto& Slot : Items)
 		{
-			if (Slot == nullptr)
+			if (!IsValidSlot(Slot))
 				continue;
 
+			// These three fields exist on all items.
+			SavedItemClass.Add(Slot.Item.Class);
 			SavedBaseData.Add(Slot.Item.BaseData);
+			SavedInstanceData.Add(Slot.InstanceData);
 
-			auto FishItem = Cast<UFishItem>(Slot.Item);
-			if (FishItem != nullptr)
+			if (Slot.Item.IsA(UFishItem))
 			{
-				SavedFishData.Add(FishItem.FishData);
-				SavedInstanceData.Add(Slot.InstanceData);
+				SavedFishData.Add(Cast<UFishItem>(Slot.Item).FishData);
 			}
 		}
 
 		SaveGame.SavedRod = EquippedRod.Data;
 		SaveGame.SavedRodTraits = EquippedRod.Traits;
 
+		SaveGame.SavedItemClass = SavedItemClass;
 		SaveGame.SavedBaseData = SavedBaseData;
 		SaveGame.SavedFishData = SavedFishData;
 		SaveGame.SavedInstanceData = SavedInstanceData;
@@ -353,6 +383,8 @@ class UInventoryComponent : UFishComponentBase
 	UFUNCTION()
 	ELoadResult LoadInventory()
 	{
+		Items.Empty();
+
 		auto SaveGame = Gameplay::LoadGameFromSlot("PlayerInventory", 0);
 		if (SaveGame == nullptr)
 			return ELoadResult::SuccessNoData;
@@ -364,31 +396,46 @@ class UInventoryComponent : UFishComponentBase
 		auto LoadedRod = FishingRod::GenerateRod(this, LoadedSave.SavedRod);
 		LoadedRod.Traits = LoadedSave.SavedRodTraits; // traits are saved separately to preserve randomization
 		EquipRod(LoadedRod);
-		Print(f"Loaded rod ({LoadedSave.SavedRod.GetName()}) with " + LoadedSave.SavedRodTraits.Num() + " traits from save.", 3.0f, FLinearColor::Green);
+		Print(f"Loaded rod ({LoadedSave.SavedRod.GetName()}) with " + LoadedSave.SavedRodTraits.Num() + " traits from save.", 3.0f, FLinearColor::Purple);
+#if EDITOR
+		PrintTraitDebugInfo(LoadedRod);
+#endif
 
-		Items.Empty();
+		int FishIndex = 0;
+
 		for (int i = 0; i < LoadedSave.SavedBaseData.Num(); i++)
 		{
-			if (i < LoadedSave.SavedFishData.Num())
+			FInventoryInstanceData InstanceData = LoadedSave.SavedInstanceData[i];
+
+			bool bIsFish = LoadedSave.SavedItemClass[i].DefaultObject.IsA(UFishItem);
+			if (bIsFish && LoadedSave.SavedFishData.IsValidIndex(FishIndex))
 			{
 				auto FishItem = NewObject(this, UFishItem);
 				FishItem.BaseData = LoadedSave.SavedBaseData[i];
-				FishItem.FishData = LoadedSave.SavedFishData[i];
-				auto SizeData = LoadedSave.SavedInstanceData[i];
+				FishItem.FishData = LoadedSave.SavedFishData[FishIndex];
+				FishIndex++;
 
-				AddItem(FishItem, SizeData, 1);
+				AddItem(FishItem, InstanceData, 1);
 			}
 			else
 			{
 				auto Item = NewObject(this, UItem);
 				Item.BaseData = LoadedSave.SavedBaseData[i];
-				AddItem(Item, FInventoryInstanceData(), 1);
+				AddItem(Item, InstanceData, 1);
 			}
 		}
 
 		return ELoadResult::Success;
 	}
 };
+
+/**
+ * Checks if the inventory slot is valid (i.e., contains an item).
+ */
+mixin bool IsValid(FInventorySlot& Slot)
+{
+	return Slot.Item != nullptr;
+}
 
 #if EDITOR
 struct FDebugTraitInfo
@@ -401,5 +448,12 @@ struct FDebugTraitInfo
 
 	UPROPERTY(VisibleAnywhere)
 	FString Effect;
+
+	FDebugTraitInfo(FString InTraitName = "", FString InDescription = "", FString InEffect = "")
+	{
+		TraitName = InTraitName;
+		Description = InDescription;
+		Effect = InEffect;
+	}
 }
 #endif

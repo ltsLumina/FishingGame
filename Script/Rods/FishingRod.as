@@ -28,7 +28,7 @@ namespace FishingRod
 			for (int i = 0; i < TraitCountProbabilities.Num(); i++)
 			{
 				CumulativeChance += TraitCountProbabilities[i];
-				if (RandomRoll <= CumulativeChance)
+				if (RandomRoll < CumulativeChance)
 				{
 					TraitCount = i;
 					break;
@@ -68,6 +68,20 @@ namespace FishingRod
 				}
 			}
 
+			switch (Rod.Data.Tier)	  // does nothing yet
+			{
+				case ERodTier::Tier1: // ★
+				case ERodTier::Tier2: // ★★
+				case ERodTier::Tier3: // ★★★
+				case ERodTier::Tier4: // ★★★★
+				case ERodTier::Tier5: // ★★★★★
+				default:
+				{
+					// nothing for now.
+					break;
+				}
+			}
+
 			SelectedTraits.Add(AvailableTraits[SelectedIndex]);
 			AvailableTraits.RemoveAt(SelectedIndex);
 		}
@@ -76,10 +90,27 @@ namespace FishingRod
 	}
 }
 
+enum ERodTier
+{
+	UMETA(DisplayName = "★")
+	Tier1,
+	UMETA(DisplayName = "★★")
+	Tier2,
+	UMETA(DisplayName = "★★★")
+	Tier3,
+	UMETA(DisplayName = "★★★★")
+	Tier4,
+	UMETA(DisplayName = "★★★★★")
+	Tier5
+};
+
 class URodData : UPrimaryDataAsset
 {
 	UPROPERTY(Category = "Rod")
 	FRodDetails Details;
+
+	UPROPERTY(Category = "Rod")
+	ERodTier Tier;
 
 	UPROPERTY(Category = "Rod")
 	FStats BaseStats;
@@ -119,7 +150,7 @@ struct FRodTraits
 	 * Index: Trait count (0 to 4)
 	 * Value: Weight for random selection (0-100, percentage chance)
 	 */
-	UPROPERTY(Category = "Traits", Meta = (EditCondition = "!IsCurated", EditConditionHides, Units="%", UIMin=0, UIMax=100), EditFixedSize)
+	UPROPERTY(Category = "Traits", Meta = (EditCondition = "!IsCurated", EditConditionHides, Units = "%", UIMin = 0, UIMax = 100), EditFixedSize)
 	TArray<float> TraitCountChances;
 
 	/**

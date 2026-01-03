@@ -1,7 +1,16 @@
+event void FOnTitleUnlocked(FText NewTitle);
+event void FOnTitleChanged(FText NewTitle);
+
 class AFishPlayerState : APlayerState
 {
-	UPROPERTY(Category = "Player Info", VisibleAnywhere)
-	FText Title = FText::FromString("Angler");
+	UPROPERTY(Category = "Player Info | Title", VisibleAnywhere, SaveGame)
+	FText Title = Text::EmptyText;
+
+	UPROPERTY(Category = "Player Info | Title", VisibleAnywhere, SaveGame)
+	TArray<FText> OwnedTitles;
+
+	UPROPERTY(Category = "Player Info | Title", EditDefaultsOnly)
+	UTitles TitlesDataAsset;
 
 	UPROPERTY(Category = "Components", BlueprintReadOnly, NotVisible)
 	UStatsComponent StatsComponent;
@@ -17,6 +26,14 @@ class AFishPlayerState : APlayerState
 
 	UPROPERTY(Category = "Components", BlueprintReadOnly, NotVisible)
 	UCollectionComponent CollectionComponent;
+
+	UPROPERTY(Category = "Player Info | Title")
+	FOnTitleUnlocked OnTitleUnlocked;
+
+	UPROPERTY(Category = "Player Info | Title")
+	FOnTitleChanged OnTitleChanged;
+
+	AFishCharacter Character;
 
 	UFUNCTION(BlueprintOverride)
 	void ConstructionScript()
@@ -35,18 +52,75 @@ class AFishPlayerState : APlayerState
 		ResetPlayerState();
 #endif
 
-		BP_BeginPlay();
-
 		TryLoadPlayerState();
+
+		System::SetTimer(this, n"Init", 0.2f, false);
+
+		BP_BeginPlay();
+	}
+
+	UFUNCTION(NotBlueprintCallable)
+	private void Init()
+	{
+		Character = Cast<AFishCharacter>(GetPawn());
+		Character.FishingComponent.OnFishCaught.AddUFunction(this, n"OnFishCaught");
+	}
+
+	UFUNCTION()
+	void OnFishCaught(AFish Fish)
+	{
+		TArray<FString> AllTitles;
+		TitlesDataAsset.Titles.GetKeys(AllTitles);
+
+		for (int i = 0; i < AllTitles.Num(); i++)
+		{
+			auto TitleName = FText::FromString(AllTitles[i]);
+			if (OwnedTitles.Contains(TitleName))
+			{
+				continue; // already owned
+			}
+
+			auto Condition = TitlesDataAsset.Titles[AllTitles[i]];
+
+			if (Condition == nullptr)
+			{
+				PrintError(f"Title (\"{TitleName}\") has no unlock condition set!");
+				continue;
+			}
+
+			if (Condition.IsSatisfied(Character, this, Fish) || Condition.AutoUnlock)
+			{
+				Title = TitleName;
+				OwnedTitles.AddUnique(TitleName);
+				Print(f"New title unlocked: \"{TitleName}\"", 5.0f, FLinearColor::Purple);
+				OnTitleUnlocked.Broadcast(TitleName);
+				OnTitleChanged.Broadcast(TitleName);
+				break;
+			}
+		}
 	}
 
 	UFUNCTION(BlueprintEvent, DisplayName = "Begin Play")
 	void BP_BeginPlay()
 	{}
 
+	UFUNCTION()
 	void TryLoadPlayerState()
 	{
-		// Load all components' data from save files.
+		switch (LoadTitles())
+		{
+			case ELoadResult::Success:
+				Print("Titles loaded from save.", 3.0f, FLinearColor::Green);
+				break;
+			case ELoadResult::SuccessNoData:
+				Print("No titles save found.", 3.0f, FLinearColor::Yellow);
+				break;
+			case ELoadResult::Failure:
+				PrintError("Failed to load titles from save.", 25.0f);
+				break;
+		}
+
+		// Load all components' data
 
 		switch (StatsComponent.LoadStats())
 		{
@@ -117,6 +191,8 @@ class AFishPlayerState : APlayerState
 	UFUNCTION(BlueprintOverride)
 	void EndPlay(EEndPlayReason EndPlayReason)
 	{
+		SaveTitles();
+
 		StatsComponent.SaveStats();
 		InventoryComponent.SaveInventory();
 		ExperienceComponent.SaveExperience();
@@ -124,9 +200,36 @@ class AFishPlayerState : APlayerState
 		CollectionComponent.SaveCollection();
 	}
 
+	bool SaveTitles()
+	{
+		auto SaveGame = NewObject(this, UTitlesSaveGame);
+		SaveGame.SavedTitle = Title;
+		SaveGame.SavedOwnedTitles = OwnedTitles;
+
+		return Gameplay::SaveGameToSlot(SaveGame, "PlayerTitles", 0);
+	}
+
+	ELoadResult LoadTitles()
+	{
+		auto SaveGame = Gameplay::LoadGameFromSlot("PlayerTitles", 0);
+		if (SaveGame == nullptr)
+			return ELoadResult::SuccessNoData;
+
+		auto LoadedSave = Cast<UTitlesSaveGame>(SaveGame);
+		if (LoadedSave == nullptr)
+			return ELoadResult::Failure;
+
+		Title = LoadedSave.SavedTitle;
+		OwnedTitles = LoadedSave.SavedOwnedTitles;
+
+		return ELoadResult::Success;
+	}
+
 	UFUNCTION(Category = "Save Game")
 	void ResetPlayerState()
 	{
+		Gameplay::DeleteGameInSlot("PlayerTitles", 0);
+
 		Gameplay::DeleteGameInSlot("PlayerStats", 0);
 		Gameplay::DeleteGameInSlot("PlayerInventory", 0);
 		Gameplay::DeleteGameInSlot("PlayerExperience", 0);

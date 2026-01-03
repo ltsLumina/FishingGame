@@ -72,10 +72,10 @@ class UStatsComponent : UFishComponentBase
 				ModifiedStats.Perception += int(Amount);
 				break;
 			case EStat::CastSpeed:
-				AddPercentAdditive(ModifiedStats.CastSpeed, Amount);
+				Percent::AddPercentAdditive(ModifiedStats.CastSpeed, Amount);
 				break;
 			case EStat::ReelSpeed:
-				AddPercentAdditive(ModifiedStats.ReelSpeed, Amount);
+				Percent::AddPercentAdditive(ModifiedStats.ReelSpeed, Amount);
 				break;
 			case EStat::CatchMultiplier:
 				ModifiedStats.CatchMultiplier += int(Amount);

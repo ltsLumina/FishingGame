@@ -1,34 +1,36 @@
-class UInventorySlot : UObject // TODO: Why is this a class and not a struct?
+struct FInventorySlot
 {
-    UPROPERTY(Category = "Inventory")
+    UPROPERTY(Category = "Inventory", VisibleAnywhere, BlueprintHidden, Transient)
+    FText SlotName;
+    
+    UPROPERTY(Category = "Inventory", VisibleAnywhere, SaveGame)
     UItem Item;
 
-    UPROPERTY(Category = "Inventory", SaveGame)
+    UPROPERTY(Category = "Inventory", VisibleAnywhere, SaveGame)
     FInventoryInstanceData InstanceData;
-
-    UFUNCTION(Category = "Inventory", BlueprintPure)
-    FFishSizeData GetFishSizeData()
-    {
-        return InstanceData.SizeData;
-    }
 }
 
 struct FInventoryInstanceData
 {
     UPROPERTY(Category = "Inventory", SaveGame)
-    FFishSizeData SizeData;
+    FFishInstanceData FishInstanceData;
 
-    UPROPERTY(Category = "Inventory", SaveGame)
-	EFishTag Tag;
-
+    /**
+     * Constructor for Fish items.
+     */
     FInventoryInstanceData(FFishSizeData InFishSizeData, EFishTag InTag = EFishTag::None)
     {
-        SizeData = InFishSizeData;
-        Tag = InTag;
+        FishInstanceData.SizeData = InFishSizeData;
+        FishInstanceData.Tag = InTag;
+    }
+
+    FInventoryInstanceData(FFishInstanceData InFishInstanceData)
+    {
+        FishInstanceData = InFishInstanceData;
     }
 }
 
-// TODO: update InventoryInstanceData to use this instead of embedding size and tag directly
+USTRUCT(Meta=(HasNativeMake="FishingGame.Fish.Fish::InstanceData::MakeFishInstanceData"))
 struct FFishInstanceData
 {
     UPROPERTY(Category = "Fish", SaveGame)

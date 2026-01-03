@@ -9,10 +9,12 @@ class AFishEntity : ACharacter
 	UPROPERTY(Category = "Initialization", BlueprintHidden, EditDefaultsOnly, meta = (AdvancedDisplay))
 	int MaxTries = 50;
 
+	UPROPERTY(Category = "Initialization", BlueprintReadOnly, NotVisible)
+	bool bInitialized = false;
+	
 	/**
 	 * Will always be valid after initialization.
 	 * Unlike FishComponentBase, this reference will always point to the local player's FishCharacter.
-	 * @note May be null during BeginPlay depending on ComponentType.
 	 */
 	UPROPERTY(Category = "Fish Entity", BlueprintReadOnly, NotVisible, DisplayName = "Character")
 	AFishCharacter Character;
@@ -20,7 +22,6 @@ class AFishEntity : ACharacter
 	/**
 	 * Will always be valid after initialization.
 	 * Unlike FishComponentBase, this reference will always point to the local player's FishPlayerState.
-	 * @note May be null during BeginPlay depending on ComponentType.
 	 */
 	UPROPERTY(Category = "Fish Entity", BlueprintReadOnly, NotVisible, DisplayName = "Player State")
 	AFishPlayerState FishState;
@@ -35,7 +36,6 @@ class AFishEntity : ACharacter
 
 	int Tries = 0;
 	float InitializationTime = 0.0f;
-	bool bInitialized = false;
 
 	UFUNCTION(NotBlueprintCallable)
 	private void Initialize()

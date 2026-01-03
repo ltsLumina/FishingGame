@@ -7,14 +7,21 @@ class UFishCheatManager : UCheatManager
     }
 
     UFUNCTION(Exec)
-    void GrantFish(FName FishID, int Quantity)
+    void GrantFish(FName FishID, int Quantity, EFishTag Tag = EFishTag::None)
     {
         auto PS = GetFishPlayerStateBase();
 
         UFishItem FishItem = NewObject(this, UFishItem);
         FishItem.BaseData.ID = FishID;
         FishItem.BaseData.ItemName = FText::FromString(FishID.ToString());
-        PS.InventoryComponent.AddItem(FishItem, FInventoryInstanceData(), Quantity);
+        
+        FInventoryInstanceData InventoryInstance;
+        FFishInstanceData FishInstance;
+        FishInstance.Tag = Tag;
+
+        InventoryInstance.FishInstanceData = FishInstance;
+        
+        PS.InventoryComponent.AddItem(FishItem, InventoryInstance, Quantity);
 
         Print(f"Granted {Quantity}x {FishID}!", 5.0f, FLinearColor::Green);
     }

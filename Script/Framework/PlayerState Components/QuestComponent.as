@@ -54,7 +54,7 @@ class UQuestComponent : UFishComponentBase
 	}
 
 	UFUNCTION(NotBlueprintCallable)
-	void HandleInventoryChanged(FName _0, UInventorySlot _1, EInventoryChangeType _2)
+	void HandleInventoryChanged(FName _0, FInventorySlot _1, EInventoryChangeType _2)
 	{
 		for (auto& LogEntry : QuestLog)
 		{
@@ -120,8 +120,6 @@ class UQuestComponent : UFishComponentBase
 		FQuestEntry Entry;
 		if (!AddEntry(Quest, Entry))
 			return;
-
-		Print("Quest started!");
 
 		QuestBegun(Quest);
 		OnQuestBegun.Broadcast(Entry);

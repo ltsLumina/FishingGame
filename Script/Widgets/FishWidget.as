@@ -4,38 +4,94 @@ class UFishWidget : UUserWidget
 	 * The fish character that owns this widget.
 	 * Will always point to the local player's character on the local machine, and be null on remote clients.
 	 */
-	UPROPERTY(BlueprintReadOnly, NotVisible)
+	UPROPERTY(Category ="Fish Widget", BlueprintReadOnly, NotVisible)
 	AFishCharacter Character;
 
 	/**
 	 * The fish player state that owns this widget.
 	 * Will always point to the local player's state on the local machine, and be null on remote clients.
 	 */
-	UPROPERTY(BlueprintReadOnly, NotVisible)
-	AFishPlayerState PlayerState;
+	UPROPERTY(Category = "Fish Widget", BlueprintReadOnly, NotVisible)
+	AFishPlayerState FishState;
+
+	UPROPERTY(Category = "Initialization", BlueprintHidden, EditDefaultsOnly, meta = (Units = "s", UIMin = "0.01", UIMax = "1.0", AdvancedDisplay))
+	float RetryDelay = 0.1f;
+
+	UPROPERTY(Category = "Initialization", BlueprintHidden, EditDefaultsOnly, meta = (AdvancedDisplay))
+	int MaxTries = 50;
+
+	UPROPERTY(Category = "Initialization", BlueprintReadOnly, NotVisible)
+	bool bInitialized = false;
 
 	UFUNCTION(BlueprintOverride)
 	void Construct()
 	{
-		bool HasOwningPlayerPawn = GetOwningPlayerPawn() != nullptr;
-		if (HasOwningPlayerPawn) Character = Cast<AFishCharacter>(GetOwningPlayerPawn());
-		else Character = GetFishCharacterBase(0);
+		Initialize();
+	}
+
+	int Tries = 0;
+	float InitializationTime = 0.0f;
+
+	UFUNCTION(NotBlueprintCallable)
+	private void Initialize()
+	{
+		if (bInitialized)
+			return;
+
+		bool bHasOwningPlayerPawn = IsValid(GetOwningPlayerPawn());
+		if (bHasOwningPlayerPawn) 
+			Character = Cast<AFishCharacter>(GetOwningPlayerPawn());
+		else 
+		{
+			Character = GetFishCharacterBase(0);
+			PrintWarning(f"UFishWidget: ({GetName()}) OwningPlayerPawn is null, defaulting to GetFishCharacterBase(0). \nMake sure to set the Owning Player when creating the widget.");
+		}
 		
 		if (IsValid(Character))
-			PlayerState = Cast<AFishPlayerState>(Character.PlayerState);
+			FishState = Cast<AFishPlayerState>(Character.PlayerState);
 
-		if (Character == nullptr || PlayerState == nullptr)
+		if (!IsValid(Character) || !IsValid(FishState))
 		{
-			System::SetTimer(this, n"Construct", 0.1f, false);
+			if (Tries < MaxTries)
+			{
+				Tries++;
+				System::SetTimer(this, n"Initialize", RetryDelay, false);
+				return;
+			}
+
+			PrintError(f"UFishWidget: ({GetName()}) timed out! \nFailed to initialize: Character or FishState is null after multiple attempts.");
 			return;
 		}
 
+		bInitialized = true;
+		InitializationTime = Tries * RetryDelay;
+		//Print(f"UFishWidget: ({GetName()}) initialized in {InitializationTime} seconds after {Tries} tries.", 5.0f, FLinearColor::Purple);
+
+		ReceivePostInitialize(Character, FishState, InitializationTime);
+		PostInitialize(Character, FishState, InitializationTime);
+
+		System::ClearTimer(this, "Initialize");
+	}
+
+	/**
+	 * Called after the widget has been initialized and Construct has run successfully.
+	 * References to Character and FishState are guaranteed to be valid here.
+	 */
+	void PostInitialize(AFishCharacter InCharacter, AFishPlayerState InFishState, float InInitializationTime)
+	{
 		OnVisibilityChanged.AddUFunction(this, n"HandleVisibilityChanged");
 		OnVisibilityChanged.AddUFunction(this, n"OnVisibilityChangedEvent");
 
-		BP_Construct();
-		ConstructFadeIn();
+		ConstructFadeIn(); // Calls the fade-in event on the W_FishWidget blueprint (blueprint-parent of this class)
 	}
+
+	/**
+	 * Called after the widget has been initialized and Construct has run successfully.
+	 * References to Character and FishState are guaranteed to be valid here.
+	 */
+	UFUNCTION(BlueprintEvent, DisplayName = "Post Initialize")
+	void ReceivePostInitialize(AFishCharacter InCharacter, AFishPlayerState InFishState, float InInitializationTime)
+	{}
 
 	UFUNCTION(BlueprintEvent)
 	void ConstructFadeIn()
@@ -78,10 +134,6 @@ class UFishWidget : UUserWidget
 			SetVisibility(Visible);
 		}
 	}
-
-	UFUNCTION(BlueprintEvent, DisplayName = "Construct")
-	void BP_Construct()
-	{}
 
 	UFUNCTION(BlueprintEvent)
 	void BecameVisible(ESlateVisibility NewVisibility)

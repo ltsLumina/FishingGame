@@ -140,19 +140,19 @@ struct FFishItemData
 
 struct FFishSizeData
 {
-	UPROPERTY(Category = "Fish | Physical")
+	UPROPERTY(Category = "Fish | Physical", SaveGame)
 	float Size = 0.0f;
 
-	UPROPERTY(Category = "Fish | Physical")
+	UPROPERTY(Category = "Fish | Physical", SaveGame)
 	float Weight = 0.0f;
 
-	UPROPERTY(Category = "Fish | Physical")
+	UPROPERTY(Category = "Fish | Physical", SaveGame)
 	bool IsTiny = false;
 
-	UPROPERTY(Category = "Fish | Physical")
+	UPROPERTY(Category = "Fish | Physical", SaveGame)
 	bool IsLarge;
 
-	UPROPERTY(Category = "Fish | Physical")
+	UPROPERTY(Category = "Fish | Physical", SaveGame)
 	int VendorValue = 0;
 
 	FFishSizeData(float InSize = 0.0f, float InWeight = 0.0f, bool InIsTiny = false, bool InIsLarge = false, int InVendorValue = 0)

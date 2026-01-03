@@ -416,7 +416,7 @@ class UFishingComponent : UFishComponentBase
 		Fish.SetLifeSpan(3);
 		Fish.SetOwner(GetOwner());
 
-		Fish.Spawn(FishItem);
+		Fish.OnSpawn(FishItem);
 		Fish.OnCaught(Cast<AFishCharacter>(GetOwner()));
 
 		SpawnFish_Client(FishClass, FishItem);
@@ -431,11 +431,15 @@ class UFishingComponent : UFishComponentBase
 		Fish.SetLifeSpan(3);
 		Fish.SetOwner(GetOwner());
 
-		Fish.Spawn(FishItem);
+		Fish.OnSpawn(FishItem);
 
 		for (int i = 0; i < PlayerState.StatsComponent.ModifiedStats.CatchMultiplier; i++)
 		{
-			PlayerState.InventoryComponent.AddItem(Fish.Item, Fish::GenerateInstanceData(Fish.Item.FishData), 1);
+			FInventoryInstanceData InventoryInstance;
+			FFishInstanceData FishInstance = Fish::InstanceData::MakeFishInstanceData(Fish.Item.FishData);
+			InventoryInstance.FishInstanceData = FishInstance;
+
+			PlayerState.InventoryComponent.AddItem(Fish.Item, InventoryInstance, 1);
 		}
 
 		OnFishCaught.Broadcast(Fish);

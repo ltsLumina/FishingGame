@@ -13,14 +13,17 @@ class UTrait : UPrimaryDataAsset
 	UPROPERTY()
 	EFishRarity Rarity;
 
-	UPROPERTY()
+	UPROPERTY(VisibleAnywhere)
 	bool IsEnhanced;
-
 	/**
 	 * Apply the effect of this trait to the given character.
 	 */
 	UFUNCTION(BlueprintEvent)
 	void ApplyTrait(AFishCharacter Character, UStatsComponent Stats, UFishingComponent FishingComponent)
+	{}
+
+	UFUNCTION(BlueprintEvent)
+	void ApplyTraitEnhanced(AFishCharacter Character, UStatsComponent Stats, UFishingComponent FishingComponent)
 	{}
 
 	/**

@@ -112,7 +112,7 @@ class UFishingHoleComponent : UActorComponent
 		if (!bOverride && !Bait.IsSpectral)
 			return false;
 
-		IsSpectral = RollPercentChance(Bait::GetSpectralChance(Bait));
+		IsSpectral = Percent::RollPercentChance(Bait::GetSpectralChance(Bait));
 		if (!IsSpectral && !bOverride)
 			return false;
 

@@ -10,7 +10,7 @@ class UFishComponentBase : UActorComponent
 	UPROPERTY(Category = "Component", BlueprintHidden, EditDefaultsOnly, meta = (AdvancedDisplay))
 	int MaxTries = 50;
 
-	UPROPERTY(BlueprintReadOnly, NotVisible)
+	UPROPERTY(Category = "Initialization", BlueprintReadOnly, NotVisible)
 	bool bInitialized = false;
 
 	/**
@@ -19,7 +19,7 @@ class UFishComponentBase : UActorComponent
 	 * Setting this to true will delay initialization of the component until after the owning Actor has initialized.
 	 * @note Must be set before BeginPlay is called. (i.e., in the constructor)
 	 */
-	UPROPERTY(BlueprintHidden, NotVisible)
+	UPROPERTY(Category = "Initialization", BlueprintHidden, NotVisible)
 	bool bWaitForOwningActorInitialized = false;
 
 	/**
