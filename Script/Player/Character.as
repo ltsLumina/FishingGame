@@ -135,7 +135,7 @@ bool IsLocallyControlled_Static(APawn Pawn)
 	return Pawn.IsLocallyControlled();
 }
 
-UFUNCTION(Category = "Stats", Meta=(AdvancedDisplay="ID"))
+UFUNCTION(Category = "Stats", Meta = (AdvancedDisplay = "ID"))
 mixin void AddStatForDuration(AFishCharacter Self, EStat Stat, float Amount, float Duration, FName ID = NAME_None)
 {
 	UStatsComponent StatsComponent = UStatsComponent::Get(Self.PlayerState);

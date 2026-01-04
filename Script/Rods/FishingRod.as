@@ -105,7 +105,7 @@ enum ERodTier
 };
 
 class URodData : UPrimaryDataAsset
-{
+{	
 	UPROPERTY(Category = "Rod")
 	FRodDetails Details;
 
