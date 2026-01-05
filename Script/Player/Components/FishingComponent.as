@@ -16,7 +16,7 @@ class UFishingComponent : UFishComponentBase
 		return CurrentState == EFishingState::Fishing;
 	}
 
-	UPROPERTY(VisibleAnywhere)
+	UPROPERTY(EditDefaultsOnly)
 	UBait CurrentBait;
 
 	/**
@@ -74,13 +74,13 @@ class UFishingComponent : UFishComponentBase
 	 * The fish that is currently hooked.
 	 * Determined when fishing starts.
 	 */
-	UPROPERTY(VisibleAnywhere)
+	UPROPERTY(VisibleInstanceOnly)
 	UFishItem CurrentFish;
 
 	/**
 	 * Whether the player currently has an opportunity to catch a fish. (MissedTimerHandle is active)
 	 */
-	UPROPERTY(VisibleAnywhere)
+	UPROPERTY(VisibleInstanceOnly)
 	bool FishOnHook;
 
 	/* Area */
@@ -357,10 +357,10 @@ class UFishingComponent : UFishComponentBase
 		BP_Hook(CaughtFish);
 	}
 
-	UPROPERTY()
+	UPROPERTY(VisibleInstanceOnly)
 	UFishItem CurrentMoochableFish;
 
-	UPROPERTY()
+	UPROPERTY(VisibleInstanceOnly)
 	UFishItem PreviouslyCaughtFish;
 
 	/**

@@ -6,11 +6,15 @@ class AFishCharacter : AFishEntity
 	UPROPERTY(Category = "Native Components", NotVisible)
 	UFishingComponent FishingComponent;
 
+	UPROPERTY(Category = "Native Components", NotVisible)
+	UEmotePlayerComponent EmotePlayerComponent;
+
 	UFUNCTION(BlueprintOverride)
 	void ConstructionScript()
 	{
 		AbilityHandler = UAbilityHandlerComponent::Get(this);
 		FishingComponent = UFishingComponent::Get(this);
+		EmotePlayerComponent = UEmotePlayerComponent::Get(this);
 	}
 
 	FText InfoText;
