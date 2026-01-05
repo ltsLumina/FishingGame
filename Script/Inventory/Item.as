@@ -12,7 +12,7 @@ class UItem : UPrimaryDataAsset
 		{
 			if (GetItemName().ToString().Len() > 0)
 			{
-				BaseData.ID = GenerateItemID(GetItemName());
+				BaseData.ID = GenerateID(GetItemName());
 			}
 			else
 			{
@@ -59,13 +59,13 @@ struct FItemData
 }
 
 UFUNCTION(Category = "Utility", BlueprintPure)
-FName GenerateItemID(FText ItemName)
+FName GenerateID(FText ItemName)
 {
 	return FName(ItemName.ToString().ToLower().Replace(" ", "_"));
 }
 
 UFUNCTION(Category = "Utility", BlueprintPure)
-FText GenerateItemName(FString Filename)
+FText GenerateDisplayName(FString Filename)
 {
 	FString Chopped = Filename.RightChop(3); // removes BP_/DA_ prefixes
 	FString WithSpaces = Chopped.Replace("_", " ");

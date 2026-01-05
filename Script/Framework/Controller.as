@@ -1,13 +1,34 @@
+event void FOnInteract(AFishNPC NPC, ESelectionState State);
+
+enum ESelectionState
+{
+	Selected,
+	Deselected
+}
+
+UCLASS(Meta=(PrioritizeCategories="Interaction"))
 class AFishController : APlayerController
 {
-    bool CanClick = true;
+	UPROPERTY(Category = "Interaction", EditDefaultsOnly)
     float ClickCooldown = 0.15f;
+	
+	UPROPERTY(Category = "Interaction", VisibleInstanceOnly)
+    bool CanClick = true;
 
-	UPROPERTY()
+	UPROPERTY(Category = "Interaction", VisibleInstanceOnly)
 	bool IsAnythingSelected;
 
-	UPROPERTY()
+	UPROPERTY(Category = "Interaction", VisibleInstanceOnly)
 	AFishNPC SelectedNPC;
+
+	UPROPERTY(Category = "Interaction", VisibleInstanceOnly)
+	AFishNPC PreviousNPC;
+
+	UPROPERTY(Category = "Interaction", VisibleAnywhere)
+	TMap<TSoftObjectPtr<AFishNPC>, FGameTime> InteractHistory;
+
+	UPROPERTY(Category = "Interaction | Events")
+	FOnInteract OnInteract;
 
 	UFUNCTION(BlueprintOverride)
 	void BeginPlay()
@@ -72,14 +93,19 @@ class AFishController : APlayerController
 				if (HitNPC != SelectedNPC && IsValid(SelectedNPC)) // Clicked on a different NPC
 				{
 					// If there's already a selected NPC, deselect it first
-					SelectedNPC.Deselect();
+					SelectedNPC.Deselect(this);
 				}
 
 				if (HitNPC.IsInRange(GetControlledPawn()))
 				{
-					HitNPC.ToggleSelection();
+					HitNPC.ToggleSelection(this);
+					PreviousNPC = SelectedNPC;
+					
 					SelectedNPC = HitNPC;
                     IsAnythingSelected = true;
+
+					// Record interaction time
+					InteractHistory.Add(SelectedNPC, TimeManager::GetGameTime());
 				}
 			}
 			else // Clicked on something that's not an NPC (global deselect)
@@ -92,7 +118,7 @@ class AFishController : APlayerController
         {
             if (SelectedNPC == nullptr) return;
 
-            SelectedNPC.Deselect();
+            SelectedNPC.Deselect(this);
             DeselectCurrentSelected();
         }
 	}
@@ -106,7 +132,7 @@ class AFishController : APlayerController
 	UFUNCTION()
 	void SelectNPC(AFishNPC NPC)
 	{
-        NPC.Select();
+        NPC.Select(this);
         SelectedNPC = NPC;
         IsAnythingSelected = true;
 	}
@@ -116,7 +142,7 @@ class AFishController : APlayerController
     {
         if (NPC == nullptr) return;
 
-        NPC.Deselect();
+        NPC.Deselect(this);
         SelectedNPC = nullptr;
         IsAnythingSelected = false;
     }
@@ -129,6 +155,51 @@ class AFishController : APlayerController
 			SelectedNPC = nullptr;
 			IsAnythingSelected = false;
 		}
+	}
+
+	/**
+	 * Checks if the specified NPC was interacted with within the given time window.
+	 * @param NPC The NPC to check.
+	 * @param TimeWindowInSeconds The time window in seconds.
+	 * @return True if the NPC was interacted with within the time window, false otherwise.
+	 */
+	UFUNCTION(BlueprintPure)
+	bool WasRecentlyInteractedWith(AFishNPC NPC, float TimeWindowInSeconds)
+	{
+		if (!InteractHistory.Contains(NPC))
+		{
+			return false;
+		}
+
+		FGameTime LastInteractionTime = InteractHistory[NPC];
+
+		float TimeDifference = TimeManager::TimeSince(LastInteractionTime);
+		return TimeDifference <= TimeWindowInSeconds;
+	}
+
+	/**
+	 * Checks if the specified NPC was interacted with within the last N interactions.
+	 * @param NPC The NPC to check.
+	 * @param InteractionsAgo The number of interactions to look back.
+	 * @return True if the NPC was interacted with within the last N interactions, false otherwise
+	 */
+	UFUNCTION(BlueprintPure, DisplayName = "Was Recently Interacted With", Category = "Interaction")
+	bool WasRecentlyInteractedWith_Index(AFishNPC NPC, int InteractionsAgo)
+	{
+		if (!InteractHistory.Contains(NPC))
+		{
+			return false;
+		}
+
+		TArray<TSoftObjectPtr<AFishNPC>> Keys;
+		InteractHistory.GetKeys(Keys);
+		int Index = Keys.FindIndex(NPC);
+		if (Index == Array::INDEX_NONE)
+		{
+			return false;
+		}
+
+		return Index >= Keys.Num() - InteractionsAgo - 1;
 	}
 };
 

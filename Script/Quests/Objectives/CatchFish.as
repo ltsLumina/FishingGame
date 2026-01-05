@@ -1,7 +1,8 @@
 /**
- * Defined in angelscript because it was easier to setup than doing it in Blueprint.
+ * Requires the player to catch a specific type and quantity of fish, optionally large size.
  */
-class USpecificFish : UQuestObjective
+UCLASS(Abstract)
+class UCatchFishObjective : UQuestObjective
 {
 	UPROPERTY(Category = "Quest | Objective", DisplayName = "Fish")
 	UFishItem Fish;

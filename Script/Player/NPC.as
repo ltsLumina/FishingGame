@@ -40,7 +40,7 @@ class AFishNPC : AFishEntity
 	UPROPERTY(Category = "NPC | Quests", Meta = (InlineEditConditionToggle))
 	bool HasQuests = false;
 
-	UPROPERTY(Category = "NPC | Quests", Meta = (EditCondition = "HasQuests"))
+	UPROPERTY(Category = "NPC | Quests", Meta = (EditCondition = "HasQuests")) 
 	TArray<FQuestEntry> AvailableQuests;
 
 	UPROPERTY(Category = "NPC | Quests", EditDefaultsOnly)
@@ -84,8 +84,8 @@ class AFishNPC : AFishEntity
 		QuestComponent.OnQuestBegun.AddUFunction(this, n"QuestBegun");
 		QuestComponent.OnQuestProgressed.AddUFunction(this, n"QuestProgressed");
 		QuestComponent.OnQuestCompleted.AddUFunction(this, n"QuestCompleted");
-
-		SetQuestSprite();
+		
+		System::SetTimerForNextTick(this, "InitQuests"); // idk why but its necessary
 	}
 
 	// - QUESTS -
@@ -93,6 +93,9 @@ class AFishNPC : AFishEntity
 	UFUNCTION()
 	void QuestBegun(FQuestEntry Entry)
 	{
+		if (!HasQuest(Entry, GetCurrentQuest())) // The quest that completed is not from this NPC
+			return;
+
 		QuestBillboard.SetSprite(FindQuestIcon(n"unsatisfied"));
 
 		QuestBegunEvent();
@@ -105,7 +108,10 @@ class AFishNPC : AFishEntity
 	UFUNCTION()
 	void QuestProgressed(FQuestEntry Entry)
 	{
-		if (!Entry.Completed)
+		if (!HasQuest(Entry, GetCurrentQuest())) // The quest that completed is not from this NPC
+			return;
+
+		if (!Entry.IsCompleted)
 			return;
 
 		QuestBillboard.SetSprite(FindQuestIcon(n"completed"));
@@ -114,12 +120,16 @@ class AFishNPC : AFishEntity
 	UFUNCTION()
 	void QuestCompleted(FQuestEntry Entry)
 	{
+		if (!HasQuest(Entry, GetCurrentQuest())) // The quest that completed is not from this NPC
+			return;
+
 		AvailableQuests.RemoveAt(0);
 
 		bool HasAdditionalQuests = AvailableQuests.Num() > 0;
 		if (!HasAdditionalQuests)
 		{
-			QuestBillboard.SetHiddenInGame(false);
+			QuestBillboard.SetHiddenInGame(true);
+			HasQuests = false;
 			return;
 		}
 
@@ -131,6 +141,21 @@ class AFishNPC : AFishEntity
 	UFUNCTION(BlueprintEvent, DisplayName = "Quest Completed")
 	void QuestCompletedEvent()
 	{}
+
+	UFUNCTION(BlueprintPure)
+	UQuest GetCurrentQuest()
+	{
+		if (AvailableQuests.Num() == 0)
+			return nullptr;
+
+		return AvailableQuests[0].Quest;
+	}
+
+	UFUNCTION(BlueprintPure)
+	bool HasQuest(FQuestEntry Entry, UQuest Quest)
+	{
+		return Entry.Quest == Quest;
+	}
 
 	UTexture2D FindQuestIcon(FName IconName)
 	{
@@ -146,35 +171,37 @@ class AFishNPC : AFishEntity
 	 * If the NPC is already selected, it will be deselected, and vice versa.
 	 */
 	UFUNCTION()
-	void ToggleSelection()
+	void ToggleSelection(AFishController InController)
 	{
 		if (IsSelected)
 		{
-			Deselect();
+			Deselect(InController);
 			return;
 		}
 
-		Select();
+		Select(InController);
 	}
 
 	/**
 	 * Selects the NPC, marking it as selected and notifying the controller.
 	 */
 	UFUNCTION()
-	void Select()
+	void Select(AFishController InController)
 	{
 		IsSelected = true;
 		OnSelected();
+		InController.OnInteract.Broadcast(this, ESelectionState::Selected);
 	}
 
 	/**
 	 * Deselects the NPC, marking it as not selected and notifying the controller.
 	 */
 	UFUNCTION()
-	void Deselect()
+	void Deselect(AFishController InController)
 	{
 		IsSelected = false;
 		OnDeselected();
+		InController.OnInteract.Broadcast(this, ESelectionState::Deselected);
 	}
 
 	UFUNCTION(BlueprintEvent)
@@ -254,11 +281,19 @@ class AFishNPC : AFishEntity
 	}
 
 	UFUNCTION(NotBlueprintCallable)
-	private void SetQuestSprite()
+	private void InitQuests()
 	{
+		HasQuests = AvailableQuests.Num() > 0;
+
+		if (!HasQuests)
+		{
+			QuestBillboard.SetHiddenInGame(true);
+			return;
+		}
+
 		FQuestEntry Entry;
 		auto QuestComp = FishState.QuestComponent;
-		QuestComp.QuestLog.Find(AvailableQuests[0].Quest.QuestID, Entry);
+		QuestComp.QuestLog.Find(GetCurrentQuest().QuestID, Entry);
 		if (!IsValid(Entry.Quest))
 		{
 			UTexture2D Texture;
@@ -267,7 +302,7 @@ class AFishNPC : AFishEntity
 			return;
 		}
 
-		if (Entry.Completed)
+		if (Entry.IsCompleted)
 		{
 			UTexture2D Texture;
 			QuestIcons.Find(n"completed", Texture);

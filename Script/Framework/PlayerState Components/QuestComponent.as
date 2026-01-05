@@ -4,27 +4,35 @@ event void FOnQuestCompleted(FQuestEntry Entry);
 
 struct FQuestEntry
 {
-	UPROPERTY(Category = "Quest", SaveGame)
+	UPROPERTY(Category = "Quest", EditInstanceOnly, SaveGame)
 	UQuest Quest;
 
-	UPROPERTY(Category = "Quest", SaveGame)
+	/**
+	 * The current progress of the quest.
+	 * Represented as the number of completed objectives.
+	 * This means quests with multiple objectives can be progressed in any order.
+	 */
+	UPROPERTY(Category = "Quest", VisibleAnywhere, SaveGame)
 	int Progress;
 
-	UPROPERTY(Category = "Quest", SaveGame)
-	bool Completed;
+	UPROPERTY(Category = "Quest", VisibleAnywhere, SaveGame)
+	TArray<UQuestObjective> CompletedObjectives;
+
+	UPROPERTY(Category = "Quest", VisibleAnywhere, SaveGame)
+	bool IsCompleted;
 
 	FQuestEntry()
 	{
 		Quest = nullptr;
 		Progress = 0;
-		Completed = false;
+		IsCompleted = false;
 	}
 
 	FQuestEntry(UQuest InQuest, int InProgress, bool InCompleted)
 	{
 		Quest = InQuest;
 		Progress = InProgress;
-		Completed = InCompleted;
+		IsCompleted = InCompleted;
 	}
 }
 
@@ -51,14 +59,24 @@ class UQuestComponent : UFishComponentBase
 		Super::PostInitialize(InCharacter, InPlayerState, InInitializationTime);
 
 		InPlayerState.InventoryComponent.OnInventoryChanged.AddUFunction(this, n"HandleInventoryChanged");
+		Cast<AFishController>(Gameplay::GetPlayerController(0)).OnInteract.AddUFunction(this, n"HandleNPCInteract"); // TODO: null on client
 	}
 
 	UFUNCTION(NotBlueprintCallable)
-	void HandleInventoryChanged(FName _0, FInventorySlot _1, EInventoryChangeType _2)
+	private void HandleInventoryChanged(FName _0, FInventorySlot _1, EInventoryChangeType _2)
 	{
 		for (auto& LogEntry : QuestLog)
 		{
 			ProgressQuest(LogEntry.Value.Quest); // Check each quest for progress
+		}
+	}
+
+	UFUNCTION(NotBlueprintCallable)
+	private void HandleNPCInteract(AFishNPC _0, ESelectionState _1)
+	{
+		for (auto& LogEntry : QuestLog)
+		{
+			ProgressQuest(LogEntry.Value.Quest);
 		}
 	}
 
@@ -145,12 +163,14 @@ class UQuestComponent : UFishComponentBase
 		int Objectives = Entry.Quest.Objectives.Num();
 		for (auto& Objective : Quest.Objectives)
 		{
-			if (Objective.IsSatisfied(Character))
+			if (Objective.IsSatisfied(Character) && !Entry.CompletedObjectives.Contains(Objective))
 			{
+				Entry.CompletedObjectives.Add(Objective);
+			
 				Print("Objective completed: " + Objective.GetName(), 3.0f, FLinearColor::Green);
 
 				Entry.Progress++;
-				Entry.Completed = (Entry.Progress >= Objectives);
+				Entry.IsCompleted = (Entry.Progress >= Objectives);
 				OnQuestProgressed.Broadcast(Entry);
 				QuestProgressed(Entry.Quest, Entry.Progress >= Objectives);
 			}
@@ -158,12 +178,12 @@ class UQuestComponent : UFishComponentBase
 
 		QuestLog[Quest.QuestID] = Entry;
 
-		if (Entry.Completed)
+		if (Entry.IsCompleted)
 		{
 			Print("Quest ready to complete!", 1.5f, FLinearColor(0.84, 0.62, 0.15));
 		}
 
-		return Entry.Completed;
+		return Entry.IsCompleted;
 	}
 
 	UFUNCTION(Category = "Quest")

@@ -1,7 +1,43 @@
 namespace TimeManager
 {
-    UFUNCTION()
+    UFUNCTION(BlueprintPure, Category = "Time")
     FGameTime GetGameTime() { return Gameplay::GetActorOfClass(ATimeManager).GameTime; }
+
+	/**
+	 * Calculates the time difference between two FGameTime instances.
+	 * @param StartTime The starting game time.
+	 * @param EndTime The ending game time.
+	 * @return The time difference in seconds.
+	 * @see TimeManager::TimeSince for calculating time elapsed since a past time.
+	 */
+	UFUNCTION(BlueprintPure, Category = "Time")
+	float GetTimeDifference(FGameTime StartTime, FGameTime EndTime)
+	{
+		int32 StartTotalSeconds = StartTime.Hour * 3600 + StartTime.Minute * 60 + StartTime.Second;
+		int32 EndTotalSeconds = EndTime.Hour * 3600 + EndTime.Minute * 60 + EndTime.Second;
+
+		// Handle day wrap-around
+		if (EndTotalSeconds < StartTotalSeconds)
+		{
+			EndTotalSeconds += 24 * 3600; // add 24 hours in seconds
+		}
+
+		return float(EndTotalSeconds - StartTotalSeconds);
+	}
+
+	/**
+	 * Calculates the time elapsed since the specified past time.
+	 * @param PastTime The past game time to compare against.
+	 * @return The time difference in seconds.
+	 * @note Useful for checking how long ago an event occurred, while TimeManager::GetTimeDifference can be used for arbitrary time comparisons.
+	 * @see TimeManager::GetTimeDifference
+	 */
+	UFUNCTION(BlueprintPure, Category = "Time")
+	float TimeSince(FGameTime PastTime)
+	{
+		FGameTime CurrentTime = GetGameTime();
+		return GetTimeDifference(PastTime, CurrentTime);
+	}
 }
 
 UCLASS(NotPlaceable, ClassGroup = "Managers", Abstract, Meta = (ShortTooltip = "Manages in-game time progression and day-night cycle"))

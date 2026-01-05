@@ -51,7 +51,6 @@ class AFishPlayerState : APlayerState
 #if EDITOR
 		ResetPlayerState();
 #endif
-
 		TryLoadPlayerState();
 
 		System::SetTimer(this, n"Init", 0.2f, false);

@@ -1,3 +1,5 @@
+event void FOnInitialized(AFishCharacter InCharacter, AFishPlayerState InPlayerState, float InInitializationTime);
+
 UCLASS(Abstract)
 class UFishComponentBase : UActorComponent
 {
@@ -35,6 +37,9 @@ class UFishComponentBase : UActorComponent
 	 */
 	UPROPERTY(Category = "Fish Component", BlueprintReadOnly, NotVisible, DisplayName = "Player State")
 	AFishPlayerState PlayerState;
+
+	UPROPERTY(Category = "Events", EditAnywhere, NotVisible)
+	FOnInitialized OnInitialized;
 
 	UFUNCTION(BlueprintOverride)
 	void BeginPlay()
@@ -99,6 +104,7 @@ class UFishComponentBase : UActorComponent
 
 		PostInitialize(Character, PlayerState, InitializationTime);
 		ReceivePostInitialize(Character, PlayerState, InitializationTime);
+		OnInitialized.Broadcast(Character, PlayerState, InitializationTime);
 	}
 
 	/**

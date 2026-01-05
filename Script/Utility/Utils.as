@@ -6,6 +6,23 @@
 UFUNCTION(Meta = (ExpandBoolAsExecs = "ReturnValue", CompactNodeTitle = "=="))
 bool Equals(UObject A, UObject B, bool&out Result)
 {
-    Result = A == B;
-    return A == B;
+	Result = A == B;
+	return A == B;
+}
+
+namespace Array
+{
+	const int INDEX_NONE = -1;
+}
+
+UFUNCTION(DisplayName="Is A (soft)", Meta=(ExpandBoolAsExecs="ReturnValue", WorldContext="Object"))
+mixin bool IsASoft_Branch(UObject Object, TSoftClassPtr<UObject> SoftClass)
+{
+	return Object.IsA(SoftClass.Get());
+}
+
+UFUNCTION(BlueprintPure, DisplayName="Is A (soft)", Meta=(WorldContext="Object"))
+mixin bool IsASoft(UObject Object, TSoftClassPtr<UObject> SoftClass)
+{
+	return Object.IsA(SoftClass.Get());
 }
