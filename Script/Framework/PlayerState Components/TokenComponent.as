@@ -37,7 +37,7 @@ class UTokenComponent : UFishComponentBase
 			float ElapsedTime = System::GetTimerElapsedTimeHandle(Entry.TimerHandle);
 			float RemainingTime = System::GetTimerRemainingTimeHandle(Entry.TimerHandle);
 			float TotalTime = RemainingTime + ElapsedTime;
-			
+
 			Entry.RemainingTime = RemainingTime;
 			Entry.RemainingTimeString = RemainingTime > 0 ? f"{RemainingTime:.1f}s/{TotalTime:.1f}s" : "Expired";
 

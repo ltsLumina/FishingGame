@@ -66,7 +66,7 @@ class AFishCharacter : AFishEntity
 	{
 #if EDITOR
 		// Can't be in BeginPlay because PlayerState isn't set yet
-		SetActorLabel(f"FishCharacter ({NewController.PlayerState.PlayerId})");
+		SetActorLabel(f"{NewController.PlayerState.PlayerName} ({NewController.PlayerState.PlayerId})");
 #endif
 	}
 

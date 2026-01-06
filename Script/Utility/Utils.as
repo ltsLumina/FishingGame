@@ -36,3 +36,12 @@ namespace EditorAsset
 	}	
 	#endif
 }
+
+namespace ProjectSettings
+{
+	UFUNCTION(BlueprintPure, Category="Project Settings")
+	UGeneralProjectSettings GetGeneralProjectSettings()
+	{
+		return UGeneralProjectSettings.GetDefaultObject();
+	}
+}

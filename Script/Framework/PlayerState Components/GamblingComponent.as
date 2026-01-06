@@ -19,10 +19,10 @@ class UGamblingComponent : UFishComponentBase
     int TotalWinnings;
 
     UPROPERTY(Category = "Gambling")
-    APlayerState BettingPlayer; // Player who initiated the bet
+    APlayerState Self; // Player who initiated the bet
 
     UPROPERTY(Category = "Gambling")
-    APlayerState OpponentPlayer; // The other player in the bet
+    APlayerState Target; // The other player in the bet
 
     UPROPERTY(Category = "Gambling")
     TArray<APlayerState> BettingPlayers;
@@ -54,8 +54,8 @@ class UGamblingComponent : UFishComponentBase
         RequiredFish = InRequiredFish;
         FishingAttempts = InFishingAttempts;
         TotalWinnings = 0;
-        BettingPlayer = PlayerState;
-        OpponentPlayer = Against;
+        Self = PlayerState;
+        Target = Against;
         
         Notifications::AddNotification(f"Betting {AmountBet}$ against {Against.GetPlayerName()} to catch a {RequiredFish} within {FishingAttempts} attempts!", 5.0f);   
     }
@@ -67,7 +67,7 @@ class UGamblingComponent : UFishComponentBase
         RequiredFish = InRequiredFish;
         FishingAttempts = InFishingAttempts;
         TotalWinnings = 0;
-        BettingPlayer = From;
+        Self = From;
         BettingPlayers.Add(From);
         BettingPlayers.Add(PlayerState);
 
@@ -84,8 +84,8 @@ class UGamblingComponent : UFishComponentBase
             // Bettor wins
             int Winnings = AmountBet * 2;
             TotalWinnings += Winnings;
-            UStatsComponent::Get(BettingPlayer).GainGil(Winnings);
-            UStatsComponent::Get(OpponentPlayer).GainGil(-AmountBet);
+            UStatsComponent::Get(Self).GainGil(Winnings);
+            UStatsComponent::Get(Target).GainGil(-AmountBet);
             
             Notifications::AddNotification(f"You earned {Winnings} Gil from your bet!", 5.0f);
             FishingAttempts = 0;
@@ -93,8 +93,8 @@ class UGamblingComponent : UFishComponentBase
         else if (FishingAttempts <= 0)
         {
             // Bettor loses, opponent wins
-            UStatsComponent::Get(BettingPlayer).GainGil(-AmountBet);
-            UStatsComponent::Get(OpponentPlayer).GainGil(AmountBet);
+            UStatsComponent::Get(Self).GainGil(-AmountBet);
+            UStatsComponent::Get(Target).GainGil(AmountBet);
             
             Notifications::AddNotification(f"You lost your bet! (-{AmountBet} Gil)", 5.0f);
             AmountBet = 0;
