@@ -76,7 +76,7 @@ class UInventoryComponent : UFishComponentBase
 			FDebugTraitInfo Info;
 			Info.TraitName = Trait.TraitName.ToString();
 			Info.Description = Trait.Description.ToString();
-			Info.Effect = Trait.Effect.ToString();
+			Info.Effect = Trait.BasicEffect.ToString();
 
 			TraitNames.Add(Info.TraitName);
 			TraitInfos.Add(Info);
@@ -108,7 +108,15 @@ class UInventoryComponent : UFishComponentBase
 			for (auto& TraitClass : EquippedRod.Traits)
 			{
 				auto Trait = NewObject(this, TraitClass);
-				if (!Trait.IsEnhanced)
+				bool IsEnhanced = false;
+				if (Trait.CanBeEnhanced)
+				{
+					float Chance = FishingRod::GetEnhanceChance(EquippedRod.Data.Tier);
+					IsEnhanced = Percent::RollPercentChance(Chance);
+					if (IsEnhanced) Print(f"Trait {Trait.TraitName} was enhanced! ({Chance}% chance)", 3.0f, FLinearColor::Purple);
+				}
+
+				if (!IsEnhanced)
 					Trait.ApplyTrait(Character, PlayerState, PlayerState.StatsComponent, Character.FishingComponent, PlayerState.TokenComponent);
 				else
 					Trait.ApplyTraitEnhanced(Character, PlayerState, PlayerState.StatsComponent, Character.FishingComponent, PlayerState.TokenComponent);

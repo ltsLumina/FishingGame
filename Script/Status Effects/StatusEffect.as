@@ -1,7 +1,13 @@
-class UStatusEffect : UPrimaryDataAsset
+struct FStatusEffect
 {
+    UPROPERTY(Category = "Details", BlueprintReadOnly)
+    FGameplayTag Tag;
+
+    UPROPERTY(Category = "Details", BlueprintReadOnly)
+    bool DisplayMaxStackCount = true;
+
     UPROPERTY(Category = "Details")
-    FText Name;
+    FText EffectName;
 
     UPROPERTY(Category = "Details", Meta = (MultiLine))
     FText Description;

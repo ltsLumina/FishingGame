@@ -1,20 +1,23 @@
 UCLASS(Abstract)
 class UTrait : UObject
 {
-	UPROPERTY(DisplayName = "Name")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, DisplayName = "Name")
 	FText TraitName;
 
-	UPROPERTY(Meta = (MultiLine))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Meta = (MultiLine))
 	FText Description;
 
-	UPROPERTY(Meta = (MultiLine))
-	FText Effect;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Meta = (MultiLine))
+	FText BasicEffect;
 
-	UPROPERTY()
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Meta = (MultiLine, EditCondition = "CanBeEnhanced", EditConditionHides))
+	FText EnhancedEffect;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	EFishRarity Rarity;
 
-	UPROPERTY(VisibleAnywhere)
-	bool IsEnhanced;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	bool CanBeEnhanced;
 
 	/**
 	 * Apply the effect of this trait to the given character.
@@ -23,7 +26,12 @@ class UTrait : UObject
 	void ApplyTrait(AFishCharacter Character, AFishPlayerState PlayerState, UStatsComponent Stats, UFishingComponent FishingComponent, UTokenComponent TokenComponent)
 	{}
 
-	UFUNCTION(BlueprintEvent)
+	/**
+	 * Apply the enhanced effect of this trait to the given character.
+	 * Enhanced traits have stronger or additional effects compared to their base versions.
+	 * Randomly rolled when the trait is created. @see UFishingComponent::RollTrait
+	 */
+	UFUNCTION(BlueprintEvent, DisplayName = "Apply Trait (Enhanced)")
 	void ApplyTraitEnhanced(AFishCharacter Character, AFishPlayerState PlayerState, UStatsComponent Stats, UFishingComponent FishingComponent, UTokenComponent TokenComponent)
 	{}
 }

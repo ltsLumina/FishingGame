@@ -1,5 +1,30 @@
 namespace FishingRod
 {
+	const float TIER1_ENHANCE_CHANCE = 0.0f;
+	const float TIER2_ENHANCE_CHANCE = 5.0f;
+	const float TIER3_ENHANCE_CHANCE = 7.5f;
+	const float TIER4_ENHANCE_CHANCE = 10.0f;
+	const float TIER5_ENHANCE_CHANCE = 20.0f;
+
+	float GetEnhanceChance(ERodTier Tier)
+	{
+		switch (Tier)
+		{
+			case ERodTier::Tier1:
+				return TIER1_ENHANCE_CHANCE;
+			case ERodTier::Tier2:
+				return TIER2_ENHANCE_CHANCE;
+			case ERodTier::Tier3:
+				return TIER3_ENHANCE_CHANCE;
+			case ERodTier::Tier4:
+				return TIER4_ENHANCE_CHANCE;
+			case ERodTier::Tier5:
+				return TIER5_ENHANCE_CHANCE;
+			default:
+				return 0.0f;
+		}
+	}
+
 	UFishingRod GenerateRod(UObject Outer, URodData RodData)
 	{
 		UFishingRod NewRod = NewObject(Outer, UFishingRod);
@@ -64,20 +89,6 @@ namespace FishingRod
 				if (Roll <= Cumulative)
 				{
 					SelectedIndex = j;
-					break;
-				}
-			}
-
-			switch (Rod.Data.Tier)	  // does nothing yet
-			{
-				case ERodTier::Tier1: // ★
-				case ERodTier::Tier2: // ★★
-				case ERodTier::Tier3: // ★★★
-				case ERodTier::Tier4: // ★★★★
-				case ERodTier::Tier5: // ★★★★★
-				default:
-				{
-					// nothing for now.
 					break;
 				}
 			}

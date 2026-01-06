@@ -55,4 +55,34 @@ class UFishCheatManager : UCheatManager
         PS.InventoryComponent.EquipRod(FishingRod::GenerateRod(this, Cast<URodData>(DebugRod)));
         #endif
     }
+
+    UFUNCTION(Exec)
+    void GrantTitle(FString TitleKey)
+    {
+        auto PS = GetFishPlayerStateBase();
+        FText TitleName = FText::FromString(TitleKey);
+
+        if (PS.OwnedTitles.Contains(TitleName))
+        {
+            PrintError(f"Player already owns title \"{TitleName}\"!");
+            return;
+        }
+
+        PS.OwnedTitles.AddUnique(TitleName);
+        Print(f"Granted title \"{TitleName}\"!", 5.0f, FLinearColor::Green);
+    }
+
+    UFUNCTION(Exec)
+    void GrantToken(FGameplayTag Token, int Amount = 1, int MaxTokens = 5, float Duration = 60.0f, bool RefreshDuration = true, FName Identifier = NAME_None)
+    {
+        auto PS = GetFishPlayerStateBase();
+        FTokenEntry NewEntry;
+        int CurrentTokens;
+        bool bSuccess = PS.TokenComponent.AddTokenForDuration(Token, Amount, MaxTokens, Duration, RefreshDuration, Identifier, CurrentTokens, NewEntry);
+
+        if (bSuccess)
+        {
+            Print(f"[Cheat] Granted {Amount}x token \"{Token}\"!", 5.0f, FLinearColor::Yellow);
+        }
+    }
 }
