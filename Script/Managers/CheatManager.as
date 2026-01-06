@@ -35,4 +35,24 @@ class UFishCheatManager : UCheatManager
 
         Print(f"Leveled up {Levels} times!", 5.0f, FLinearColor::Green);
     }
+
+    /**
+     * @note Path is not case-sensitive.
+     */
+    UFUNCTION(Exec)
+    void GrantRod(FString InRodName = "DA_Rod_DEBUG")
+    {
+        #if EDITOR
+        FString RodName = InRodName;
+        
+        if (!RodName.StartsWith("DA_Rod_"))
+        {
+            RodName = "DA_Rod_" + RodName;
+        }
+        auto DebugRod = EditorAsset::GetEditorAsset(f"/Game/FishingGame/Blueprints/Rods/{RodName}.{RodName}");
+
+        auto PS = GetFishPlayerStateBase();
+        PS.InventoryComponent.EquipRod(FishingRod::GenerateRod(this, Cast<URodData>(DebugRod)));
+        #endif
+    }
 }

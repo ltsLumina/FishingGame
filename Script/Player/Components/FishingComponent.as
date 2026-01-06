@@ -43,13 +43,6 @@ class UFishingComponent : UFishComponentBase
 	UPROPERTY(Category = "Fishing | State", VisibleInstanceOnly)
 	TArray<TSubclassOf<UFishCondition>> CurrentIgnoredConditions;
 
-	/**
-	 * Tokens are granted by certain abilities to modify fishing behavior (e.g., ignoring conditions).
-	 * For instance, an ability may grant a "Thaliak's Favor" token, which can be used by other abilities.
-	 */
-	UPROPERTY(Category = "Fishing | State", VisibleAnywhere)
-	TMap<FName, int> Tokens;
-
 	UPROPERTY(Category = "Fishing | State", VisibleAnywhere)
 	TArray<UFishItem> MoochedFish;
 
@@ -94,6 +87,9 @@ class UFishingComponent : UFishComponentBase
 	UPROPERTY(Category = "Fishing | Area", VisibleAnywhere)
 	TArray<UFishItem> CurrentCatchableFish;
 
+	UPROPERTY()
+	FCatchContext CatchContext;
+
 	void UpdateCatchableFish()
 	{
 		if (Character == nullptr || TimeManager == nullptr || WeatherManager == nullptr)
@@ -115,8 +111,8 @@ class UFishingComponent : UFishComponentBase
 			if (!Data.PreferredBaits.Contains(CurrentBait))
 				continue;
 
-			if (Data.MinimumGathering > Stats::GetStats(Character).Gathering || Data.MinimumPerception > Stats::GetStats(Character).Perception)
-				continue;
+			// if (Data.MinimumGathering > Stats::GetStats(Character).Gathering || Data.MinimumPerception > Stats::GetStats(Character).Perception)
+			// continue;
 
 			for (UFishCondition Condition : Data.Conditions)
 			{
@@ -314,8 +310,9 @@ class UFishingComponent : UFishComponentBase
 
 		FFishItemData Data = CurrentFish.FishData;
 
-		float PlayerGathering = GetFishPlayerStateBase().StatsComponent.ModifiedStats.Gathering;
-		float GatheringDiff = Math::Max(0.0f, PlayerGathering - Data.MinimumGathering);
+		float GatheringStat;
+		Stats::GetStat(Character, GameplayTags::Stat_Fishing_Gathering, false, GatheringStat);
+		float GatheringDiff = Math::Max(0.0f, GatheringStat - Data.MinimumGathering);
 		float CurrentCatchRate = Math::Clamp(Data.CatchRate + GatheringDiff * 0.5f, 0.0f, 100.0f);
 
 		// Chance to escape - uses Catch Rate 0-100
@@ -334,7 +331,7 @@ class UFishingComponent : UFishComponentBase
 			if (Data.Rarity > EFishRarity::Aetherial && UAbilityHandlerComponent::Get(Character).HasAbilityByName("Thaliak's Favor"))
 			{
 				Print(f"You've hooked a rare \"{CurrentFish.BaseData.ItemName}\"!\nA stack of Angler's Art has been granted.", 3, FLinearColor::Green);
-				Tokens.Add(FName("Angler's Art"), 1);
+				//Tokens.Add(FName("Angler's Art"), 1);
 				StatusEffects.Add(FName("Angler's Art"), 1); // TODO: separate system with data assets so I can display the icon.
 			}
 		}
@@ -432,8 +429,9 @@ class UFishingComponent : UFishComponentBase
 		Fish.SetOwner(GetOwner());
 
 		Fish.OnSpawn(FishItem);
+		OnFishCaught.Broadcast(Fish);
 
-		for (int i = 0; i < PlayerState.StatsComponent.ModifiedStats.CatchMultiplier; i++)
+		for (int i = 0; i < CatchContext.Quantity; i++)
 		{
 			FInventoryInstanceData InventoryInstance;
 			FFishInstanceData FishInstance = Fish::InstanceData::MakeFishInstanceData(Fish.Item.FishData);
@@ -441,8 +439,6 @@ class UFishingComponent : UFishComponentBase
 
 			PlayerState.InventoryComponent.AddItem(Fish.Item, InventoryInstance, 1);
 		}
-
-		OnFishCaught.Broadcast(Fish);
 	}
 
 	/**
@@ -487,7 +483,13 @@ class UFishingComponent : UFishComponentBase
 	{}
 
 	UFUNCTION(BlueprintPure, Category = "Fishing", DisplayName = "Is State")
-	bool IsState(TArray<EFishingState> StatesToCheck)
+	bool IsState(EFishingState StateToCheck)
+	{
+		return CurrentState == StateToCheck;
+	}
+
+	UFUNCTION(BlueprintPure, Category = "Fishing", DisplayName = "Is State")
+	bool IsAnyState(TArray<EFishingState> StatesToCheck)
 	{
 		return StatesToCheck.Contains(CurrentState);
 	}
@@ -498,6 +500,14 @@ class UFishingComponent : UFishComponentBase
 		return StatesToCheck.Contains(CurrentState);
 	}
 };
+
+struct FCatchContext
+{
+	UPROPERTY()
+	UFishItem FishItem;
+	UPROPERTY()
+	int Quantity;
+}
 
 enum EFishingState
 {

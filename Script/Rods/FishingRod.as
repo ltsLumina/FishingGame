@@ -115,6 +115,9 @@ class URodData : UPrimaryDataAsset
 	UPROPERTY(Category = "Rod")
 	FStats BaseStats;
 
+	UPROPERTY(Category = "Rod", Meta = (Categories = "Stat"))
+	TMap <FGameplayTag, float> Stats;
+
 	UPROPERTY(Category = "Rod")
 	FRodTraits Traits;
 

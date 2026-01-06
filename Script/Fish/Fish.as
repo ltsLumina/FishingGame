@@ -122,7 +122,7 @@ namespace Fish
 				float SpanMax = FishItemData.SizeSpan.Y;
 				float SpanRange = Math::Max(0.0001f, SpanMax - SpanMin); // avoid division by zero
 				float Normalized = (Size - SpanMin) / SpanRange;
-				float NormalizedPercent = Percent::FromPercent(Normalized);
+				float NormalizedPercent = Percent::From(Normalized);
 
 				// considered Tiny if in lowest 25% of the span, Large if in highest 25%
 				bool IsTiny = NormalizedPercent < TINY_THRESHOLD;

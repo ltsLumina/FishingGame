@@ -107,11 +107,11 @@ class UInventoryComponent : UFishComponentBase
 			// apply rod stat modifiers
 			for (auto& TraitClass : EquippedRod.Traits)
 			{
-				auto Trait = TraitClass.GetDefaultObject();
+				auto Trait = NewObject(this, TraitClass);
 				if (!Trait.IsEnhanced)
-					Trait.ApplyTrait(Character, PlayerState.StatsComponent, Character.FishingComponent);
+					Trait.ApplyTrait(Character, PlayerState, PlayerState.StatsComponent, Character.FishingComponent, PlayerState.TokenComponent);
 				else
-					Trait.ApplyTraitEnhanced(Character, PlayerState.StatsComponent, Character.FishingComponent);
+					Trait.ApplyTraitEnhanced(Character, PlayerState, PlayerState.StatsComponent, Character.FishingComponent, PlayerState.TokenComponent);
 			}
 
 			OnRodEquipped.Broadcast(EquippedRod);

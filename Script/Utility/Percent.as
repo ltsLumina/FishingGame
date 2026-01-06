@@ -11,7 +11,7 @@ namespace Percent
 	 * @param Value The whole value to convert to a percentage (to decimal)
 	 */
 	UFUNCTION(BlueprintPure, Category = "Math")
-	float ToPercent(float Value)
+	float To(float Value)
 	{
 		return Value / 100.0f;
 	}
@@ -22,7 +22,7 @@ namespace Percent
 	 * @return The whole value
 	 */
 	UFUNCTION(BlueprintPure)
-	float FromPercent(float Percent)
+	float From(float Percent)
 	{
 		return Percent * 100.0f;
 	}
@@ -30,28 +30,28 @@ namespace Percent
 	UFUNCTION(BlueprintPure, Category = "Math", Meta = (CompactNodeTitle = "Add %"))
 	float AddPercentMultiplicative(float& BaseValue, float PercentToAdd)
 	{
-		BaseValue += (BaseValue * ToPercent(PercentToAdd));
+		BaseValue += (BaseValue * To(PercentToAdd));
 		return BaseValue;
 	}
 
 	UFUNCTION(BlueprintPure, Category = "Math", Meta = (CompactNodeTitle = "Add %"))
 	float AddPercentAdditive(float& BaseValue, float PercentToAdd)
 	{
-		BaseValue += ToPercent(PercentToAdd);
+		BaseValue += To(PercentToAdd);
 		return BaseValue;
 	}
 
 	UFUNCTION(BlueprintPure, Category = "Math", Meta = (CompactNodeTitle = "Subtract %"))
 	float SubtractPercentMultiplicative(float& BaseValue, float PercentToSubtract)
 	{
-		BaseValue -= (BaseValue * ToPercent(PercentToSubtract));
+		BaseValue -= (BaseValue * To(PercentToSubtract));
 		return BaseValue;
 	}
 
 	UFUNCTION(BlueprintPure, Category = "Math", Meta = (CompactNodeTitle = "Subtract %"))
 	float SubtractPercentAdditive(float& BaseValue, float PercentToSubtract)
 	{
-		BaseValue -= ToPercent(PercentToSubtract);
+		BaseValue -= To(PercentToSubtract);
 		return BaseValue;
 	}
 

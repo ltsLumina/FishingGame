@@ -26,3 +26,13 @@ mixin bool IsASoft(UObject Object, TSoftClassPtr<UObject> SoftClass)
 {
 	return Object.IsA(SoftClass.Get());
 }
+
+namespace EditorAsset
+{
+	#if EDITOR
+	UObject GetEditorAsset(FString Path)
+	{
+		return LoadObject(nullptr, Path);
+	}	
+	#endif
+}

@@ -19,29 +19,75 @@ class UStatsComponent : UFishComponentBase
 {
 	UPROPERTY(Category = "Stats", SaveGame)
 	int Gil;
-	
-	UPROPERTY(Category = "Stats", SaveGame)
-	FStats ModifiedStats; // Stats including rod modifiers
 
-	UPROPERTY(Category = "Stats", SaveGame)
-	FStats RodlessStats;  // Base stats without rod modifiers
+	UPROPERTY(Category = "Stats", EditDefaultsOnly, Meta = (Categories = "Stat"))
+	private TMap<FGameplayTag, float> Stats;
 
+	UPROPERTY(Category = "Stats", VisibleAnywhere, Meta = (Categories = "Stat"))
+	private TMap<FGameplayTag, float> AdditiveModifiers;
+
+	UPROPERTY(Category = "Stats", VisibleAnywhere, Meta = (Categories = "Stat"))
+	private TMap<FGameplayTag, float> MultiplicativeModifiers;
+
+#if EDITOR
+	UPROPERTY(Category = "Stats", VisibleAnywhere)
+	TMap<FString, float> CurrentStats;
+#endif
 
 	void PostInitialize(AFishCharacter InCharacter, AFishPlayerState InPlayerState,
 						float InInitializationTime) override
 	{
 		Super::PostInitialize(InCharacter, InPlayerState, InInitializationTime);
 
-		RodlessStats = FStats(); // initialize base stats
-
 		PlayerState.InventoryComponent.OnRodUnequipped.AddUFunction(this, n"RodUnequipped");
+		PlayerState.InventoryComponent.OnRodEquipped.AddUFunction(this, n"RodEquipped");
 	}
 
 	UFUNCTION(NotBlueprintCallable)
 	private void RodUnequipped(UFishingRod OldRod)
 	{
-		ModifiedStats = RodlessStats;
+		auto RodStats = OldRod.Data.Stats;
+		for (auto& StatPair : RodStats)
+		{
+			//RemoveModifier(StatPair.Key);
+		}
 	}
+
+	UFUNCTION()
+	private void RodEquipped(UFishingRod NewRod)
+	{
+		auto RodStats = NewRod.Data.Stats;
+		for (auto& StatPair : RodStats)
+		{
+			//AddModifier(StatPair.Key, StatPair.Value);
+		}
+	}
+
+#if EDITOR
+	UFUNCTION(BlueprintOverride)
+	void Tick(float DeltaSeconds)
+	{
+		CurrentStats = TMap<FString, float>();
+		for (auto& StatPair : Stats)
+		{
+			float ModifiedValue = StatPair.Value;
+			
+			// Apply additive modifiers first
+			if (AdditiveModifiers.Contains(StatPair.Key))
+			{
+				ModifiedValue += AdditiveModifiers[StatPair.Key];
+			}
+			
+			// Then apply multiplicative modifiers
+			if (MultiplicativeModifiers.Contains(StatPair.Key))
+			{
+				ModifiedValue *= MultiplicativeModifiers[StatPair.Key];
+			}
+			
+			CurrentStats.Add(StatPair.Key.ToString(), ModifiedValue);
+		}
+	}
+#endif
 
 	UFUNCTION(Category = "Gil")
 	void GainGil(int Amount)
@@ -60,109 +106,163 @@ class UStatsComponent : UFishComponentBase
 		return false;
 	}
 
-	UFUNCTION(Category = "Stats")
-	void AddStat(EStat Stat, float Amount)
+	UFUNCTION(Category = "Stats", BlueprintPure, Meta = (Categories = "Stat", ReturnDisplayName="Has Stat", AdvancedDisplay="BaseValue"))
+	bool GetStat(FGameplayTag StatTag, bool BaseValue = false, float &OutValue = -1.0f)
 	{
-		switch (Stat)
+		if (HasStat(StatTag))
 		{
-			case EStat::Gathering:
-				ModifiedStats.Gathering += int(Amount);
-				break;
-			case EStat::Perception:
-				ModifiedStats.Perception += int(Amount);
-				break;
-			case EStat::CastSpeed:
-				Percent::AddPercentAdditive(ModifiedStats.CastSpeed, Amount);
-				break;
-			case EStat::ReelSpeed:
-				Percent::AddPercentAdditive(ModifiedStats.ReelSpeed, Amount);
-				break;
-			case EStat::CatchMultiplier:
-				ModifiedStats.CatchMultiplier += int(Amount);
-				break;
+			if (BaseValue)
+			{
+				OutValue = Stats[StatTag];
+			}
+			else if (!HasModifier(StatTag))
+			{
+				OutValue = Stats[StatTag];
+			}
+			else
+			{
+				float ModifiedValue = Stats[StatTag];
+				
+				// additive modifiers first
+				if (AdditiveModifiers.Contains(StatTag))
+				{
+					ModifiedValue += AdditiveModifiers[StatTag];
+				}
+				
+				// multiplicative modifiers
+				if (MultiplicativeModifiers.Contains(StatTag))
+				{
+					ModifiedValue *= MultiplicativeModifiers[StatTag];
+				}
+				
+				OutValue = ModifiedValue;
+			}
+			return true;
 		}
+		return false;
+	}
+
+	UFUNCTION(Category = "Stats", BlueprintPure, Meta = (Categories = "Stat"))
+	bool HasStat(FGameplayTag StatTag)
+	{
+		return Stats.Contains(StatTag);
+	}
+
+	/**
+	 * Adds to a stat using a gameplay tag identifier.
+	 * @param Amount The amount to add to the stat (can be negative to subtract).
+	 * @param Type The type of stat (flat or percentage).
+	 * @param StackingType The stacking type (additive or multiplicative). Decides how multiple modifiers to the same stat are combined.
+	 * @note For percentage-based stats, provide the amount as a whole number (e.g., 25 for 25%).
+	 */
+	UFUNCTION(Category = "Stats", Meta = (Categories = "Stat"))
+	void AddModifier(FGameplayTag Stat, float Amount, EStatType Type, EStackingType StackingType)
+	{
+		if (!Stat.IsValid()) PrintError(f"Invalid Stat GameplayTag provided!}");
+
+		float FinalAmount = Amount;
+		if (Type == EStatType::Percentage)
+		{
+			FinalAmount = 1.0f + (Percent::To(Amount)); // convert percentage to multiplier
+		}
+
+		if (StackingType == EStackingType::Additive)
+		{
+			if (AdditiveModifiers.Contains(Stat))
+			{
+				AdditiveModifiers[Stat] += FinalAmount;
+			}
+			else
+			{
+				AdditiveModifiers.Add(Stat, FinalAmount);
+			}
+		}
+		else if (StackingType == EStackingType::Multiplicative)
+		{
+			if (MultiplicativeModifiers.Contains(Stat))
+			{
+				MultiplicativeModifiers[Stat] *= FinalAmount;
+			}
+			else
+			{
+				MultiplicativeModifiers.Add(Stat, FinalAmount);
+			}
+		}
+	}
+
+	UFUNCTION(Category = "Stats", Meta = (Categories = "Stat"))
+	void RemoveModifier(FGameplayTag Stat)
+	{
+		if (AdditiveModifiers.Contains(Stat))
+		{
+			AdditiveModifiers.Remove(Stat);
+		}
+		if (MultiplicativeModifiers.Contains(Stat))
+		{
+			MultiplicativeModifiers.Remove(Stat);
+		}
+	}
+
+	UFUNCTION(Category = "Stats", Meta = (Categories = "Stat"))
+	void ClearStatModifiers()
+	{
+		AdditiveModifiers.Empty();
+		MultiplicativeModifiers.Empty();
 	}
 
 	private TArray<FStatModification> ActiveModifications;
 	private int NextModificationIndex = 0;
 
-	UFUNCTION(Category = "Stats")
-	FTimerHandle SetStatForDuration(EStat Stat, float Value, float Duration)
+	/**
+	 * Adds a stat modifier that lasts for a specified duration.
+	 * @param Stat The gameplay tag identifying the stat.
+	 * @param Amount The amount to modify the stat by.
+	 * @param Duration The duration (in seconds) the modifier should last.
+	 * @param Type The type of stat (flat or percentage).
+	 * @param ModifierType The stacking type (additive or multiplicative).
+	 * @param Identifier An optional identifier for the modifier to allow for targeted removal.
+	 * @param NewValue Output parameter to receive the modified stat value after applying the modifier. Shorthand for GetStat after adding the modifier.
+	 * @return A timer handle that can be used to track the duration of the modifier.
+	 */
+	UFUNCTION(Category = "Stats", Meta = (AdvancedDisplay = "Identifier", ReturnDisplayName = "Timer Handle"))
+	FTimerHandle AddModifierForDuration(FGameplayTag Modifier, float Amount, float Duration, EStatType Type, EStackingType ModifierType = EStackingType::Additive, FName Identifier = NAME_None, float&out NewValue = -1.0f)
 	{
-		// Store the current value so we can revert to it
-		float PreviousValue;
-		switch (Stat)
-		{
-			case EStat::Gathering:
-				PreviousValue = ModifiedStats.Gathering;
-				Stats::SetGathering(ModifiedStats, int(Value));
-				break;
-			case EStat::Perception:
-				PreviousValue = ModifiedStats.Perception;
-				Stats::SetPerception(ModifiedStats, int(Value));
-				break;
-			case EStat::CastSpeed:
-				PreviousValue = ModifiedStats.CastSpeed;
-				Stats::SetCastSpeed(ModifiedStats, Value);
-				break;
-			case EStat::ReelSpeed:
-				PreviousValue = ModifiedStats.ReelSpeed;
-				Stats::SetReelSpeed(ModifiedStats, Value);
-				break;
-			case EStat::CatchMultiplier:
-				PreviousValue = ModifiedStats.CatchMultiplier;
-				Stats::SetCatchMultiplier(ModifiedStats, int(Value));
-				break;
-		}
+		AddModifier(Modifier, Amount, Type, ModifierType);
+		GetStat(Modifier, false, NewValue);
 
-		// Track this modification
 		FStatModification Modification;
+
 		NextModificationIndex++;
-		Modification.Index = NextModificationIndex;
-		Modification.Stat = Stat;
-		Modification.bIsAdditive = false;
-		Modification.PreviousValue = PreviousValue;
 		Modification.TimerHandle = System::SetTimer(this, n"UndoStatModification", Duration, false);
+
+		Modification = FStatModification(Identifier, NextModificationIndex, EStat::Gathering, Modifier, true, Amount);
 		ActiveModifications.Add(Modification);
 
 		return Modification.TimerHandle;
 	}
 
 	/**
-	 * Adds to a stat for a limited duration, then reverts the change.
-	 * @ID Optional ID to identify this modification for later removal.
+	 * Checks if a stat modifier exists for the given gameplay tag.
+	 * @param Modifier The gameplay tag identifying the stat.
+	 * @param Value Optional value to check against (default is -1.0f, which ignores the value).
+	 * @return True if the stat modifier exists, false otherwise.
 	 */
-	UFUNCTION(Category = "Stats", Meta = (AdvancedDisplay = "ID"))
-	FTimerHandle AddStatForDuration(EStat Stat, float Amount, float Duration, FName ID = NAME_None)
+	UFUNCTION(Category = "Stats", BlueprintPure, Meta = (AdvancedDisplay = "Value"))
+	bool HasModifier(FGameplayTag Modifier, float Value = -1)
 	{
-		AddStat(Stat, Amount);
-
-		FStatModification Modification;
-
-		NextModificationIndex++;
-		Modification.TimerHandle = System::SetTimer(this, n"UndoStatModification", Duration, false);
-		
-		Modification = FStatModification(ID, NextModificationIndex, Stat, true, Amount);
-		ActiveModifications.Add(Modification);
-
-		return Modification.TimerHandle;
-	}
-
-	UFUNCTION(Category = "Stats")
-	void ClearStatModification(FName ModificationID)
-	{
-		if (ModificationID == NAME_None)
-			PrintWarning("ClearStatModification called with invalid ModificationID.", 5.0f);
-		
-		for (int i = 0; i < ActiveModifications.Num(); i++)
+		if (AdditiveModifiers.Contains(Modifier))
 		{
-			if (ActiveModifications[i].ID == ModificationID)
-			{
-				System::ClearAndInvalidateTimerHandle(ActiveModifications[i].TimerHandle);
-				ActiveModifications.RemoveAt(i);
-				return;
-			}
+			if (Value < 0.0f)
+				return true;
+			return Math::IsNearlyEqual(AdditiveModifiers[Modifier], Value);
 		}
+		if (MultiplicativeModifiers.Contains(Modifier))
+		{
+			if (Value < 0.0f)
+				return true;
+			return Math::IsNearlyEqual(MultiplicativeModifiers[Modifier], Value);
+		}
+		return false;
 	}
 
 	UFUNCTION(NotBlueprintCallable)
@@ -173,43 +273,56 @@ class UStatsComponent : UFishComponentBase
 
 		FStatModification Mod = ActiveModifications[0]; // FIFO (first in, first out) - not the australian thing lol
 
-		if (Mod.bIsAdditive)
-		{
-			// Reverse the additive modification
-			AddStat(Mod.Stat, -Mod.Amount);
-		}
-		else
-		{
-			// Restore the previous value
-			switch (Mod.Stat)
-			{
-				case EStat::Gathering:
-					Stats::SetGathering(ModifiedStats, int(Mod.PreviousValue));
-					break;
-				case EStat::Perception:
-					Stats::SetPerception(ModifiedStats, int(Mod.PreviousValue));
-					break;
-				case EStat::CastSpeed:
-					Stats::SetCastSpeed(ModifiedStats, Mod.PreviousValue);
-					break;
-				case EStat::ReelSpeed:
-					Stats::SetReelSpeed(ModifiedStats, Mod.PreviousValue);
-					break;
-				case EStat::CatchMultiplier:
-					Stats::SetCatchMultiplier(ModifiedStats, int(Mod.PreviousValue));
-					break;
-			}
-		}
+		RemoveModifier(Mod.StatTag);
 
 		ActiveModifications.RemoveAt(0);
+	}
+
+	/**
+	 * Removes a stat modifier associated with the given timer handle.
+	 * @param TimerHandle The timer handle associated with the stat modifier to remove.
+	 * @return True if the modifier was found and removed, false otherwise.
+	 */
+	UFUNCTION(Category = "Stats", Meta = (Categories = "Stat"))
+	bool KillModifier(FName Identifier)
+	{
+		for (int i = 0; i < ActiveModifications.Num(); i++)
+		{
+			if (ActiveModifications[i].ID == Identifier)
+			{
+				System::ClearAndInvalidateTimerHandle(ActiveModifications[i].TimerHandle);
+				RemoveModifier(ActiveModifications[i].StatTag);
+				ActiveModifications.RemoveAt(i);
+				return true;
+			}
+		}
+		return false;
+	}
+
+	UFUNCTION(BlueprintPure, Meta = (Categories = "Stat"))
+	bool GetModifier(FGameplayTag StatTag, float&out Value)
+	{
+		if (AdditiveModifiers.Contains(StatTag))
+		{
+			Value = AdditiveModifiers[StatTag];
+			return true;
+		}
+		if (MultiplicativeModifiers.Contains(StatTag))
+		{
+			Value = MultiplicativeModifiers[StatTag];
+			return true;
+		}
+
+		Value = -1.0f;
+		return false;
 	}
 
 	UFUNCTION(Category = "Data")
 	bool SaveStats()
 	{
 		auto SaveGame = NewObject(this, UStatsSaveGame);
-		SaveGame.SavedStats = ModifiedStats;
 		SaveGame.SavedGil = Gil;
+		SaveGame.SavedStats = Stats;
 		return Gameplay::SaveGameToSlot(SaveGame, "PlayerStats", 0);
 	}
 
@@ -226,8 +339,8 @@ class UStatsComponent : UFishComponentBase
 		if (LoadedSave == nullptr)
 			return ELoadResult::Failure;
 
-		ModifiedStats = LoadedSave.SavedStats;
 		Gil = LoadedSave.SavedGil;
+		Stats = LoadedSave.SavedStats;
 		return ELoadResult::Success;
 	}
 };
@@ -241,29 +354,18 @@ int GetGil()
 struct FStats
 {
 	UPROPERTY(Category = "Stats")
-	int Gathering = 100;
+	int Gathering = 0;
 
 	// higher chance of catching rare fish
 	UPROPERTY(Category = "Stats")
-	int Perception = 100;
-
-	/**
-	 * Multiplier for cast speed (e.g. 1.25 = +25% cast speed)
-	 * Stacks additively.
-	 */
-	UPROPERTY(Category = "Stats", Transient, Meta=(Units="x", Delta="0.25", UIMin="0.1", UIMax="5.0"))
-	float CastSpeed = 1;
+	int Perception = 0;
 
 	/**
 	 * Multiplier for reel speed (e.g. 1.25 = +25% reel speed)
 	 * Stacks additively.
 	 */
-	UPROPERTY(Category = "Stats", Transient, Meta=(Units="x", UIMin="0.25", UIMax="5.0"))
+	UPROPERTY(Category = "Stats", Transient, Meta = (Units = "x", UIMin = "0.25", UIMax = "5.0"))
 	float ReelSpeed = 1;
-
-	// amount of fish caught per cast
-	UPROPERTY(Category = "Stats", Transient, Meta=(Units="x", UIMin="1", UIMax="10"))
-	int CatchMultiplier = 1;
 }
 
 struct FStatModification
@@ -276,6 +378,9 @@ struct FStatModification
 
 	UPROPERTY()
 	EStat Stat;
+
+	UPROPERTY(Meta = (Categories = "Stat"))
+	FGameplayTag StatTag;
 
 	UPROPERTY()
 	bool bIsAdditive;
@@ -292,11 +397,12 @@ struct FStatModification
 	UPROPERTY()
 	FTimerHandle TimerHandle;
 
-	FStatModification(FName InID = NAME_None, int InIndex = 0, EStat InStat = EStat::Gathering, bool InbIsAdditive = true, float InAmount = 0.0f)
+	FStatModification(FName InID = NAME_None, int InIndex = 0, EStat InStat = EStat::Gathering, FGameplayTag InStatTag = FGameplayTag(), bool InbIsAdditive = true, float InAmount = 0.0f)
 	{
 		this.ID = InID;
 		this.Index = Index;
 		this.Stat = Stat;
+		this.StatTag = InStatTag;
 		this.bIsAdditive = bIsAdditive;
 		this.Amount = Amount;
 	}
@@ -304,119 +410,55 @@ struct FStatModification
 
 namespace Stats
 {
-	const FName GATHERING = n"Gathering";
-	const FName PERCEPTION = n"Perception";
-	const FName CAST_SPEED = n"CastSpeed";
-	const FName REEL_SPEED = n"ReelSpeed";
-	const FName CATCH_MULTIPLIER = n"CatchMultiplier";
+	UFUNCTION(BlueprintPure, Meta = (Categories = "Stat", ReturnDisplayName="Has Stat", AdvancedDisplay="BaseValue"))
+	bool GetStat(AFishCharacter Character, FGameplayTag StatTag, bool BaseValue = false, float&out Value = -1.0f)
+	{
+		return Character.FishState.StatsComponent.GetStat(StatTag, BaseValue, Value);
+	}
 
+
+	UFUNCTION(BlueprintPure, Meta = (Categories = "Stat"))
+	bool GetStatModifier(AFishCharacter Character, FGameplayTag StatTag, float&out Value)
+	{
+		return Character.FishState.StatsComponent.GetModifier(StatTag, Value);
+	}
+}
+
+enum EStatType
+{
 	/**
-	 * Gets the player's stats, optionally modified by the equipped rod.
-	 * @param Character The fish character whose stats to retrieve.
-	 * @param bModified If true, returns stats modified by the equipped rod; if false, returns base stats without rod modifiers.
-	 * @return The player's stats as an FStats struct.
+	 * A stat that represents a flat value, such as "Gathering" or "Perception".
 	 */
-	UFUNCTION(Category = "Stats", BlueprintPure, Meta = (AdvancedDisplay = "bModified"))
-	FStats GetStats(AFishCharacter Character, bool bModified = true)
-	{
-		if (bModified)
-		{
-			return GetModifiedStats(Character);
-		}
-		else
-		{
-			return GetBaseStats(Character);
-		}
-	}
-
-	UFUNCTION(Category = "Stats", BlueprintPure)
-	FStats GetBaseStats(AFishCharacter Character)
-	{
-		return UStatsComponent::Get(Character.PlayerState).RodlessStats;
-	}
-
-	UFUNCTION(Category = "Stats", BlueprintPure)
-	FStats GetModifiedStats(AFishCharacter Character)
-	{
-		return UStatsComponent::Get(Character.PlayerState).ModifiedStats;
-	}
-
-	UFUNCTION(Category = "Stats", BlueprintPure)
-	FStats GetRodStats(UFishingRod Rod)
-	{
-		return Rod.Data.BaseStats;
-	}
-
-	UFUNCTION(Category = "Stats", BlueprintPure)
-	int GetGathering(FStats & Stats)
-	{
-		return Stats.Gathering;
-	}
-
-	UFUNCTION(Category = "Stats")
-	int SetGathering(FStats & Stats, int Amount)
-	{
-		Stats.Gathering = Amount;
-		return Stats.Gathering;
-	}
-
-	UFUNCTION(Category = "Stats", BlueprintPure)
-	int GetPerception(FStats & Stats)
-	{
-		return Stats.Perception;
-	}
-
-	UFUNCTION(Category = "Stats")
-	int SetPerception(FStats & Stats, int Amount)
-	{
-		Stats.Perception = Amount;
-		return Stats.Perception;
-	}
-
-	UFUNCTION(Category = "Stats", BlueprintPure)
-	float GetCastSpeed(FStats & Stats)
-	{
-		return Stats.CastSpeed;
-	}
-
+	Flat,
 	/**
-	 * Sets the Cast Speed stat.
-	 * Expects a decimal value (e.g. 1.25 for +25% Cast Speed).
+	 * A stat that represents a percentage value, such as "Cast Speed" or "Reel Speed".
 	 */
-	UFUNCTION(Category = "Stats")
-	float SetCastSpeed(FStats & Stats, float Amount)
-	{
-		Stats.CastSpeed = Amount;
-		return Stats.CastSpeed;
-	}
+	Percentage
+}
 
-	UFUNCTION(Category = "Stats", BlueprintPure)
-	float GetReelSpeed(FStats & Stats)
-	{
-		return Stats.ReelSpeed;
-	}
-
+enum EStackingType
+{
 	/**
-	 * Sets the Reel Speed stat.
-	 * Expects a decimal value (e.g. 1.25 for +25% Reel Speed).
+	 * **- Has Diminishing Returns**
+	 * **- Additive stacking (e.g., +10 +20 = +30)**
+	 * 
+	 * **Assume base 1.**
+	 * If you have 10 traits that give +10% additive damage, then the first trait will add 10% damage, increasing the base to 1.1. 
+	 * The last item will increase base damage from 1.9 to 2.0. 
+	 * This step is only going to increase your actual damage by ~5%.
+	 * 
+	 * A large flat addition may be better than a percentage increase, if the flat addition is big enough
 	 */
-	UFUNCTION(Category = "Stats")
-	float SetReelSpeed(FStats & Stats, float Amount)
-	{
-		Stats.ReelSpeed = Amount;
-		return Stats.ReelSpeed;
-	}
-
-	UFUNCTION(Category = "Stats", BlueprintPure)
-	int GetCatchMultiplier(FStats & Stats)
-	{
-		return Stats.CatchMultiplier;
-	}
-
-	UFUNCTION(Category = "Stats")
-	int SetCatchMultiplier(FStats & Stats, int Amount)
-	{
-		Stats.CatchMultiplier = Amount;
-		return Stats.CatchMultiplier;
-	}
+	Additive,
+	/**
+	 * **- No Diminishing Returns**
+	 * **- Multiplicative stacking (e.g., 1.1 x 1.2 = 1.32)**
+	 * 
+	 * **Assume base 1.**
+	 * Multiplicative in turn has no dminishing returns, which results in (1.1)^10 = 2.6
+	 * 10 instances of 10% multiplicative increases it by 160%.
+	 * 
+	 * It's best for you if percentage increases stack multiplicatively when you have multiple of them.
+	 */
+	Multiplicative
 }

@@ -23,6 +23,9 @@ class UFishWidget : UUserWidget
 	UPROPERTY(Category = "Initialization", BlueprintReadOnly, NotVisible)
 	bool bInitialized = false;
 
+	UPROPERTY(Category = "Fish Widget", BlueprintReadWrite, NotVisible)
+	ESlateVisibility FadeOutVisibility;
+
 	UFUNCTION(BlueprintOverride)
 	void Construct()
 	{

@@ -27,6 +27,12 @@ class AFishPlayerState : APlayerState
 	UPROPERTY(Category = "Components", BlueprintReadOnly, NotVisible)
 	UCollectionComponent CollectionComponent;
 
+	UPROPERTY(Category = "Components", BlueprintReadOnly, NotVisible)
+	UGamblingComponent GamblingComponent;
+
+	UPROPERTY(Category = "Components", BlueprintReadOnly, NotVisible)
+	UTokenComponent TokenComponent;
+
 	UPROPERTY(Category = "Player Info | Title")
 	FOnTitleUnlocked OnTitleUnlocked;
 
@@ -43,6 +49,8 @@ class AFishPlayerState : APlayerState
 		ExperienceComponent = UExperienceComponent::Get(this);
 		QuestComponent = UQuestComponent::Get(this);
 		CollectionComponent = UCollectionComponent::Get(this);
+		GamblingComponent = UGamblingComponent::Get(this);
+		TokenComponent = UTokenComponent::Get(this);
 	}
 
 	UFUNCTION(BlueprintOverride)

@@ -91,8 +91,8 @@ class UFishingHoleComponent : UActorComponent
 
 		if (IsSpectral)
 		{
-			Character.FishState.StatsComponent.ClearStatModification(n"SpectralCastSpeed");
-			Character.FishState.StatsComponent.ClearStatModification(n"SpectralReelSpeed");
+			//Character.FishState.StatsComponent.ClearStatModification(n"SpectralCastSpeed");
+			//Character.FishState.StatsComponent.ClearStatModification(n"SpectralReelSpeed");
 		}
 
 		NearbyPlayers.RemoveSingleSwap(Character);
