@@ -49,7 +49,7 @@ class UStatsComponent : UFishComponentBase
 		auto RodStats = OldRod.Data.Stats;
 		for (auto& StatPair : RodStats)
 		{
-			//RemoveModifier(StatPair.Key);
+			// RemoveModifier(StatPair.Key);
 		}
 	}
 
@@ -59,7 +59,7 @@ class UStatsComponent : UFishComponentBase
 		auto RodStats = NewRod.Data.Stats;
 		for (auto& StatPair : RodStats)
 		{
-			//AddModifier(StatPair.Key, StatPair.Value);
+			// AddModifier(StatPair.Key, StatPair.Value);
 		}
 	}
 
@@ -71,19 +71,19 @@ class UStatsComponent : UFishComponentBase
 		for (auto& StatPair : Stats)
 		{
 			float ModifiedValue = StatPair.Value;
-			
+
 			// Apply additive modifiers first
 			if (AdditiveModifiers.Contains(StatPair.Key))
 			{
 				ModifiedValue += AdditiveModifiers[StatPair.Key];
 			}
-			
+
 			// Then apply multiplicative modifiers
 			if (MultiplicativeModifiers.Contains(StatPair.Key))
 			{
 				ModifiedValue *= MultiplicativeModifiers[StatPair.Key];
 			}
-			
+
 			CurrentStats.Add(StatPair.Key.ToString(), ModifiedValue);
 		}
 	}
@@ -106,8 +106,8 @@ class UStatsComponent : UFishComponentBase
 		return false;
 	}
 
-	UFUNCTION(Category = "Stats", BlueprintPure, Meta = (Categories = "Stat", ReturnDisplayName="Has Stat", AdvancedDisplay="BaseValue"))
-	bool GetStat(FGameplayTag StatTag, bool BaseValue = false, float &OutValue = -1.0f)
+	UFUNCTION(Category = "Stats", BlueprintPure, Meta = (Categories = "Stat", ReturnDisplayName = "Has Stat", AdvancedDisplay = "BaseValue"))
+	bool GetStat(FGameplayTag StatTag, bool BaseValue = false, float& OutValue = -1.0f)
 	{
 		if (HasStat(StatTag))
 		{
@@ -122,19 +122,19 @@ class UStatsComponent : UFishComponentBase
 			else
 			{
 				float ModifiedValue = Stats[StatTag];
-				
+
 				// additive modifiers first
 				if (AdditiveModifiers.Contains(StatTag))
 				{
 					ModifiedValue += AdditiveModifiers[StatTag];
 				}
-				
+
 				// multiplicative modifiers
 				if (MultiplicativeModifiers.Contains(StatTag))
 				{
 					ModifiedValue *= MultiplicativeModifiers[StatTag];
 				}
-				
+
 				OutValue = ModifiedValue;
 			}
 			return true;
@@ -158,7 +158,8 @@ class UStatsComponent : UFishComponentBase
 	UFUNCTION(Category = "Stats", Meta = (Categories = "Stat"))
 	void AddModifier(FGameplayTag Stat, float Amount, EStatType Type, EStackingType StackingType)
 	{
-		if (!Stat.IsValid()) PrintError(f"Invalid Stat GameplayTag provided!}");
+		if (!Stat.IsValid())
+			PrintError(f"Invalid Stat GameplayTag provided!}");
 
 		float FinalAmount = Amount;
 		if (Type == EStatType::Percentage)
@@ -345,12 +346,6 @@ class UStatsComponent : UFishComponentBase
 	}
 };
 
-UFUNCTION(Category = "Stats", BlueprintPure)
-int GetGil()
-{
-	return GetFishCharacterBase().FishState.StatsComponent.Gil;
-}
-
 struct FStats
 {
 	UPROPERTY(Category = "Stats")
@@ -410,17 +405,22 @@ struct FStatModification
 
 namespace Stats
 {
-	UFUNCTION(BlueprintPure, Meta = (Categories = "Stat", ReturnDisplayName="Has Stat", AdvancedDisplay="BaseValue"))
+	UFUNCTION(BlueprintPure, Meta = (Categories = "Stat", ReturnDisplayName = "Has Stat", AdvancedDisplay = "BaseValue"))
 	bool GetStat(AFishCharacter Character, FGameplayTag StatTag, bool BaseValue = false, float&out Value = -1.0f)
 	{
 		return Character.FishState.StatsComponent.GetStat(StatTag, BaseValue, Value);
 	}
 
-
 	UFUNCTION(BlueprintPure, Meta = (Categories = "Stat"))
 	bool GetStatModifier(AFishCharacter Character, FGameplayTag StatTag, float&out Value)
 	{
 		return Character.FishState.StatsComponent.GetModifier(StatTag, Value);
+	}
+
+	UFUNCTION(Category = "Stats", BlueprintPure)
+	int GetGil()
+	{
+		return GetFishCharacterBase().FishState.StatsComponent.Gil;
 	}
 }
 
@@ -441,23 +441,23 @@ enum EStackingType
 	/**
 	 * **- Has Diminishing Returns**
 	 * **- Additive stacking (e.g., +10 +20 = +30)**
-	 * 
+	 *
 	 * **Assume base 1.**
-	 * If you have 10 traits that give +10% additive damage, then the first trait will add 10% damage, increasing the base to 1.1. 
-	 * The last item will increase base damage from 1.9 to 2.0. 
+	 * If you have 10 traits that give +10% additive damage, then the first trait will add 10% damage, increasing the base to 1.1.
+	 * The last item will increase base damage from 1.9 to 2.0.
 	 * This step is only going to increase your actual damage by ~5%.
-	 * 
+	 *
 	 * A large flat addition may be better than a percentage increase, if the flat addition is big enough
 	 */
 	Additive,
 	/**
 	 * **- No Diminishing Returns**
 	 * **- Multiplicative stacking (e.g., 1.1 x 1.2 = 1.32)**
-	 * 
+	 *
 	 * **Assume base 1.**
 	 * Multiplicative in turn has no dminishing returns, which results in (1.1)^10 = 2.6
 	 * 10 instances of 10% multiplicative increases it by 160%.
-	 * 
+	 *
 	 * It's best for you if percentage increases stack multiplicatively when you have multiple of them.
 	 */
 	Multiplicative

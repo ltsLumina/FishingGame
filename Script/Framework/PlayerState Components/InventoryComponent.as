@@ -108,6 +108,9 @@ class UInventoryComponent : UFishComponentBase
 			for (auto& TraitClass : EquippedRod.Traits)
 			{
 				auto Trait = NewObject(this, TraitClass);
+				Trait.Init(Character.FishingComponent, PlayerState.StatsComponent, PlayerState.TokenComponent);
+				AppliedTraits.Add(Trait);
+
 				bool IsEnhanced = false;
 				if (Trait.CanBeEnhanced)
 				{
@@ -117,14 +120,18 @@ class UInventoryComponent : UFishComponentBase
 				}
 
 				if (!IsEnhanced)
-					Trait.ApplyTrait(Character, PlayerState, PlayerState.StatsComponent, Character.FishingComponent, PlayerState.TokenComponent);
+					Trait.ApplyTrait(Character, PlayerState);
 				else
-					Trait.ApplyTraitEnhanced(Character, PlayerState, PlayerState.StatsComponent, Character.FishingComponent, PlayerState.TokenComponent);
+					Trait.ApplyTraitEnhanced(Character, PlayerState);
 			}
 
 			OnRodEquipped.Broadcast(EquippedRod);
 		}
 	}
+
+	// literally just used to prevent garbage collection of traits
+	UPROPERTY()
+	TArray<UTrait> AppliedTraits;
 
 	UFUNCTION(Category = "Inventory")
 	void AddItem(UItem Item, FInventoryInstanceData InstanceData, int Quantity = 1)

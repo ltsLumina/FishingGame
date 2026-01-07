@@ -19,11 +19,20 @@ class UTrait : UObject
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	bool CanBeEnhanced;
 
+	UPROPERTY(BlueprintReadOnly)
+	UFishingComponent FishingComponent;
+
+	UPROPERTY(BlueprintReadOnly)
+	UStatsComponent StatsComponent;
+
+	UPROPERTY(BlueprintReadOnly)
+	UTokenComponent TokenComponent;
+
 	/**
 	 * Apply the effect of this trait to the given character.
 	 */
 	UFUNCTION(BlueprintEvent)
-	void ApplyTrait(AFishCharacter Character, AFishPlayerState PlayerState, UStatsComponent Stats, UFishingComponent FishingComponent, UTokenComponent TokenComponent)
+	void ApplyTrait(AFishCharacter Character, AFishPlayerState PlayerState)
 	{}
 
 	/**
@@ -32,6 +41,13 @@ class UTrait : UObject
 	 * Randomly rolled when the trait is created. @see UFishingComponent::RollTrait
 	 */
 	UFUNCTION(BlueprintEvent, DisplayName = "Apply Trait (Enhanced)")
-	void ApplyTraitEnhanced(AFishCharacter Character, AFishPlayerState PlayerState, UStatsComponent Stats, UFishingComponent FishingComponent, UTokenComponent TokenComponent)
+	void ApplyTraitEnhanced(AFishCharacter Character, AFishPlayerState PlayerState)
 	{}
+
+	void Init(UFishingComponent InFishingComponent, UStatsComponent InStatsComponent, UTokenComponent InTokenComponent)
+	{
+		FishingComponent = InFishingComponent;
+		StatsComponent = InStatsComponent;
+		TokenComponent = InTokenComponent;
+	}
 }
