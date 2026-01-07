@@ -434,11 +434,12 @@ class UFishingComponent : UFishComponentBase
 		for (int i = 0; i < CatchContext.Quantity; i++)
 		{
 			FInventoryInstanceData InventoryInstance;
-			FFishInstanceData FishInstance = Fish::InstanceData::MakeFishInstanceData(Fish.Item.FishData);
-			InventoryInstance.FishInstanceData = FishInstance;
+			InventoryInstance.FishInstanceData = Fish::InstanceData::MakeFishInstanceData(FishItem.FishData); // create new instance data for each fish, so they aren't identical. The Clone trait adds a fish to the inventory with identical instance data instead.
 
 			PlayerState.InventoryComponent.AddItem(Fish.Item, InventoryInstance, 1);
 		}
+
+		CatchContext = FCatchContext();
 	}
 
 	/**
@@ -505,8 +506,9 @@ struct FCatchContext
 {
 	UPROPERTY()
 	UFishItem FishItem;
+	
 	UPROPERTY()
-	int Quantity;
+	int Quantity = 1;
 }
 
 enum EFishingState

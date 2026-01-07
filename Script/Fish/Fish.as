@@ -59,7 +59,7 @@ namespace Fish
 		{
 			FFishInstanceData InstanceData;
 			InstanceData.Tag = Fish::InstanceData::Tag::RollTag();
-			InstanceData.SizeData = Fish::InstanceData::Size::Generate(FishItemData);
+			InstanceData.SizeData = Fish::InstanceData::Size::CalculateSize(FishItemData);
 			return InstanceData;
 		}
 
@@ -109,7 +109,7 @@ namespace Fish
 			 * @note Size and weight are randomized within the size span defined in the fish item data.
 			 */
 			UFUNCTION(Category = "Fish | Size", BlueprintPure)
-			FFishSizeData Generate(FFishItemData FishItemData)
+			FFishSizeData CalculateSize(FFishItemData FishItemData)
 			{
 				// Randomize size and weight within span
 				float Size = Math::RandRange(FishItemData.SizeSpan.X, FishItemData.SizeSpan.Y);
@@ -173,7 +173,7 @@ class AFish : AActor
 	/**
 	 * @note Must be called after spawning the fish to initialize it!
 	 */
-	UFUNCTION()
+	UFUNCTION(Category = "Fish")
 	void OnSpawn(UFishItem InItem)
 	{
 		Item = InItem;
