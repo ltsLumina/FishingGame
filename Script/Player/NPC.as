@@ -54,6 +54,9 @@ class AFishNPC : AFishEntity
 	UPROPERTY(Category = "NPC | Menu", Meta = (EditCondition = "HasMenu"))
 	TSubclassOf<UFishWidget> MenuWidgetClass;
 
+	UPROPERTY(Category="NPC | Menu")
+    TArray<FText> DialogueEntries;
+
 	default bReplicates = false;
 	default bReplicateMovement = false;
 
