@@ -36,8 +36,8 @@ for all players who are fishing in the hole.~~
 ## alcohol / drinking
 - apparently this is why fishing is fun, according to Adam
 
-## dialogue-system
-- dialogue
+## ~~dialogue-system~~
+- ~~dialogue~~
 
 # style & theme
 - low poly, toon shaded, cartoony
