@@ -1,12 +1,15 @@
 class AFishGameState : AGameStateBase
 {
-    UPROPERTY(BlueprintGetter = "GetIsSinglePlayer")
+    UPROPERTY()
+    UDataTable FishingHoleDataTable;
+    
+    UPROPERTY(VisibleInstanceOnly)
     bool IsSinglePlayer = true;
 
     UFUNCTION(BlueprintOverride)
     void BeginPlay()
     {
-        System::SetTimer(this, n"CheckSinglePlayerStatus", 0.5f, false);
+        System::SetTimer(this, n"CheckSinglePlayerStatus", 1.5f, false);
     }
 
     UFUNCTION(NotBlueprintCallable)
@@ -14,10 +17,10 @@ class AFishGameState : AGameStateBase
     {
         IsSinglePlayer = PlayerArray.Num() <= 1;
     }
-
-    UFUNCTION(BlueprintPure, DisplayName = "Is SinglePlayer")
-    bool GetIsSinglePlayer()
-    {
-        return IsSinglePlayer;
-    }
 };
+
+UFUNCTION(BlueprintPure)
+AFishGameState GetFishGameStateBase()
+{
+    return Cast<AFishGameState>(Gameplay::GetGameState());
+}

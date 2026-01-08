@@ -21,7 +21,7 @@ class UStatsComponent : UFishComponentBase
 	int Gil;
 
 	UPROPERTY(Category = "Stats", EditDefaultsOnly, Meta = (Categories = "Stat"))
-	private TMap<FGameplayTag, float> Stats;
+	TMap<FGameplayTag, float> Stats;
 
 	UPROPERTY(Category = "Stats", VisibleAnywhere, Meta = (Categories = "Stat"))
 	private TMap<FGameplayTag, float> AdditiveModifiers;
@@ -46,20 +46,20 @@ class UStatsComponent : UFishComponentBase
 	UFUNCTION(NotBlueprintCallable)
 	private void RodUnequipped(UFishingRod OldRod)
 	{
-		auto RodStats = OldRod.Data.Stats;
+		auto RodStats = OldRod.Data.BaseStats;
 		for (auto& StatPair : RodStats)
 		{
-			// RemoveModifier(StatPair.Key);
+			RemoveModifier(StatPair.Key);
 		}
 	}
 
 	UFUNCTION()
 	private void RodEquipped(UFishingRod NewRod)
 	{
-		auto RodStats = NewRod.Data.Stats;
+		auto RodStats = NewRod.Data.BaseStats;
 		for (auto& StatPair : RodStats)
 		{
-			// AddModifier(StatPair.Key, StatPair.Value);
+			AddModifier(StatPair.Key, StatPair.Value, EStatType::Flat, EStackingType::Additive);
 		}
 	}
 
@@ -148,6 +148,8 @@ class UStatsComponent : UFishComponentBase
 		return Stats.Contains(StatTag);
 	}
 
+	TMap<FGameplayTag, FName> TrackedModifiers;
+
 	/**
 	 * Adds to a stat using a gameplay tag identifier.
 	 * @param Amount The amount to add to the stat (can be negative to subtract).
@@ -155,8 +157,8 @@ class UStatsComponent : UFishComponentBase
 	 * @param StackingType The stacking type (additive or multiplicative). Decides how multiple modifiers to the same stat are combined.
 	 * @note For percentage-based stats, provide the amount as a whole number (e.g., 25 for 25%).
 	 */
-	UFUNCTION(Category = "Stats", Meta = (Categories = "Stat"))
-	void AddModifier(FGameplayTag Stat, float Amount, EStatType Type, EStackingType StackingType)
+	UFUNCTION(Category = "Stats", Meta = (Categories = "Stat", AdvancedDisplay = "Identifier"))
+	void AddModifier(FGameplayTag Stat, float Amount, EStatType Type, EStackingType StackingType, FName Identifier = NAME_None)
 	{
 		if (!Stat.IsValid())
 			PrintError(f"Invalid Stat GameplayTag provided!}");
@@ -188,6 +190,11 @@ class UStatsComponent : UFishComponentBase
 			{
 				MultiplicativeModifiers.Add(Stat, FinalAmount);
 			}
+		}
+
+		if (Identifier != NAME_None)
+		{
+			TrackedModifiers.Add(Stat, Identifier);
 		}
 	}
 
@@ -281,7 +288,7 @@ class UStatsComponent : UFishComponentBase
 
 	/**
 	 * Removes a stat modifier associated with the given timer handle.
-	 * @param TimerHandle The timer handle associated with the stat modifier to remove.
+	 * @param Identifier The identifier of the modifier to remove.
 	 * @return True if the modifier was found and removed, false otherwise.
 	 */
 	UFUNCTION(Category = "Stats", Meta = (Categories = "Stat"))
@@ -291,8 +298,8 @@ class UStatsComponent : UFishComponentBase
 		{
 			if (ActiveModifications[i].ID == Identifier)
 			{
-				System::ClearAndInvalidateTimerHandle(ActiveModifications[i].TimerHandle);
 				RemoveModifier(ActiveModifications[i].StatTag);
+				System::ClearAndInvalidateTimerHandle(ActiveModifications[i].TimerHandle);
 				ActiveModifications.RemoveAt(i);
 				return true;
 			}

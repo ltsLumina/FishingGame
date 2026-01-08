@@ -33,7 +33,7 @@ class UTrait : UObject
 	 */
 	UFUNCTION(BlueprintEvent)
 	void ApplyTrait(AFishCharacter Character, AFishPlayerState PlayerState)
-	{}
+	{ }
 
 	/**
 	 * Apply the enhanced effect of this trait to the given character.
@@ -42,7 +42,9 @@ class UTrait : UObject
 	 */
 	UFUNCTION(BlueprintEvent, DisplayName = "Apply Trait (Enhanced)")
 	void ApplyTraitEnhanced(AFishCharacter Character, AFishPlayerState PlayerState)
-	{}
+	{ }
+
+	bool bInitialized = false;
 
 	void Init(UFishingComponent InFishingComponent, UStatsComponent InStatsComponent, UTokenComponent InTokenComponent)
 	{

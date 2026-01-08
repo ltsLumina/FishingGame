@@ -1,19 +1,34 @@
 event void FOnSpectralShift();
 
-UCLASS(ClassGroup = "Fishing")
+struct FFishingHoleTableRow
+{
+	UPROPERTY()
+	TArray<TSoftObjectPtr<UFishItem>> CatchableFish;
+	
+	UPROPERTY(Category = "Debug")
+	private FGameplayTag Helper;
+}
+
+UCLASS(ClassGroup = "Fishing", Meta = (PrioritizeCategories = "Fishing"))
 class UFishingHoleComponent : UActorComponent
 {
+	default bReplicates = true;
+
+	UPROPERTY(Category = "Fishing | Area", EditInstanceOnly, Meta = (Categories="Hole"))
+	FGameplayTag HoleTag;
+
 	UPROPERTY(Category = "Fishing | Area", DisplayName = "Name")
 	FText HoleName;
 	default HoleName = FText::FromName(GetName());
 
-	UPROPERTY(Category = "Fishing | Area")
+	UPROPERTY(Category = "Fishing | Area", VisibleInstanceOnly, Replicated)
 	TArray<TSoftObjectPtr<UFishItem>> CatchableFish;
 
-	UPROPERTY(Category = "Fishing | Area")
+
+	UPROPERTY(Category = "Fishing | Area", VisibleInstanceOnly, Replicated)
 	TArray<AFishCharacter> NearbyPlayers;
 
-	UPROPERTY(Category = "Fishing | Area", VisibleInstanceOnly)
+	UPROPERTY(Category = "Fishing | Area", VisibleInstanceOnly, Replicated)
 	bool IsSpectral;
 
 	UPROPERTY(Category = "Fishing | Area", EditAnywhere)
@@ -28,6 +43,27 @@ class UFishingHoleComponent : UActorComponent
 	UFUNCTION(BlueprintOverride)
 	void BeginPlay()
 	{
+		auto Table = GetFishGameStateBase().FishingHoleDataTable;
+		TArray<FGameplayTag> Tags;
+		DataTableGameplayTag::GetDataTableRowTags(Table, Tags);
+
+		for (FGameplayTag Tag : Tags)
+		{
+			if (Tag.MatchesTagExact(HoleTag))
+			{
+				FFishingHoleTableRow Row;
+				if (Table.FindRow(Tag.TagName, Row))
+				{
+					CatchableFish = Row.CatchableFish;
+					break;
+				}
+				else
+				{
+					PrintError("Fishing Hole Component could not find row for tag: " + Tag.ToString());
+				}
+			}
+		}
+		
 		System::SetTimerForNextTick(this, "ValidateCatchableFish");
 	}
 
@@ -91,8 +127,7 @@ class UFishingHoleComponent : UActorComponent
 
 		if (IsSpectral)
 		{
-			//Character.FishState.StatsComponent.ClearStatModification(n"SpectralCastSpeed");
-			//Character.FishState.StatsComponent.ClearStatModification(n"SpectralReelSpeed");
+			// Remove spectral traits
 		}
 
 		NearbyPlayers.RemoveSingleSwap(Character);
@@ -103,7 +138,7 @@ class UFishingHoleComponent : UActorComponent
 		FishingComponent.UpdateCatchableFish();
 	}
 
-	UFUNCTION(Meta = (AdvancedDisplay = "bOverride", ReturnDisplayName = "Success"))
+	UFUNCTION(NetMulticast, Meta = (AdvancedDisplay = "bOverride", ReturnDisplayName = "Success"))
 	bool TrySpectralShift(UBait Bait, bool bOverride = false)
 	{
 		if (IsSpectral) // acts as a cooldown
@@ -121,14 +156,13 @@ class UFishingHoleComponent : UActorComponent
 		FishingComponent.UpdateCatchableFish();
 		for (AFishCharacter PlayerChar : NearbyPlayers)
 		{
-			//PlayerChar.FishState.StatsComponent.AddStatForDuration(EStat::CastSpeed, 50, 60.0f, n"SpectralCastSpeed");
-			//PlayerChar.FishState.StatsComponent.AddStatForDuration(EStat::ReelSpeed, 50, 60.0f, n"SpectralReelSpeed");
-
-			//for (TSubclassOf<UTrait> TraitClass : SpectralTraits)
-			//{
-			//	UTrait Trait = TraitClass.GetDefaultObject();
-			//	Trait.ApplyTrait(PlayerChar);
-			//}
+			for (TSubclassOf<UTrait> TraitClass : SpectralTraits)
+			{
+				UTrait Trait = Cast<UTrait>(NewObject(this, TraitClass));
+				Trait.Init(FishingComponent, PlayerChar.FishState.StatsComponent, PlayerChar.FishState.TokenComponent);
+				Trait.ApplyTrait(PlayerChar, PlayerChar.FishState);
+				AppliedTraits.Add(Trait);
+			}
 		}
 
 		OnSpectralShift.Broadcast();
@@ -136,6 +170,10 @@ class UFishingHoleComponent : UActorComponent
 
 		return IsSpectral;
 	}
+
+	// entirely for avoiding GC of traits
+	UPROPERTY(NotVisible, Transient, Replicated)
+	TArray<UTrait> AppliedTraits;
 
 	UFUNCTION(BlueprintEvent)
 	void BP_SpectralShift()

@@ -1,4 +1,6 @@
 event void FOnInteract(AFishNPC NPC, ESelectionState State);
+event void FOnBeginDialogue(AFishNPC NPC);
+event void FOnEndDialogue(AFishNPC NPC);
 
 enum ESelectionState
 {
@@ -29,6 +31,12 @@ class AFishController : APlayerController
 
 	UPROPERTY(Category = "Interaction | Events")
 	FOnInteract OnInteract;
+
+	UPROPERTY(Category = "Interaction | Events")
+	FOnBeginDialogue OnBeginDialogue;
+
+	UPROPERTY(Category = "Interaction | Events")
+	FOnEndDialogue OnEndDialogue;
 
 	UFUNCTION(BlueprintOverride)
 	void BeginPlay()

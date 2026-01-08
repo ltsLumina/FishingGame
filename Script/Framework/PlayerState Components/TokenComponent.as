@@ -144,7 +144,7 @@ class UTokenComponent : UFishComponentBase
 	{
 		if (Tokens.Contains(Token))
 		{
-			Tokens[Token] -= Amount;
+			Tokens[Token] = Math::Max(Tokens[Token] - Amount, 0); // prevent negative values
 			if (Tokens[Token] <= 0)
 			{
 				Tokens.Remove(Token);

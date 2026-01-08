@@ -99,6 +99,51 @@ namespace FishingRod
 
 		return SelectedTraits;
 	}
+
+	UFUNCTION(BlueprintPure)
+	FString GetStatsString(URodData RodData)
+	{
+		TArray<FGameplayTag> StatNames;
+		TArray<float> StatValues;
+		RodData.BaseStats.GetKeys(StatNames);
+		for (int i = 0; i < RodData.BaseStats.Num(); i++)
+		{
+			auto Value = RodData.BaseStats[StatNames[i]];
+			StatValues.Add(Value);
+		}
+
+		FString String;
+		for (int i = 0; i < RodData.BaseStats.Num(); i++)
+		{
+			FString FirstHalf;
+			FString LastTagName;
+			StatNames[i].TagName.ToString().Split(".", FirstHalf, LastTagName, ESearchCase::IgnoreCase, ESearchDir::FromEnd);
+			FString SignString = Math::Sign(StatValues[i]) < 0.0f ? "-" : "+";
+			String = String::Concat_StrStr(String, f"{SignString}{Math::Abs(StatValues[i])} {LastTagName.ToDisplayName()}" + "\n");
+		}
+
+		String.RemoveFromEnd("\n");
+
+		return String;
+	}
+
+	UFUNCTION(BlueprintPure)
+	mixin FText GetName(URodData RodData)
+	{
+		return RodData.Details.RodName;
+	}
+
+	UFUNCTION(BlueprintPure)
+	mixin FText GetLore(URodData RodData)
+	{
+		return RodData.Details.Lore;
+	}
+	
+	UFUNCTION(BlueprintPure)
+	mixin UTexture2D GetIcon(URodData RodData)
+	{
+		return RodData.Details.Icon;
+	}
 }
 
 enum ERodTier
@@ -116,18 +161,23 @@ enum ERodTier
 };
 
 class URodData : UPrimaryDataAsset
-{	
+{
 	UPROPERTY(Category = "Rod")
 	FRodDetails Details;
 
 	UPROPERTY(Category = "Rod")
 	ERodTier Tier;
 
-	UPROPERTY(Category = "Rod")
-	FStats BaseStats;
-
-	UPROPERTY(Category = "Rod", Meta = (Categories = "Stat"))
-	TMap <FGameplayTag, float> Stats;
+	/**
+	 * The base stats this rod provides when equipped.
+	 * Stats are applied when the rod is equipped.
+	 * These stats are always applied as a flat, additive stat.
+	 */
+	UPROPERTY(Category = "Rod", Meta = (Categories = "Stat", ForceInlineRow, EditFixedSize))
+	TMap<FGameplayTag, float> BaseStats;
+	default BaseStats.Add(GameplayTags::Stat_Fishing_Gathering, 0.0f);
+	default BaseStats.Add(GameplayTags::Stat_Fishing_Perception, 0.0f);
+	default BaseStats.Add(GameplayTags::Stat_Fishing_ReelSpeed, 0.0f);
 
 	UPROPERTY(Category = "Rod")
 	FRodTraits Traits;
@@ -194,4 +244,17 @@ class UFishingRod : UObject
 	 */
 	UPROPERTY(SaveGame)
 	TArray<TSubclassOf<UTrait>> Traits;
+
+	UFUNCTION(BlueprintPure)
+	FString GetTraitsString()
+	{
+		FString String;
+		for (int i = 0; i < Traits.Num(); i++)
+		{
+			auto TraitClass = Traits[i];
+			auto TraitCDO = TraitClass.GetDefaultObject();
+			String = String::Concat_StrStr(String, TraitCDO.TraitName.ToString() + "\n");
+		}
+		return String;
+	}
 }

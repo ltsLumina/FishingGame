@@ -1,5 +1,6 @@
 event void FOnStateChange(EFishingState NewState);
 event void FOnSelectBait(UBait Bait);
+event void FOnFishHooked(UFishItem FishItem);
 event void FOnFishCaught(AFish Fish);
 
 class UFishingComponent : UFishComponentBase
@@ -149,13 +150,22 @@ class UFishingComponent : UFishComponentBase
 
 	/* Events */
 
-	UPROPERTY()
+	UPROPERTY(Category = "Events")
 	FOnStateChange OnStateChange;
 
-	UPROPERTY()
+	UPROPERTY(Category = "Events")
 	FOnSelectBait OnSelectBait;
 
-	UPROPERTY()
+	/**
+	 * Called after the fish has been hooked, but before the reeling-in process begins.
+	 */
+	UPROPERTY(Category = "Events")
+	FOnFishHooked OnFishHooked;
+
+	/**
+	 * Called after the fish has been spawned on the client, but before it is added to the player's inventory.
+	 */
+	UPROPERTY(Category = "Events")
 	FOnFishCaught OnFishCaught;
 
 	/* End */
@@ -273,6 +283,7 @@ class UFishingComponent : UFishComponentBase
 		}
 
 		BiteTimer = NewBiteTimer;
+
 		BP_StartFishing();
 	}
 
@@ -352,6 +363,7 @@ class UFishingComponent : UFishComponentBase
 		StopFishing();
 
 		BP_Hook(CaughtFish);
+		OnFishHooked.Broadcast(CaughtFish);
 	}
 
 	UPROPERTY(VisibleInstanceOnly)
