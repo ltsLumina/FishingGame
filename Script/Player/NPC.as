@@ -53,8 +53,11 @@ class AFishNPC : AFishEntity
 
 	UPROPERTY(Category = "NPC | Menu", Meta = (EditCondition = "HasMenu"))
 	TSubclassOf<UFishWidget> MenuWidgetClass;
+	
+	UPROPERTY(Category = "NPC | Dialogue", Meta = (InlineEditConditionToggle))
+	bool HasDialogue = false;
 
-	UPROPERTY(Category="NPC | Menu")
+	UPROPERTY(Category="NPC | Menu", Meta=(EditCondition="HasDialogue"))
     TArray<FText> DialogueEntries;
 
 	default bReplicates = false;
