@@ -60,6 +60,9 @@ class UEmotePlayerComponent : UFishComponentBase
     UFUNCTION(NotBlueprintCallable, BlueprintPure, Meta=(DisplayName="Is Emote Playing"))
     bool GetIsEmotePlaying()
     {
+        if (!IsValid(AnimInstance))
+            return false;
+
         // check if any EMOTE is playing
         for (auto& Pair : EmoteMap)
         {
