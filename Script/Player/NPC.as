@@ -59,6 +59,7 @@ class AFishNPC : AFishEntity
 
 	UPROPERTY(Category="NPC | Menu", Meta=(EditCondition="HasDialogue"))
     TArray<FText> DialogueEntries;
+	
 
 	default bReplicates = false;
 	default bReplicateMovement = false;
