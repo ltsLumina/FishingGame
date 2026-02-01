@@ -35,6 +35,12 @@ class UFishWidgetBase : UUserWidget
 	UPROPERTY(Category = "Initialization", NotVisible, BlueprintReadOnly)
 	float InitializationTime = 0.0f;
 
+	/**
+	 * If true, warnings about initialization issues will be muted.
+	 */
+	UPROPERTY(Category = "Initialization")
+	bool MuteWarnings = false;
+
 	UFUNCTION(NotBlueprintCallable)
 	private void Initialize()
 	{
@@ -47,7 +53,7 @@ class UFishWidgetBase : UUserWidget
 		else
 		{
 			Character = GetFishCharacterBase(0);
-			PrintWarning(f"UFishWidget: ({GetName()}) OwningPlayerPawn is null, defaulting to GetFishCharacterBase(0). \nMake sure to set the Owning Player when creating the widget.");
+			if (!MuteWarnings) PrintWarning(f"UFishWidget: ({GetName()}) OwningPlayerPawn is null, defaulting to GetFishCharacterBase(0). \nMake sure to set the Owning Player when creating the widget.");
 		}
 
 		if (IsValid(Character))
@@ -62,7 +68,7 @@ class UFishWidgetBase : UUserWidget
 				return;
 			}
 
-			PrintError(f"UFishWidget: ({GetName()}) timed out! \nFailed to initialize: Character or FishState is null after multiple attempts.");
+			if (!MuteWarnings) PrintError(f"UFishWidget: ({GetName()}) timed out! \nFailed to initialize: Character or FishState is null after multiple attempts.");
 			return;
 		}
 
@@ -112,8 +118,11 @@ class UFishWidget : UFishWidgetBase
 	/**
 	 * In seconds, how long it takes the widget to fade in/out.
 	 */
-	UPROPERTY(Category = "Widget | Customization", EditDefaultsOnly, Meta = (Units = "s", UIMin = "0.0", UIMax = "1.0", Delta = "0.05"))
-	float FadeTime = 0.15f;
+	UPROPERTY(Category = "Widget | Customization", Meta = (Units = "s", UIMin = "0.0", UIMax = "1.0", Delta = "0.05"))
+	float FadeInTime = 0.1f;
+
+	UPROPERTY(Category = "Widget | Customization", Meta = (Units = "s", UIMin = "0.0", UIMax = "1.0", Delta = "0.05"))
+	float FadeOutTime = 0.1f;
 
 	UPROPERTY(Category = "Widget | Customization", NotVisible, BlueprintReadOnly)
 	bool IsFadingIn;
@@ -140,7 +149,7 @@ class UFishWidget : UFishWidgetBase
 	{
 		if (IsFadingIn)
 		{
-			RenderOpacity = Math::Clamp(RenderOpacity + (InDeltaTime / FadeTime), 0.0f, 1.0f);
+			RenderOpacity = Math::Clamp(RenderOpacity + (InDeltaTime / FadeInTime), 0.0f, 1.0f);
 			if (RenderOpacity >= 1.0f)
 			{
 				IsFadingIn = false;
@@ -152,7 +161,7 @@ class UFishWidget : UFishWidgetBase
 
 		if (IsFadingOut)
 		{
-			RenderOpacity = Math::Clamp(RenderOpacity - (InDeltaTime / FadeTime), 0.0f, 1.0f);
+			RenderOpacity = Math::Clamp(RenderOpacity - (InDeltaTime / FadeOutTime), 0.0f, 1.0f);
 			if (RenderOpacity <= 0.0f)
 			{
 				IsFadingOut = false;
@@ -184,6 +193,11 @@ class UFishWidget : UFishWidgetBase
 			FadeInVisibility = NewVisibility;
 			OnFadeComplete = FadeInCompleted;
 		}
+		else
+		{
+			RenderOpacity = 1.0f;
+			SetVisibility(NewVisibility);
+		}
 	}
 
 	UFUNCTION(Category = "Fish Widget | Visibility", Meta = (AdvancedDisplay = "FadeOut, FadeOutCompleted"))
@@ -199,6 +213,11 @@ class UFishWidget : UFishWidgetBase
 			FadeOutVisibility = NewVisibility;
 			OnFadeComplete = FadeOutCompleted;
 		}
+		else
+		{
+			SetVisibility(NewVisibility);
+			RenderOpacity = 0.0f;
+		}
 	}
 
 	UFUNCTION(Category = "Fish Widget", DisplayName = "Remove From Parent", Meta = (AdvancedDisplay = "FadeOut, FadeOutCompleted"), Keywords = "remove from parent")
@@ -210,7 +229,7 @@ class UFishWidget : UFishWidgetBase
 			IsFadingOut = true;
 			FadeOutVisibility = ESlateVisibility::Collapsed;
 			OnFadeComplete = FadeOutCompleted;
-			System::SetTimer(this, n"RemoveFromParentTimer", FadeTime, false);
+			System::SetTimer(this, n"RemoveFromParentTimer", FadeOutTime, false);
 		}
 		else
 		{
@@ -274,10 +293,16 @@ class UFishWidget : UFishWidgetBase
 		}
 	}
 
+	/**
+	 * Called when the widget becomes visible, after any fade-in has completed.
+	 */
 	UFUNCTION(BlueprintEvent)
 	void BecameVisible(ESlateVisibility NewVisibility)
 	{}
 
+	/**
+	 * Called when the widget becomes hidden, after any fade-out has completed.
+	 */
 	UFUNCTION(BlueprintEvent)
 	void BecameHidden(ESlateVisibility NewVisibility)
 	{}
