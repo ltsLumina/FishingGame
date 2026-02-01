@@ -1,0 +1,4 @@
+class UFishWidgetComponent : UFishWidget
+{
+    
+}
