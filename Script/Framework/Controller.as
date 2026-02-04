@@ -211,6 +211,11 @@ class AFishController : APlayerController
 	}
 };
 
+/**
+ * Gets the FishController for the local player.
+ * Calling it on the Listen-Server will return the Listen-Server's PlayerController
+ * Calling it on a Client will return the Client's PlayerController
+ */
 UFUNCTION(BlueprintPure, Category = "Controller")
 AFishController GetFishControllerBase()
 {

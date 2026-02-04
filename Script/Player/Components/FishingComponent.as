@@ -17,7 +17,7 @@ class UFishingComponent : UFishComponentBase
 		return CurrentState == EFishingState::Fishing;
 	}
 
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(Category = "Fishing | State", EditDefaultsOnly, VisibleInstanceOnly)
 	UBait CurrentBait;
 
 	/**
