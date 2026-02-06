@@ -1,6 +1,7 @@
 event void FOnStoryBeginEvent(UStory Story);
 event void FOnContinueEvent(UStory Story);
 event void FOnMakeChoiceEvent(UStory Story, FChoice Choice);
+event void FOnStoryEndEvent(UStory Story);
 
 class UStory : UPrimaryDataAsset
 {
@@ -11,24 +12,51 @@ class UStory : UPrimaryDataAsset
 UCLASS(Meta = (DisplayName = "Story"))
 class UStorySubsystem : UScriptGameInstanceSubsystem
 {
-    UPROPERTY()
-    ADialogueRuntime DialogueRunner;
-    
+	UPROPERTY()
+	ADialogueRuntime DialogueRunner;
+
 	UFUNCTION(BlueprintOverride)
-	bool ShouldCreateSubsystem(UObject InOuter) const
+	void Initialize()
 	{
-		return true;
+		DialogueRunner = nullptr;
+	}
+
+	UFUNCTION(BlueprintOverride)
+	void Deinitialize()
+	{
+		if (IsValid(DialogueRunner))
+		{
+			DialogueRunner.DestroyActor();
+			DialogueRunner = nullptr;
+		}
 	}
 
 	UFUNCTION()
 	ADialogueRuntime BeginStory(UStory Story)
 	{
+		if (IsValid(DialogueRunner) && DialogueRunner.IsInitialized)
+		{
+			PrintWarning("A story is already running! Ending it and starting the new one.");
+			DialogueRunner.StoryEnd.Broadcast(DialogueRunner.Story);
+		}
+
+		if (IsValid(DialogueRunner))
+			DialogueRunner.DestroyActor();
 		DialogueRunner = SpawnActor(ADialogueRuntime);
 		DialogueRunner.Story = Story;
 		DialogueRunner.StoryIndex = 0;
-		DialogueRunner.Initialized = true;
+		DialogueRunner.IsInitialized = true;
+		DialogueRunner.StoryBegin.Broadcast(Story);
+
+		System::SetTimer(this, n"OnStoryBegin", 0.1f, false);
 
 		return DialogueRunner;
+	}
+
+	UFUNCTION(NotBlueprintCallable)
+	void OnStoryBegin()
+	{
+		DialogueRunner.StoryBegin.Broadcast(DialogueRunner.Story);
 	}
 }
 
@@ -40,17 +68,40 @@ class ADialogueRuntime : AActor
 	UPROPERTY(VisibleInstanceOnly)
 	int StoryIndex;
 
-	bool Initialized;
+	bool IsInitialized;
 
-    UPROPERTY()
-    FOnStoryBeginEvent StoryBegin;
-    UPROPERTY()
-    FOnContinueEvent StoryContinue;
-    UPROPERTY()
-    FOnMakeChoiceEvent StoryMakeChoice;
+	UPROPERTY()
+	FOnStoryBeginEvent StoryBegin;
+	UPROPERTY()
+	FOnContinueEvent StoryContinue;
+	UPROPERTY()
+	FOnMakeChoiceEvent StoryMakeChoice;
+	UPROPERTY()
+	FOnStoryEndEvent StoryEnd;
+
+	UFUNCTION(BlueprintOverride)
+	void BeginPlay()
+	{
+		StoryEnd.AddUFunction(this, n"OnStoryEnd");
+	}
+
+	UFUNCTION(NotBlueprintCallable)
+	private void OnStoryEnd(UStory InStory)
+	{
+		Story = nullptr;
+		StoryIndex = -1;
+		IsInitialized = false;
+	}
 
 	bool GetCurrentEntry(FEntry&out Entry)
 	{
+		if (!IsInitialized)
+		{
+			PrintError("Story has not yet been initialized!");
+			Entry = FEntry();
+			return false;
+		}
+
 		auto Entries = Story.Entries;
 
 		TArray<FName> Keys;
@@ -73,26 +124,38 @@ class ADialogueRuntime : AActor
 				return false;
 			}
 		}
-
-        // Story finished
-        Print("Story has ended.");
-
-        StoryIndex = -1;
+		else
+		{
+			StoryEnd.Broadcast(Story);
+		}
 
 		Entry = FEntry();
 		return false;
 	}
 
+	bool StoryOver;
+
 	UFUNCTION()
 	FText Continue()
 	{
-		if (!Initialized)
-			PrintError("Story has not yet been initialized!");
+		if (StoryOver)
+		{
+			StoryEnd.Broadcast(Story);
+			return FText();
+		}
 
 		FEntry Entry;
 		if (GetCurrentEntry(Entry))
 		{
+			if (Entry.IsEnd)
+			{
+				StoryOver = true;
+				return Entry.CurrentLine;
+			}
+
 			StoryIndex++;
+
+			StoryContinue.Broadcast(Story);
 			return Entry.CurrentLine;
 		}
 
@@ -117,7 +180,7 @@ class ADialogueRuntime : AActor
 			return true;
 		}
 
-		return false;
+		return true; // if the story is over, we can consider it "continued"
 	}
 
 	UFUNCTION()
@@ -128,60 +191,75 @@ class ADialogueRuntime : AActor
 		{
 			if (!Entry.HasChoices)
 			{
-                PrintWarning("Can't make a choice on an entry with no choices!");
-                return;
-            }
+				PrintWarning("Can't make a choice on an entry with no choices!");
+				return;
+			}
 
 			auto Options = Entry.Choices;
-			ChoiceText = Options[Choice];
-            StoryIndex++;
+			ChoiceText = Options[Choice].Text;
+
+			auto JumpTo = Entry.Choices[Choice].JumpTo;
+			Jump(JumpTo);
+
+			StoryMakeChoice.Broadcast(Story, FChoice(ChoiceText));
 		}
 	}
 
-    UFUNCTION(BlueprintPure, Meta = (ReturnDisplayName = "Has Options"))
-    bool GetCurrentChoices(TArray<FText>&out Choices)
-    {
-        FEntry Entry;
-        if (GetCurrentEntry(Entry))
-        {
-            Choices = Entry.Choices;
-            return Entry.HasChoices;
-        }
+	UFUNCTION()
+	void Jump(FName EntryName)
+	{
+		TArray<FName> Keys;
+		Story.Entries.GetKeys(Keys);
+		for (int i = 0; i < Keys.Num(); i++)
+		{
+			if (Keys[i] == EntryName)
+			{
+				StoryIndex = i;
+				return;
+			}
+		}
 
-        Choices = TArray<FText>();
-        return false;
-    }
+		PrintWarning("Couldn't find entry with name " + EntryName.ToString());
+	}
 
-    UFUNCTION(BlueprintPure)
-    FText GetCurrentText()
-    {
-        FEntry Entry;
-        if (GetCurrentEntry(Entry))
-        {
-            return Entry.CurrentLine;
-        }
+	UFUNCTION(BlueprintPure, Meta = (ReturnDisplayName = "Has Choices"))
+	bool GetCurrentChoices(TArray<FText>&out Choices)
+	{
+		if (!IsInitialized)
+		{
+			Choices = TArray<FText>();
+			return false;
+		}
 
-        return FText();
-    }
+		FEntry Entry;
+		if (GetCurrentEntry(Entry))
+		{
+			Choices = TArray<FText>();
+			for (auto& Choice : Entry.Choices)
+			{
+				Choices.Add(Choice.Text);
+			}
+			return Entry.HasChoices;
+		}
 
-    UFUNCTION(BlueprintPure)
-    TArray<FText> GetAllText()
-    {
-        TArray<FText> AllText;
-        
-        for (auto Entry : Story.Entries)
-        {
-            AllText.Add(Entry.Value.CurrentLine);
-        }
+		Choices = TArray<FText>();
+		return false;
+	}
 
-        return AllText;
-    }
-}
+	UFUNCTION(BlueprintPure)
+	FText GetCurrentText()
+	{
+		if (!IsInitialized)
+			return FText();
 
-struct FChoice
-{
-	UPROPERTY()
-	FText Text;
+		FEntry Entry;
+		if (GetCurrentEntry(Entry))
+		{
+			return Entry.CurrentLine;
+		}
+
+		return FText();
+	}
 }
 
 namespace Dialogue
@@ -197,12 +275,30 @@ struct FEntry
 	UPROPERTY()
 	FText Speaker;
 
-	UPROPERTY()
+	UPROPERTY(Meta = (Multiline))
 	FText CurrentLine;
 
 	UPROPERTY(Meta = (InlineEditConditionToggle))
 	bool HasChoices;
 
-	UPROPERTY(Meta = (EditCondition = "HasChoices"))
-	TArray<FText> Choices;
+	UPROPERTY(Meta = (EditCondition = "HasChoices", TitleProperty = "Text"))
+	TArray<FChoice> Choices;
+
+	UPROPERTY()
+	bool IsEnd;
+}
+
+struct FChoice
+{
+	UPROPERTY()
+	FText Text;
+
+	UPROPERTY()
+	FName JumpTo;
+
+	FChoice(FText InText = FText(), FName InJumpTo = NAME_None)
+	{
+		Text = InText;
+		JumpTo = InJumpTo;
+	}
 }
