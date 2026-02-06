@@ -23,7 +23,6 @@ class UFishingComponent : UFishComponentBase
 	/**
 	 * Current time elapsed on the hook timer.
 	 */
-	// replicated so clients can read other players' timers
 	UPROPERTY(Category = "Fishing | State", Meta = (Units = "s"), VisibleAnywhere)
 	float BiteTimer = 0;
 
