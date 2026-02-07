@@ -13,54 +13,54 @@ UCLASS(Meta = (DisplayName = "Story"))
 class UStorySubsystem : UScriptGameInstanceSubsystem
 {
 	UPROPERTY()
-	ADialogueRuntime DialogueRunner;
+	AStoryRuntime Runtime;
 
 	UFUNCTION(BlueprintOverride)
 	void Initialize()
 	{
-		DialogueRunner = nullptr;
+		Runtime = nullptr;
 	}
 
 	UFUNCTION(BlueprintOverride)
 	void Deinitialize()
 	{
-		if (IsValid(DialogueRunner))
+		if (IsValid(Runtime))
 		{
-			DialogueRunner.DestroyActor();
-			DialogueRunner = nullptr;
+			Runtime.DestroyActor();
+			Runtime = nullptr;
 		}
 	}
 
 	UFUNCTION()
-	ADialogueRuntime BeginStory(UStory Story)
+	AStoryRuntime BeginStory(UStory Story)
 	{
-		if (IsValid(DialogueRunner) && DialogueRunner.IsInitialized)
+		if (IsValid(Runtime) && Runtime.IsInitialized)
 		{
 			PrintWarning("A story is already running! Ending it and starting the new one.");
-			DialogueRunner.StoryEnd.Broadcast(DialogueRunner.Story);
+			Runtime.StoryEnd.Broadcast(Runtime.Story);
 		}
 
-		if (IsValid(DialogueRunner))
-			DialogueRunner.DestroyActor();
-		DialogueRunner = SpawnActor(ADialogueRuntime);
-		DialogueRunner.Story = Story;
-		DialogueRunner.StoryIndex = 0;
-		DialogueRunner.IsInitialized = true;
-		DialogueRunner.StoryBegin.Broadcast(Story);
+		if (IsValid(Runtime))
+			Runtime.DestroyActor();
+		Runtime = SpawnActor(AStoryRuntime);
+		Runtime.Story = Story;
+		Runtime.StoryIndex = 0;
+		Runtime.IsInitialized = true;
+		Runtime.StoryBegin.Broadcast(Story);
 
 		System::SetTimer(this, n"OnStoryBegin", 0.1f, false);
 
-		return DialogueRunner;
+		return Runtime;
 	}
 
 	UFUNCTION(NotBlueprintCallable)
 	void OnStoryBegin()
 	{
-		DialogueRunner.StoryBegin.Broadcast(DialogueRunner.Story);
+		Runtime.StoryBegin.Broadcast(Runtime.Story);
 	}
 }
 
-class ADialogueRuntime : AActor
+class AStoryRuntime : AActor
 {
 	UPROPERTY(VisibleInstanceOnly)
 	UStory Story;
@@ -85,10 +85,18 @@ class ADialogueRuntime : AActor
 		StoryEnd.AddUFunction(this, n"OnStoryEnd");
 	}
 
+	UFUNCTION(BlueprintOverride)
+	void Tick(float DeltaSeconds)
+	{
+		if (!IsInitialized)
+			return;
+		Print(f"storyindex: {StoryIndex}", 0);
+	}
+
 	UFUNCTION(NotBlueprintCallable)
 	private void OnStoryEnd(UStory InStory)
 	{
-		Story = nullptr;
+		//Story = nullptr;
 		StoryIndex = -1;
 		IsInitialized = false;
 	}
@@ -147,9 +155,17 @@ class ADialogueRuntime : AActor
 		FEntry Entry;
 		if (GetCurrentEntry(Entry))
 		{
+			if (Entry.NextStory != nullptr)
+			{
+				Story = Entry.NextStory;
+				StoryIndex = 0;
+				return GetCurrentText();
+			}
+			
 			if (Entry.IsEnd)
 			{
 				StoryOver = true;
+				StoryContinue.Broadcast(Story);
 				return Entry.CurrentLine;
 			}
 
@@ -262,7 +278,8 @@ class ADialogueRuntime : AActor
 	}
 }
 
-namespace Dialogue
+
+namespace Story
 {
 	mixin FText GetText(FChoice Choice)
 	{
@@ -283,6 +300,12 @@ struct FEntry
 
 	UPROPERTY(Meta = (EditCondition = "HasChoices", TitleProperty = "Text"))
 	TArray<FChoice> Choices;
+
+	UPROPERTY(Meta = (InlineEditConditionToggle))
+	bool HasNextStory;
+
+	UPROPERTY(Meta=(EditCondition = "HasNextStory", DisplayThumbnail="false"))
+	UStory NextStory;
 
 	UPROPERTY()
 	bool IsEnd;

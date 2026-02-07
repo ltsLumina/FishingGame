@@ -1,7 +1,7 @@
 UCLASS(Meta = (PrioritizeCategories = "Item", AutoExpandCategories="Logic"))
 class UFishItem : UItem
 {
-	UPROPERTY(Category = "Fish", ExposeOnSpawn, SaveGame)
+	UPROPERTY(Category = "Fish", ExposeOnSpawn, SaveGame, Meta=(ShowOnlyInnerProperties))
 	FFishItemData FishData;
 
 	UFUNCTION(Category = "Fish | Info", BlueprintPure)
