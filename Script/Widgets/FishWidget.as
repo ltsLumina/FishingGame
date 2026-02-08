@@ -53,7 +53,8 @@ class UFishWidgetBase : UUserWidget
 		else
 		{
 			Character = GetFishCharacterBase(0);
-			if (!MuteWarnings) PrintWarning(f"UFishWidget: ({GetName()}) OwningPlayerPawn is null, defaulting to GetFishCharacterBase(0). \nMake sure to set the Owning Player when creating the widget.");
+			if (!MuteWarnings)
+				PrintWarning(f"UFishWidget: ({GetName()}) OwningPlayerPawn is null, defaulting to GetFishCharacterBase(0). \nMake sure to set the Owning Player when creating the widget.");
 		}
 
 		if (IsValid(Character))
@@ -68,7 +69,8 @@ class UFishWidgetBase : UUserWidget
 				return;
 			}
 
-			if (!MuteWarnings) PrintError(f"UFishWidget: ({GetName()}) timed out! \nFailed to initialize: Character or FishState is null after multiple attempts.");
+			if (!MuteWarnings)
+				PrintError(f"UFishWidget: ({GetName()}) timed out! \nFailed to initialize: Character or FishState is null after multiple attempts.");
 			return;
 		}
 

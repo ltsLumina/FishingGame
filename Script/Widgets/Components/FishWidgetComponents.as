@@ -280,6 +280,12 @@ class UFishEditableText : UFishWidgetComponent
 	{
 		EditableText.SetHintText(InHintText);
 	}
+
+	UFUNCTION(BlueprintPure, Category = "Fish Component")
+	bool HasFocus()
+	{
+		return EditableText.HasKeyboardFocus();
+	}
 }
 
 class UFishExitButton : UFishWidgetComponent
