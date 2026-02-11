@@ -77,10 +77,10 @@ class UChatComponent : UActorComponent
                     AdvancedFriends::IsAFriend(PS.Get().PlayerController, NetID, IsAFriend);
                     if (!IsAFriend)
                     {
+						ChatComp.Client_SendChat(Formatted);
                         Print(f"User is not a friend!");
                         continue;
                     }
-                    ChatComp.Client_SendChat(Formatted);
                     break;
             }
         }
@@ -92,6 +92,7 @@ class UChatComponent : UActorComponent
 	UFUNCTION(Client, BlueprintEvent)
 	void Client_SendChat(FText Message)
 	{
+		throw("Override this event in Blueprints!");
 	}
 
 	UFUNCTION()

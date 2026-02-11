@@ -14,6 +14,9 @@ mixin void BillboardToCamera(USceneComponent TargetComponent)
 
 namespace Math
 {
+    /**
+     * Isn't bound in c++ so here's an Angelscript version
+     */
     FRotator FindLookAtRotation(FVector Start, FVector Target)
     {
         FVector Direction = (Target - Start).GetSafeNormal();

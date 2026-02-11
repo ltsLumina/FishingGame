@@ -36,7 +36,7 @@ class UGamblingComponent : UFishComponentBase
     }
 
     UFUNCTION(NotBlueprintCallable)
-    private void OnFishCaught(AFish Fish)
+    private void OnFishCaught(AFish Fish, UFishingHoleComponent FishingHole)
     {
         if (BettingPlayers.Num() == 0)
             return;

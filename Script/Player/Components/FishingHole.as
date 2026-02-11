@@ -103,7 +103,7 @@ class UFishingHoleComponent : UActorComponent
 		NearbyPlayers.AddUnique(Character);
 
 		FishingComponent.OnSelectBait.AddUFunction(this, n"UpdateCatchableFish");
-
+		
 		FishingComponent.CurrentFishingHole = this;
 		FishingComponent.UpdateCatchableFish();
 	}
@@ -132,7 +132,7 @@ class UFishingHoleComponent : UActorComponent
 
 		NearbyPlayers.RemoveSingleSwap(Character);
 
-		FishingComponent.OnSelectBait.UnbindObject(this);
+		FishingComponent.OnSelectBait.Unbind(this, n"UpdateCatchableFish");
 
 		FishingComponent.CurrentFishingHole = nullptr;
 		FishingComponent.UpdateCatchableFish();

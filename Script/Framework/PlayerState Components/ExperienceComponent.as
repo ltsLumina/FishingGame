@@ -1,36 +1,81 @@
+event void FOnGainedExperience(int GainedXP);
 event void FOnLevelUp(int NewLevel);
 
 class UExperienceComponent : UFishComponentBase
 {
-	UPROPERTY(Category = "Stats", SaveGame, Replicated)
-	FExperienceData ExperienceData;
+	UPROPERTY(Category = "Stats", DisplayName = "Level", VisibleInstanceOnly, SaveGame, Replicated)
+	int Level = 1;
 
-	UPROPERTY(Category = "Stats", BlueprintGetter = "GetXPToLevelUp", VisibleInstanceOnly)
-	float XPToNextLevel;
-
-	UFUNCTION(BlueprintPure)
-	float GetXPToLevelUp()
-	{
-		float RequiredXP = EXPGainCurve.GetFloatValue(ExperienceData.Level + 1);
-		return RequiredXP - ExperienceData.CurrentXP;
-	}
-
-	UPROPERTY(Category = "Stats", BlueprintGetter = "GetNextLevelXP", VisibleInstanceOnly)
-	float NextLevelXP;
-
-	UFUNCTION(BlueprintPure)
-	float GetNextLevelXP()
-	{
-		return EXPGainCurve.GetFloatValue(ExperienceData.Level + 1);
-	}
+	UPROPERTY(Category = "Stats", DisplayName = "XP", VisibleInstanceOnly, SaveGame)
+	float CurrentXP;
 
 	UPROPERTY(Category = "Stats", EditDefaultsOnly)
 	UCurveFloat EXPGainCurve;
 
 	UPROPERTY(Category = "Events")
+	FOnGainedExperience OnGainedXP;
+
+	UPROPERTY(Category = "Events")
 	FOnLevelUp OnLevelUp;
 
 	default bReplicates = true;
+
+//#region Helper Functions
+	/**
+	 * @return the amount of XP to reach InLevel from the current amount of XP.
+	 * For example, if you're currently at 500 XP, and need 750 to reach InLevel, this will return (750-200= 550) XP.
+	 */
+	UFUNCTION(BlueprintPure)
+	float GetExperienceToLevel(int InLevel)
+	{
+		float RequiredXP = EXPGainCurve.GetFloatValue(InLevel);
+		return RequiredXP - CurrentXP;
+	}
+
+	/**
+	 * @return the amount of XP to reach the next level.
+	 */
+	UFUNCTION(BlueprintPure)
+	float GetExperienceToNextLevel() property
+	{
+		return GetExperienceToLevel(Level + 1);
+	}
+
+	/**
+	 * Returns a normalized [0..1] range of the progress to InLevel.
+	 */
+	UFUNCTION(BlueprintPure)
+	float GetProgressToLevel(int InLevel)
+	{
+		float RequiredXP = EXPGainCurve.GetFloatValue(InLevel);
+		float Progress = Math::NormalizeToRange(CurrentXP, 0, RequiredXP);
+		return Progress;
+	}
+
+	/**
+	 * @return a normalized [0..1] range of the progress to the next level.
+	 */
+	UFUNCTION(BlueprintPure)
+	float GetProgressToNextLevel() property
+	{
+		return GetProgressToLevel(Level + 1);
+	}
+
+	/**
+	 * @return the amount of XP required to reach a level from the previous level (the total amount from e.g., Level 1 to InLevel).
+	 */
+	UFUNCTION(BlueprintPure)
+	float GetExperienceAtLevel(int InLevel)
+	{
+		return EXPGainCurve.GetFloatValue(InLevel);
+	}
+
+	UFUNCTION(BlueprintPure)
+	float GetExperienceAtNextLevel() property
+	{
+		return GetExperienceAtLevel(Level + 1);
+	}
+//#endregion
 
 	void PostInitialize(AFishCharacter InCharacter, AFishPlayerState InPlayerState,
 						float InInitializationTime) override
@@ -41,23 +86,35 @@ class UExperienceComponent : UFishComponentBase
 	}
 
 	UFUNCTION(NotBlueprintCallable)
-	private void OnFishCaught(AFish Fish)
+	private void OnFishCaught(AFish Fish, UFishingHoleComponent FishingHole)
 	{
 		GainExperience(Fish.Item.FishData.ExperienceValue);
 	}
 
-	UFUNCTION()
+	UFUNCTION(Category = "Experience")
 	void GainExperience(float Amount)
 	{
-		ExperienceData.CurrentXP += Amount;
+		CurrentXP += Amount;
 
-		float RequiredXP = EXPGainCurve.GetFloatValue(ExperienceData.Level + 1);
-		while (ExperienceData.CurrentXP >= RequiredXP)
+		TryLevelUp();
+	}
+
+	bool TryLevelUp()
+	{
+		int LevelUps = 0;
+		
+		float RequiredXP = EXPGainCurve.GetFloatValue(Level + 1);
+		while (CurrentXP >= RequiredXP)
 		{
-			ExperienceData.CurrentXP -= RequiredXP;
+			CurrentXP -= RequiredXP;
 			LevelUp();
-			RequiredXP = EXPGainCurve.GetFloatValue(ExperienceData.Level + 1);
+			LevelUps++;
+			RequiredXP = EXPGainCurve.GetFloatValue(Level + 1);
 		}
+
+		if (LevelUps > 0) return true;
+
+		return false;
 	}
 
 	UFUNCTION()
@@ -69,9 +126,9 @@ class UExperienceComponent : UFishComponentBase
 	UFUNCTION(Server, NotBlueprintCallable)
 	void Server_LevelUp()
 	{
-		ExperienceData.Level++;
-		
-		Client_LevelUp(ExperienceData.Level);
+		Level++;
+
+		Client_LevelUp(Level);
 	}
 
 	UFUNCTION(Client, NotBlueprintCallable)
@@ -79,20 +136,24 @@ class UExperienceComponent : UFishComponentBase
 	{
 		OnLevelUp.Broadcast(NewLevel);
 
-		BP_OnLevelUp(ExperienceData.Level);
+		BP_OnLevelUp(Level);
 
 		Notifications::AddNotification(f"You reached level {NewLevel}!");
 	}
 
+//#region Events
 	UFUNCTION(BlueprintEvent, DisplayName = "Level Up")
 	void BP_OnLevelUp(int NewLevel)
 	{}
+//#endregion
 
+//#region Save/Load
 	UFUNCTION(Category = "Save Game")
 	bool SaveExperience()
 	{
 		auto SaveGame = NewObject(this, UExperienceSaveGame);
-		SaveGame.SavedExperienceData = ExperienceData;
+		SaveGame.Level = Level;
+		SaveGame.CurrentXP = CurrentXP;
 		return Gameplay::SaveGameToSlot(SaveGame, "PlayerExperience", 0);
 	}
 
@@ -107,25 +168,10 @@ class UExperienceComponent : UFishComponentBase
 		if (LoadedSave == nullptr)
 			return ELoadResult::Failure;
 
-		ExperienceData = LoadedSave.SavedExperienceData;
+		Level = LoadedSave.Level;
+		CurrentXP = LoadedSave.CurrentXP;
+
 		return ELoadResult::Success;
 	}
+//#endregion
 };
-
-struct FExperienceData
-{
-	UPROPERTY(Category = "Stats", DisplayName = "Level", VisibleInstanceOnly, SaveGame, Replicated)
-	int Level = 1;
-
-	UPROPERTY(Category = "Stats", DisplayName = "XP", VisibleInstanceOnly, SaveGame)
-	float CurrentXP;
-}
-
-struct FAbilityUnlockInfo
-{
-	UPROPERTY(Category = "Ability", SaveGame)
-	TSoftObjectPtr<UAbilityData> Ability;
-
-	UPROPERTY(Category = "Ability", Meta = (UIMin = "1", UIMax = "100"), SaveGame)
-	int UnlockLevel = 1;
-}

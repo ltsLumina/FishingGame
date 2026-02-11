@@ -30,7 +30,7 @@ struct FInventoryInstanceData
     }
 }
 
-USTRUCT(Meta=(HasNativeMake="FishingGame.Fish.Fish::InstanceData::MakeFishInstanceData"))
+USTRUCT(Meta=(HasNativeMake="FishingGame.Fish.Fish::InstanceData::MakeFishInstanceData")) // dont think this actually works, but it blocks the native make function which is intended
 struct FFishInstanceData
 {
     UPROPERTY(Category = "Fish", SaveGame)

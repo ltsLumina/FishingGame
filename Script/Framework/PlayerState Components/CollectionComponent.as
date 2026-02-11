@@ -52,7 +52,7 @@ class UCollectionComponent : UFishComponentBase
 	}
 
 	UFUNCTION(NotBlueprintCallable)
-	private void AddToCollectionByFish(AFish Fish)
+	private void AddToCollectionByFish(AFish Fish, UFishingHoleComponent FishingHole)
 	{
 		if (Fish.Item != nullptr)
 		{

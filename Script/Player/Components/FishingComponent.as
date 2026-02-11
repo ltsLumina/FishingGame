@@ -1,7 +1,7 @@
 event void FOnStateChange(EFishingState NewState);
 event void FOnSelectBait(UBait Bait);
-event void FOnFishHooked(UFishItem FishItem);
-event void FOnFishCaught(AFish Fish);
+event void FOnFishHooked(UFishItem FishItem, UFishingHoleComponent FishingHole);
+event void FOnFishCaught(AFish Fish, UFishingHoleComponent FishingHole);
 
 class UFishingComponent : UFishComponentBase
 {
@@ -362,7 +362,7 @@ class UFishingComponent : UFishComponentBase
 		StopFishing();
 
 		BP_Hook(CaughtFish);
-		OnFishHooked.Broadcast(CaughtFish);
+		OnFishHooked.Broadcast(CaughtFish, CurrentFishingHole);
 	}
 
 	UPROPERTY(VisibleInstanceOnly)
@@ -440,7 +440,7 @@ class UFishingComponent : UFishComponentBase
 		Fish.SetOwner(GetOwner());
 
 		Fish.OnSpawn(FishItem);
-		OnFishCaught.Broadcast(Fish);
+		OnFishCaught.Broadcast(Fish, CurrentFishingHole);
 
 		for (int i = 0; i < CatchContext.Quantity; i++)
 		{
