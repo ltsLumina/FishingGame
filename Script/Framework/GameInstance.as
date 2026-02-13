@@ -53,6 +53,12 @@ class UFishGameInstance : UAdvancedFriendsGameInstance
 	FString ReconnectSessionID;
 
 	UFUNCTION(BlueprintOverride)
+	void Shutdown()
+	{
+		ResetLobbyData();
+	}
+
+	UFUNCTION(BlueprintOverride)
 	void HandleNetworkError(ENetworkFailure FailureType, bool bIsServer)
 	{
 		switch (FailureType)
@@ -62,6 +68,7 @@ class UFishGameInstance : UAdvancedFriendsGameInstance
 				break;
 
 			case ENetworkFailure::ConnectionTimeout:
+				AttemptReconnectTimedOut();
 				break;
 
 			case ENetworkFailure::FailureReceived:
@@ -89,20 +96,20 @@ class UFishGameInstance : UAdvancedFriendsGameInstance
 		{
 			if (LobbyData.IsBackupHost)
 			{
-				MigrateHost(LobbyData);
-				PrintWarning(f"Migrating host!");
-
 				auto SaveGame = Gameplay::LoadGameFromSlot("LobbyData", 0);
 				if (SaveGame == nullptr) throw("No Saved Lobby Data found!");
 				auto LobbySaveGame = Cast<ULobbySaveGame>(SaveGame);
 				LobbyData.IsBackupHost = false;
 				Gameplay::SaveGameToSlot(LobbySaveGame, "LobbyData", 0);
+				
+				MigrateHost(LobbyData);
+				PrintWarning(f"Migrating host!");
 			}
 			else // attempt to join newly migrated host
 			{
-				ReconnectSessionID = LobbyData::GetSessionID(LobbyData);
+				ReconnectSessionID = LobbyData.SessionID;
 				ReconnectHandle = System::SetTimer(this, n"Internal_AttemptReconnect", 1.0f, true);
-				System::SetTimer(this, n"Internal_AttemptReconnectTimedOut", 10.0f, false);
+				System::SetTimer(this, n"AttemptReconnectTimedOut", 30.0f, false);
 			}
 		}
 	}
@@ -111,25 +118,19 @@ class UFishGameInstance : UAdvancedFriendsGameInstance
 	void Internal_AttemptReconnect()
 	{
 		AttemptReconnect(ReconnectSessionID);
-		PrintWarning("Attempting to reconnect to migrated host!");
+		PrintWarning("Attempting to reconnect to migrated host!", 1.0f);
 	}
 
-	UFUNCTION(NotBlueprintCallable)
-	void Internal_AttemptReconnectTimedOut()
+	UFUNCTION()
+	void AttemptReconnectTimedOut()
 	{
 		System::ClearAndInvalidateTimerHandle(ReconnectHandle);
-		PrintWarning(f"Attempt reconnect failed!");
+		PrintWarning(f"Attempt reconnect timed out! (Does not necessarily mean failed!)");
 	}
 
 	UFUNCTION(BlueprintEvent)
 	void AttemptReconnect(FString SessionID)
 	{}
-
-	UFUNCTION(BlueprintOverride)
-	void Shutdown()
-	{
-		ResetLobbyData();
-	}
 
 	UFUNCTION(BlueprintEvent)
 	void MigrateHost(FLobbyData LobbyData)
@@ -138,16 +139,7 @@ class UFishGameInstance : UAdvancedFriendsGameInstance
 	UFUNCTION()
 	void ResetLobbyData()
 	{
-		auto SaveGame = Gameplay::LoadGameFromSlot("LobbyData", 0);
-		if (SaveGame == nullptr)
-			return;
-
-		auto LoadedSave = Cast<ULobbySaveGame>(SaveGame);
-		if (LoadedSave == nullptr)
-			return;
-
-		// wipe the lobby data when the game quits
-		LoadedSave.LobbyData = FLobbyData();
+		Gameplay::DeleteGameInSlot("LobbyData", 0);
 	}
 
 	UFUNCTION()

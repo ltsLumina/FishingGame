@@ -9,21 +9,18 @@ class AFishPlayGameMode : AGameModeBase
 		if (SaveGame == nullptr) throw("No Saved Lobby Data found!");
 		auto LobbySaveGame = Cast<ULobbySaveGame>(SaveGame);
 
+		int indx = 0;
+		indx = GetFishGameStateBase().PlayerArray.Num();
+
 		// if we're the first client to join, we're assign as the backup host for host migration
-		if (NetIndex == 1) // first client to join
+		if (indx >= 2) // first client to join
 		{
+			// TODO: get average ping and assign the best one as backup host
+
 			LobbySaveGame.LobbyData.IsBackupHost = true;
 			Gameplay::SaveGameToSlot(SaveGame, "LobbyData", 0);
 			PrintWarning(f"{NewPlayer.PlayerState.PlayerName} has been assigned as the backup host in the event of host migration.");
 		}
-		else NetIndex++;
-	}
-
-	UFUNCTION(BlueprintOverride)
-	void OnLogout(AController ExitingController)
-	{
-		auto Instance = Cast<UFishGameInstance>(GameInstance);
-		Instance.HandleConnectionLost();
 	}
 };
 

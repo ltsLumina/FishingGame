@@ -9,36 +9,46 @@ class ULobbySaveGame : USaveGame
 
 struct FLobbyData
 {
-	UPROPERTY(Category = "Data")
-	TArray<FSessionPropertyKeyPair> ExtraSettings;
-
-	UPROPERTY(Category = "Data", BlueprintReadOnly)
+	UPROPERTY(Category = "Data", BlueprintReadOnly, SaveGame)
 	bool IsBackupHost;
 
-    UPROPERTY(Category = "Data")
+	UPROPERTY(Category = "Data", SaveGame)
+	FText SessionName;
+
+	UPROPERTY(Category = "Data", SaveGame)
+	TArray<FString> Tags;
+
+	UPROPERTY(Category = "Data", SaveGame)
+	FString HostSteamID;
+
+	UPROPERTY(Category = "Data", SaveGame)
+	FString SessionID;
+
+    UPROPERTY(Category = "Data", SaveGame)
     int MaxPlayers;
     
-    UPROPERTY(Category = "Data")
+    UPROPERTY(Category = "Data", SaveGame)
     bool UseLAN;
 
     /** 
 	* FALSE Means the lobby is PRIVATE (friends only)
 	* TRUE Means the lobby is PUBLIC to everyone.
 	*/
-    UPROPERTY(Category = "Data")
+    UPROPERTY(Category = "Data", SaveGame)
     bool ShouldAdvertise;
 
     // TODO
-    UPROPERTY(Category = "Data")
+    UPROPERTY(Category = "Data", SaveGame)
     FGameTime GameTime;
 
     // TODO
-    UPROPERTY(Category = "Data")
+    UPROPERTY(Category = "Data", SaveGame)
     EWeather Weather;
 }
 
 namespace LobbyData
 {        
+	/*
 	UFUNCTION()
 	FString GetSessionName(FLobbyData LobbyData)
 	{
@@ -69,10 +79,10 @@ namespace LobbyData
 		return SettingValue;
 	}
 
+	*/
     UFUNCTION()
-    FString GetSessionID(FLobbyData LobbyData)
+    FString GetSessionID(TArray<FSessionPropertyKeyPair> ExtraSettings)
     {
-        TArray<FSessionPropertyKeyPair> ExtraSettings = LobbyData.ExtraSettings;
         ESessionSettingSearchResult Result;
 		FString SettingValue;
 		AdvancedSessions::GetSessionPropertyString(ExtraSettings, AdvancedSessions::Properties::SESSION_ID, Result, SettingValue);

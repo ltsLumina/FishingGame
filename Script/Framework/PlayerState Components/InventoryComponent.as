@@ -114,7 +114,7 @@ class UInventoryComponent : UFishComponentBase
 	}
 
 	void EquipRod(UFishingRod NewRod)
-	{
+	{	
 		if (EquippedRod != nullptr)
 		{
 			OnRodUnequipped.Broadcast(EquippedRod);
@@ -127,6 +127,12 @@ class UInventoryComponent : UFishComponentBase
 			// apply rod stat modifiers
 			for (auto& TraitClass : EquippedRod.Traits)
 			{
+				if (TraitClass == nullptr) 
+				{
+					throw("TraitClass is nullptr!");
+					continue;
+				}
+
 				auto Trait = NewObject(this, TraitClass);
 				Trait.Init(Character.FishingComponent, PlayerState.StatsComponent, PlayerState.TokenComponent);
 				AppliedTraits.Add(Trait);
