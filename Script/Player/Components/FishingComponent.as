@@ -56,14 +56,6 @@ class UFishingComponent : UFishComponentBase
 	}
 
 	/**
-	 * Status effects currently applied to the player while fishing.
-	 * Key is the effect name.
-	 * Value is the amount of stacks.
-	 */
-	UPROPERTY(Category = "Fishing | State", VisibleAnywhere)
-	TMap<FName, int> StatusEffects;
-
-	/**
 	 * The fish that is currently hooked.
 	 * Determined when fishing starts.
 	 */
@@ -342,7 +334,6 @@ class UFishingComponent : UFishComponentBase
 			{
 				Print(f"You've hooked a rare \"{CurrentFish.BaseData.ItemName}\"!\nA stack of Angler's Art has been granted.", 3, FLinearColor::Green);
 				PlayerState.TokenComponent.AddToken(GameplayTags::Token_Ability_AnglersArt);
-				//StatusEffects.Add(FName("Angler's Art"), 1); // TODO: separate system with data assets so I can display the icon.
 			}
 		}
 

@@ -359,24 +359,3 @@ class UFishExitButton : UFishWidgetComponent
 		return Cast<UFishWidget>(GetOuter().GetOuter());
 	}
 }
-
-UFUNCTION(BlueprintPure)
-FString GetServerTags(TArray<FString> InTags)
-{
-	FString TagsString;
-	for (FString Tag : InTags)
-	{
-		if (Tag.IsEmpty() || Tag == "None " || Tag == "None")
-		{
-			continue;
-		}
-
-		if (!TagsString.IsEmpty())
-		{
-			TagsString += ", ";
-		}
-		TagsString += Tag;
-	}
-
-	return TagsString;
-}

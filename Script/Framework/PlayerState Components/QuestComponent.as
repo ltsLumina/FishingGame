@@ -195,7 +195,7 @@ class UQuestComponent : UFishComponentBase
 
 		// Grant rewards
 		auto Reward = Entry.Quest.Reward;
-		PlayerState.StatsComponent.GainGil(Reward.Gil);
+		PlayerState.InventoryComponent.GainGil(Reward.Gil);
 		PlayerState.ExperienceComponent.GainExperience(Reward.Experience);
 		if (Reward.GrantsItem)
 		{

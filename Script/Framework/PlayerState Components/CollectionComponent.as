@@ -21,7 +21,7 @@ struct FCollectionEntry
 
 class UCollectionComponent : UFishComponentBase
 {
-	UPROPERTY()
+	UPROPERTY(Category = "Collection", EditFixedSize, VisibleInstanceOnly)
 	TArray<FCollectionEntry> CollectedItems;
 
 	UPROPERTY(Category = "Events")

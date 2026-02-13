@@ -10,6 +10,9 @@ enum EInventoryChangeType
 
 class UInventoryComponent : UFishComponentBase
 {
+	UPROPERTY(Category = "Stats", SaveGame)
+	int Gil;
+	
 	UPROPERTY(Category = "Rod", EditDefaultsOnly)
 	URodData DefaultRodData;
 
@@ -17,11 +20,11 @@ class UInventoryComponent : UFishComponentBase
 	UFishingRod EquippedRod;
 
 #if EDITOR
-	UPROPERTY(Category = "Rod", EditFixedSize, Meta = (TitleProperty = "TraitName", EditFixedOrder))
+	UPROPERTY(Category = "Rod", VisibleInstanceOnly, EditFixedSize, Meta = (TitleProperty = "TraitName", EditFixedOrder))
 	TArray<FDebugTraitInfo> TraitInfos;
 #endif
 
-	UPROPERTY(Category = "Inventory", EditFixedSize, Meta = (TitleProperty = "SlotName", EditFixedOrder))
+	UPROPERTY(Category = "Inventory", VisibleInstanceOnly, EditFixedSize, Meta = (TitleProperty = "SlotName", EditFixedOrder))
 	TArray<FInventorySlot> Items;
 
 	UPROPERTY(Category = "Inventory", EditDefaultsOnly)
@@ -39,6 +42,23 @@ class UInventoryComponent : UFishComponentBase
 	default bReplicates = false;
 
 	default bWaitForOwningActorInitialized = true;
+
+	UFUNCTION(Category = "Gil")
+	void GainGil(int Amount)
+	{
+		Gil += Math::Max(0, Amount);
+	}
+
+	UFUNCTION(Category = "Gil")
+	bool SpendGil(int Amount)
+	{
+		if (Gil >= Amount)
+		{
+			Gil -= Amount;
+			return true;
+		}
+		return false;
+	}
 
 	void PostInitialize(AFishCharacter InCharacter, AFishPlayerState InPlayerState,
 						float InInitializationTime) override
@@ -130,7 +150,7 @@ class UInventoryComponent : UFishComponentBase
 	}
 
 	// literally just used to prevent garbage collection of traits
-	UPROPERTY()
+	UPROPERTY(NotEditable, NotVisible, BlueprintHidden)
 	TArray<UTrait> AppliedTraits;
 
 	UFUNCTION(Category = "Inventory")

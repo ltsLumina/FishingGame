@@ -13,7 +13,7 @@ class UFishWidgetBase : UUserWidget
 	 * Will always point to the local player's state on the local machine, and be null on remote clients.
 	 */
 	UPROPERTY(Category = "Fish Widget", BlueprintReadOnly, NotVisible)
-	AFishPlayerState FishState;
+	AFishPlayerState PlayerState;
 
 	UPROPERTY(Category = "Initialization", BlueprintHidden, EditDefaultsOnly, meta = (Units = "s", UIMin = "0.01", UIMax = "1.0", AdvancedDisplay))
 	float RetryDelay = 0.1f;
@@ -58,9 +58,9 @@ class UFishWidgetBase : UUserWidget
 		}
 
 		if (IsValid(Character))
-			FishState = Cast<AFishPlayerState>(Character.PlayerState);
+			PlayerState = Cast<AFishPlayerState>(Character.PlayerState);
 
-		if (!IsValid(Character) || !IsValid(FishState))
+		if (!IsValid(Character) || !IsValid(PlayerState))
 		{
 			if (Tries < MaxTries)
 			{
@@ -77,8 +77,8 @@ class UFishWidgetBase : UUserWidget
 		bInitialized = true;
 		InitializationTime = Tries * RetryDelay;
 
-		ReceivePostInitialize(Character, FishState);
-		PostInitialize(Character, FishState);
+		ReceivePostInitialize(Character, PlayerState);
+		PostInitialize(Character, PlayerState);
 
 		System::ClearTimer(this, "Initialize");
 	}

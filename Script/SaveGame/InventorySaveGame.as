@@ -1,6 +1,9 @@
 class UInventorySaveGame : USaveGame
 {
     UPROPERTY(Category = "Data")
+    int SavedGil;
+    
+    UPROPERTY(Category = "Data")
     URodData SavedRod;
 
     UPROPERTY(Category = "Data")

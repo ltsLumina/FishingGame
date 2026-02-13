@@ -17,9 +17,6 @@ enum EStat
 
 class UStatsComponent : UFishComponentBase
 {
-	UPROPERTY(Category = "Stats", SaveGame)
-	int Gil;
-
 	UPROPERTY(Category = "Stats", EditDefaultsOnly, Meta = (Categories = "Stat"))
 	TMap<FGameplayTag, float> Stats;
 
@@ -88,23 +85,6 @@ class UStatsComponent : UFishComponentBase
 		}
 	}
 #endif
-
-	UFUNCTION(Category = "Gil")
-	void GainGil(int Amount)
-	{
-		Gil += Math::Max(0, Amount);
-	}
-
-	UFUNCTION(Category = "Gil")
-	bool SpendGil(int Amount)
-	{
-		if (Gil >= Amount)
-		{
-			Gil -= Amount;
-			return true;
-		}
-		return false;
-	}
 
 	UFUNCTION(Category = "Stats", BlueprintPure, Meta = (Categories = "Stat", ReturnDisplayName = "Has Stat", AdvancedDisplay = "BaseValue"))
 	bool GetStat(FGameplayTag StatTag, bool BaseValue = false, float& OutValue = -1.0f)
@@ -329,7 +309,6 @@ class UStatsComponent : UFishComponentBase
 	bool SaveStats()
 	{
 		auto SaveGame = NewObject(this, UStatsSaveGame);
-		SaveGame.SavedGil = Gil;
 		SaveGame.SavedStats = Stats;
 		return Gameplay::SaveGameToSlot(SaveGame, "PlayerStats", 0);
 	}
@@ -347,7 +326,6 @@ class UStatsComponent : UFishComponentBase
 		if (LoadedSave == nullptr)
 			return ELoadResult::Failure;
 
-		Gil = LoadedSave.SavedGil;
 		Stats = LoadedSave.SavedStats;
 		return ELoadResult::Success;
 	}
@@ -422,12 +400,6 @@ namespace Stats
 	bool GetStatModifier(AFishCharacter Character, FGameplayTag StatTag, float&out Value)
 	{
 		return Character.FishState.StatsComponent.GetModifier(StatTag, Value);
-	}
-
-	UFUNCTION(Category = "Stats", BlueprintPure)
-	int GetGil()
-	{
-		return GetFishCharacterBase().FishState.StatsComponent.Gil;
 	}
 }
 
