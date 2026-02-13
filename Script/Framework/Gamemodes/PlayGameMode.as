@@ -18,6 +18,13 @@ class AFishPlayGameMode : AGameModeBase
 		}
 		else NetIndex++;
 	}
+
+	UFUNCTION(BlueprintOverride)
+	void OnLogout(AController ExitingController)
+	{
+		auto Instance = Cast<UFishGameInstance>(GameInstance);
+		Instance.HandleConnectionLost();
+	}
 };
 
 UFUNCTION(BlueprintPure, Category = "Gamemode")

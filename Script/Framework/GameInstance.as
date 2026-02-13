@@ -29,16 +29,16 @@ namespace AdvancedSessions
 class UFishGameInstance : UAdvancedFriendsGameInstance
 {
 	UPROPERTY(BlueprintReadOnly)
-	const FName SESSION_NAME = n"SESSION_NAME";
+	const FName SESSION_NAME = AdvancedSessions::Properties::SESSION_NAME;
 
 	UPROPERTY(BlueprintReadOnly)
-	const FName SESSION_TAGS = n"SESSION_TAGS";
+	const FName SESSION_TAGS = AdvancedSessions::Properties::SESSION_TAGS;
 
 	UPROPERTY(BlueprintReadOnly)
-	const FName HOST_STEAM_ID = n"HOST_STEAM_ID";
+	const FName HOST_STEAM_ID = AdvancedSessions::Properties::HOST_STEAM_ID;
 
 	UPROPERTY(BlueprintReadOnly)
-	const FName SESSION_ID = n"SESSION_ID";
+	const FName SESSION_ID = AdvancedSessions::Properties::SESSION_ID;
 
 	UPROPERTY(Category = "Events | Sessions")
 	FOnHostSession OnHostSession;
@@ -91,6 +91,12 @@ class UFishGameInstance : UAdvancedFriendsGameInstance
 			{
 				MigrateHost(LobbyData);
 				PrintWarning(f"Migrating host!");
+
+				auto SaveGame = Gameplay::LoadGameFromSlot("LobbyData", 0);
+				if (SaveGame == nullptr) throw("No Saved Lobby Data found!");
+				auto LobbySaveGame = Cast<ULobbySaveGame>(SaveGame);
+				LobbyData.IsBackupHost = false;
+				Gameplay::SaveGameToSlot(LobbySaveGame, "LobbyData", 0);
 			}
 			else // attempt to join newly migrated host
 			{
