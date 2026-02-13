@@ -82,11 +82,11 @@ class UExperienceComponent : UFishComponentBase
 	{
 		Super::PostInitialize(InCharacter, InPlayerState, InInitializationTime);
 
-		Character.FishingComponent.OnFishCaught.AddUFunction(this, n"OnFishCaught");
+		InCharacter.FishingComponent.OnFishCaught.AddUFunction(this, n"OnFishCaught");
 	}
 
 	UFUNCTION(NotBlueprintCallable)
-	private void OnFishCaught(AFish Fish, UFishingHoleComponent FishingHole)
+	private void OnFishCaught(AFish Fish, UBait Bait, UFishingHoleComponent FishingHole)
 	{
 		GainExperience(Fish.Item.FishData.ExperienceValue);
 	}

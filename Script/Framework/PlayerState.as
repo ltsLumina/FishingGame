@@ -74,7 +74,7 @@ class AFishPlayerState : APlayerState
 	}
 
 	UFUNCTION()
-	void OnFishCaught(AFish Fish, UFishingHoleComponent FishingHole)
+	void OnFishCaught(AFish Fish, UBait Bait, UFishingHoleComponent FishingHole)
 	{
 		TArray<FString> AllTitles;
 		TitlesDataAsset.Titles.GetKeys(AllTitles);

@@ -1,3 +1,5 @@
+event void FOnFishingHoleEntered(UFishingHoleComponent NewHole);
+event void FOnFishingHoleExited(UFishingHoleComponent ExitingHole);
 event void FOnSpectralShift();
 
 struct FFishingHoleTableRow
@@ -24,18 +26,23 @@ class UFishingHoleComponent : UActorComponent
 	UPROPERTY(Category = "Fishing | Area", VisibleInstanceOnly, Replicated)
 	TArray<TSoftObjectPtr<UFishItem>> CatchableFish;
 
-
 	UPROPERTY(Category = "Fishing | Area", VisibleInstanceOnly, Replicated)
 	TArray<AFishCharacter> NearbyPlayers;
 
-	UPROPERTY(Category = "Fishing | Area", VisibleInstanceOnly, Replicated)
+	UPROPERTY(Category = "Fishing | Spectral", VisibleInstanceOnly, Replicated)
 	bool IsSpectral;
 
-	UPROPERTY(Category = "Fishing | Area", EditAnywhere)
+	UPROPERTY(Category = "Fishing | Spectral", EditAnywhere)
 	TArray<TSubclassOf<UTrait>> SpectralTraits;
 
 	UPROPERTY(Category = "Events")
 	FOnSpectralShift OnSpectralShift;
+
+	UPROPERTY(Category = "Events")
+	FOnFishingHoleEntered OnHoleEntered;
+
+	UPROPERTY(Category = "Events")
+	FOnFishingHoleExited OnHoleExited;
 
 	AFishCharacter Character;
 	UFishingComponent FishingComponent;
@@ -101,17 +108,12 @@ class UFishingHoleComponent : UActorComponent
 			return;
 
 		NearbyPlayers.AddUnique(Character);
+		OnHoleEntered.Broadcast(this);
 
-		FishingComponent.OnSelectBait.AddUFunction(this, n"UpdateCatchableFish");
+		FishingComponent.UpdateCatchableFish(this);
 		
-		FishingComponent.CurrentFishingHole = this;
-		FishingComponent.UpdateCatchableFish();
-	}
-
-	UFUNCTION(NotBlueprintCallable)
-	void UpdateCatchableFish(UBait _)
-	{
-		FishingComponent.UpdateCatchableFish();
+		FishingComponent.OnSelectBait.AddUFunction(this, n"UpdateCatchableFish");
+		FishingComponent.OnFishHooked.AddUFunction(this, n"TrySpectralShift");
 	}
 
 	UFUNCTION()
@@ -131,29 +133,48 @@ class UFishingHoleComponent : UActorComponent
 		}
 
 		NearbyPlayers.RemoveSingleSwap(Character);
+		OnHoleExited.Broadcast(this);
+
+		FishingComponent.UpdateCatchableFish(nullptr); // clears the catchable fish
 
 		FishingComponent.OnSelectBait.Unbind(this, n"UpdateCatchableFish");
+	}
 
-		FishingComponent.CurrentFishingHole = nullptr;
-		FishingComponent.UpdateCatchableFish();
+	UFUNCTION(NotBlueprintCallable)
+	void UpdateCatchableFish(UBait _)
+	{
+		FishingComponent.UpdateCatchableFish(this);
+	}
+
+	UFUNCTION()
+	private void TrySpectralShift(UFishItem FishItem, UBait Bait, UFishingHoleComponent FishingHole)
+	{
+		Server_TrySpectralShift(Bait);
+	}
+
+
+	UFUNCTION(Server)
+	void Server_TrySpectralShift(UBait Bait, bool Override = false)
+	{
+		Multicast_TrySpectralShift(Bait, Override);
 	}
 
 	UFUNCTION(NetMulticast, Meta = (AdvancedDisplay = "bOverride", ReturnDisplayName = "Success"))
-	bool TrySpectralShift(UBait Bait, bool bOverride = false)
+	bool Multicast_TrySpectralShift(UBait Bait, bool Override = false)
 	{
 		if (IsSpectral) // acts as a cooldown
 			return false;
 
-		if (!bOverride && !Bait.IsSpectral)
+		if (!Override && !Bait.IsSpectral)
 			return false;
 
 		IsSpectral = Percent::RollPercentChance(Bait::GetSpectralChance(Bait));
-		if (!IsSpectral && !bOverride)
+		if (!IsSpectral && !Override)
 			return false;
 
 		Print("The fishing hole has spectral shifted!", 5.0f, FLinearColor::Purple);
 
-		FishingComponent.UpdateCatchableFish();
+		FishingComponent.UpdateCatchableFish(this);
 		for (AFishCharacter PlayerChar : NearbyPlayers)
 		{
 			for (TSubclassOf<UTrait> TraitClass : SpectralTraits)

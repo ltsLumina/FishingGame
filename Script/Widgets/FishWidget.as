@@ -53,7 +53,7 @@ class UFishWidgetBase : UUserWidget
 		else
 		{
 			Character = GetFishCharacterBase(0);
-			if (!MuteWarnings)
+			if (!MuteWarnings && Tries < 1)
 				PrintWarning(f"UFishWidget: ({GetName()}) OwningPlayerPawn is null, defaulting to GetFishCharacterBase(0). \nMake sure to set the Owning Player when creating the widget.");
 		}
 

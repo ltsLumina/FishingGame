@@ -6,7 +6,7 @@ class AFishPlayGameMode : AGameModeBase
 	void OnPostLogin(APlayerController NewPlayer)
 	{
 		auto SaveGame = Gameplay::LoadGameFromSlot("LobbyData", 0);
-		if (SaveGame == nullptr) throw("No Saved Lobby Data found!");
+		if (SaveGame == nullptr) return;
 		auto LobbySaveGame = Cast<ULobbySaveGame>(SaveGame);
 
 		int indx = 0;

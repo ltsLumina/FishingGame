@@ -97,7 +97,7 @@ class UFishGameInstance : UAdvancedFriendsGameInstance
 			if (LobbyData.IsBackupHost)
 			{
 				auto SaveGame = Gameplay::LoadGameFromSlot("LobbyData", 0);
-				if (SaveGame == nullptr) throw("No Saved Lobby Data found!");
+				if (SaveGame == nullptr) return;
 				auto LobbySaveGame = Cast<ULobbySaveGame>(SaveGame);
 				LobbyData.IsBackupHost = false;
 				Gameplay::SaveGameToSlot(LobbySaveGame, "LobbyData", 0);

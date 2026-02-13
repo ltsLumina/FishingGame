@@ -216,7 +216,7 @@ enum EFishType
 
 enum EFishRarity
 {
-	/**
+	/*
 	 * 100% spawn rate weight.
 	 */
 	Basic,
