@@ -19,6 +19,9 @@ class UFishingHoleComponent : UActorComponent
 	UPROPERTY(Category = "Fishing | Area", EditInstanceOnly, Meta = (Categories="Hole"))
 	FGameplayTag HoleTag;
 
+	UPROPERTY(Category = "Fishing | Area", EditInstanceOnly, Meta = (Categories="Licence"))
+	FGameplayTag RequiredLicence = GameplayTags::Licence_Zone1;
+
 	UPROPERTY(Category = "Fishing | Area", DisplayName = "Name")
 	FText HoleName;
 	default HoleName = FText::FromName(GetName());

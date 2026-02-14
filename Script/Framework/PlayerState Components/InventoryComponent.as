@@ -12,6 +12,10 @@ class UInventoryComponent : UFishComponentBase
 {
 	UPROPERTY(Category = "Stats", SaveGame)
 	int Gil;
+
+	UPROPERTY(Category = "Licence", VisibleInstanceOnly, Meta = (Categories="Licence"))
+	FGameplayTagContainer Licences;
+	default Licences.AddTag(GameplayTags::Licence_Zone1);
 	
 	UPROPERTY(Category = "Rod", EditDefaultsOnly)
 	URodData DefaultRodData;
@@ -132,6 +136,8 @@ class UInventoryComponent : UFishComponentBase
 					throw("TraitClass is nullptr!");
 					continue;
 				}
+
+				if (Character == nullptr) Character = GetFishCharacterBase();
 
 				auto Trait = NewObject(this, TraitClass);
 				Trait.Init(Character.FishingComponent, PlayerState.StatsComponent, PlayerState.TokenComponent);

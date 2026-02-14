@@ -115,6 +115,12 @@ class UFishingComponent : UFishComponentBase
 	ATimeManager TimeManager;
 	AWeatherManager WeatherManager;
 
+	UFUNCTION(BlueprintPure)
+	bool HasRequiredLicence()
+	{
+		return PlayerState.InventoryComponent.Licences.HasTagExact(CurrentFishingHole.RequiredLicence);
+	}
+
 	void PostInitialize(AFishCharacter InCharacter, AFishPlayerState InPlayerState, float InInitializationTime) override
 	{
 		TimeManager = Gameplay::GetActorOfClass(ATimeManager);
@@ -278,6 +284,13 @@ class UFishingComponent : UFishComponentBase
 		}
 
 		BiteTimer = NewBiteTimer;
+
+		if (!HasRequiredLicence())
+		{
+			Notifications::AddNotification("Fishing without an appropriate licence!");
+			PrintWarning("Fishing without an appropriate licence! Rewards are reduced.");
+			Gameplay::GetPlayerController(0).GetComponentByClass(UChatComponent).Server_SendConsoleMessage("Fishing without an appropriate licence!");
+		}
 
 		BP_StartFishing();
 		Server_PlayCastMontage();

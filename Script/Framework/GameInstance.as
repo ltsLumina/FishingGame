@@ -28,16 +28,16 @@ namespace AdvancedSessions
 
 class UFishGameInstance : UAdvancedFriendsGameInstance
 {
-	UPROPERTY(BlueprintReadOnly)
+	UPROPERTY(BlueprintReadOnly, VisibleDefaultsOnly)
 	const FName SESSION_NAME = AdvancedSessions::Properties::SESSION_NAME;
 
-	UPROPERTY(BlueprintReadOnly)
+	UPROPERTY(BlueprintReadOnly, VisibleDefaultsOnly)
 	const FName SESSION_TAGS = AdvancedSessions::Properties::SESSION_TAGS;
 
-	UPROPERTY(BlueprintReadOnly)
+	UPROPERTY(BlueprintReadOnly, VisibleDefaultsOnly)
 	const FName HOST_STEAM_ID = AdvancedSessions::Properties::HOST_STEAM_ID;
 
-	UPROPERTY(BlueprintReadOnly)
+	UPROPERTY(BlueprintReadOnly, VisibleDefaultsOnly)
 	const FName SESSION_ID = AdvancedSessions::Properties::SESSION_ID;
 
 	UPROPERTY(Category = "Events | Sessions")

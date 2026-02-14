@@ -11,6 +11,15 @@ class UChatComponent : UActorComponent
 	UPROPERTY(Category = "Events")
 	FOnChatModeChanged ChatModeChanged;
 
+	UFUNCTION(Server)
+	void Server_SendConsoleMessage(FString Message, FString RichTextStyle = "Error")
+	{
+		FText ServerFormat = FText::FromString(f"<RichText.{RichTextStyle}>{Message}</>");
+
+		auto ChatComp = GetOwner().GetComponentByClass(UChatComponent);
+		ChatComp.Client_SendChat(ServerFormat, true);
+	}
+
 	/**
 	 * @param Formatted The formatted string including the player's name, using RichText.
 	 * @param PlayerName .
@@ -90,7 +99,7 @@ class UChatComponent : UActorComponent
 	 * Called on the owning client by the server.
 	 */
 	UFUNCTION(Client, BlueprintEvent)
-	void Client_SendChat(FText Message)
+	void Client_SendChat(FText Message, bool IsConsoleMessage = false)
 	{
 		throw("Override this event in Blueprints!");
 	}
