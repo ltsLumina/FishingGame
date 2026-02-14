@@ -8,11 +8,9 @@ enum EInventoryChangeType
 	Removed
 };
 
+UCLASS(Abstract)
 class UInventoryComponent : UFishComponentBase
 {
-	UPROPERTY(Category = "Stats", SaveGame)
-	int Gil;
-
 	UPROPERTY(Category = "Licence", VisibleInstanceOnly, Meta = (Categories="Licence"))
 	FGameplayTagContainer Licences;
 	default Licences.AddTag(GameplayTags::Licence_Zone1);
@@ -46,23 +44,6 @@ class UInventoryComponent : UFishComponentBase
 	default bReplicates = false;
 
 	default bWaitForOwningActorInitialized = true;
-
-	UFUNCTION(Category = "Gil")
-	void GainGil(int Amount)
-	{
-		Gil += Math::Max(0, Amount);
-	}
-
-	UFUNCTION(Category = "Gil")
-	bool SpendGil(int Amount)
-	{
-		if (Gil >= Amount)
-		{
-			Gil -= Amount;
-			return true;
-		}
-		return false;
-	}
 
 	void PostInitialize(AFishCharacter InCharacter, AFishPlayerState InPlayerState,
 						float InInitializationTime) override

@@ -33,6 +33,9 @@ class AFishPlayerState : APlayerState
 	UPROPERTY(Category = "Components", BlueprintReadOnly, NotVisible)
 	UTokenComponent TokenComponent;
 
+	UPROPERTY(Category = "Components", BlueprintReadOnly, NotVisible)
+	UCurrencyComponent CurrencyComponent;
+
 	UPROPERTY(Category = "Player Info | Title")
 	FOnTitleUnlocked OnTitleUnlocked;
 
@@ -51,6 +54,7 @@ class AFishPlayerState : APlayerState
 		CollectionComponent = UCollectionComponent::Get(this);
 		GamblingComponent = UGamblingComponent::Get(this);
 		TokenComponent = UTokenComponent::Get(this);
+		CurrencyComponent = UCurrencyComponent::Get(this);
 	}
 
 	UFUNCTION(BlueprintOverride)
@@ -193,6 +197,19 @@ class AFishPlayerState : APlayerState
 				PrintError("Failed to load collection from save.", 25.0f);
 				break;
 		}
+
+		switch (CurrencyComponent.LoadCurrencies())
+		{
+			case ELoadResult::Success:
+				Print("Currencies loaded from save.", 3.0f, FLinearColor::Green);
+				break;
+			case ELoadResult::SuccessNoData:
+				Print("No Currencies save found.", 3.0f, FLinearColor::Yellow);
+				break;
+			case ELoadResult::Failure:
+				PrintError("Failed to load Currencies from save.", 25.0f);
+				break;
+		}
 	}
 
 	UFUNCTION(BlueprintOverride)
@@ -205,6 +222,7 @@ class AFishPlayerState : APlayerState
 		ExperienceComponent.SaveExperience();
 		QuestComponent.SaveQuests();
 		CollectionComponent.SaveCollection();
+		CurrencyComponent.SaveCurrencies();
 	}
 
 	bool SaveTitles()
@@ -242,6 +260,7 @@ class AFishPlayerState : APlayerState
 		Gameplay::DeleteGameInSlot("PlayerExperience", 0);
 		Gameplay::DeleteGameInSlot("PlayerQuestLog", 0);
 		Gameplay::DeleteGameInSlot("PlayerCollection", 0);
+		Gameplay::DeleteGameInSlot("PlayerCurrencies", 0);
 
 		PrintWarning("Player state reset: all save data deleted.", 5.0f);
 	}

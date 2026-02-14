@@ -287,9 +287,9 @@ class UFishingComponent : UFishComponentBase
 
 		if (!HasRequiredLicence())
 		{
-			Notifications::AddNotification("Fishing without an appropriate licence!");
 			PrintWarning("Fishing without an appropriate licence! Rewards are reduced.");
-			Gameplay::GetPlayerController(0).GetComponentByClass(UChatComponent).Server_SendConsoleMessage("Fishing without an appropriate licence!");
+			Notifications::AddNotification("Fishing without an appropriate licence!");
+			Gameplay::GetPlayerController(0).GetComponentByClass(UChatComponent).Server_SendConsoleMessage("Fishing without an appropriate licence! Rewards are reduced.");
 		}
 
 		BP_StartFishing();

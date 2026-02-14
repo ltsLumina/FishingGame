@@ -3,7 +3,7 @@ event void FOnChatModeChanged(EChatMode ChatMode);
 class UChatComponent : UActorComponent
 {
 	UPROPERTY(Category = "Chat", VisibleAnywhere, BlueprintReadOnly)
-	EChatMode ChatMode;
+	EChatMode ChatMode = EChatMode::Global;
 
 	UPROPERTY(Category = "Chat", EditDefaultsOnly, EditInline)
 	TArray<UChatCommand> ChatCommands;
@@ -58,7 +58,7 @@ class UChatComponent : UActorComponent
             auto ChatComp = PS.Get().GetPlayerController().GetComponentByClass(UChatComponent);
             switch (InChatMode)
             {
-                case EChatMode::Say:
+                case EChatMode::Local:
                 {
                     if (SenderPawn != nullptr && PS.Get() != SenderPS)
                     {
@@ -72,7 +72,7 @@ class UChatComponent : UActorComponent
                     break;
                 }
 
-                case EChatMode::Shout:
+                case EChatMode::Global:
                     ChatComp.Client_SendChat(Formatted);
                     break;
 
@@ -140,7 +140,7 @@ class UChatCommand : UObject
 
 enum EChatMode
 {
-	Say,
-	Shout,
+	Local,
+	Global,
 	FriendsOnly
 }

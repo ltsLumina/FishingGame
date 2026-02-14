@@ -75,7 +75,7 @@ class UQuest : UPrimaryDataAsset
 struct FQuestReward
 {
 	UPROPERTY(Category = "Quest | Reward")
-	int32 Gil = 50;
+	int32 Money = 50;
 
 	UPROPERTY(Category = "Quest | Reward")
 	int32 Experience = 100;
