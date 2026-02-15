@@ -45,3 +45,15 @@ namespace ProjectSettings
 		return UGeneralProjectSettings.GetDefaultObject();
 	}
 }
+
+namespace Widget
+{
+	/**
+	 * Returns the outermost userwidget of this widget.
+	 */
+	UFUNCTION(BlueprintPure, DisplayName = "Get Root Widget")
+	UWidget BP_GetRootWidget(UUserWidget Widget)
+	{
+		return Cast<UWidget>(Widget.GetOuter().GetOuter());
+	}
+}

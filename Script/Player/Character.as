@@ -39,9 +39,9 @@ class AFishCharacter : AFishEntity
 
 		FText CurrentFish = FishingComponent.CurrentFish != nullptr ? FishingComponent.CurrentFish.BaseData.ItemName : FText::FromString("None");
 
-		float ExperiencePoints = XPComponent.ExperienceData.CurrentXP;
-		float ToNextLevel = XPComponent.GetNextLevelXP();
-		ExperienceLevel = XPComponent.ExperienceData.Level;
+		float ExperiencePoints = XPComponent.CurrentXP;
+		float ToNextLevel = XPComponent.GetExperienceAtNextLevel();
+		ExperienceLevel = XPComponent.Level;
 		float BiteTimer = FishingComponent.BiteTimer;
 		TArray<FString> MoochedFishNames;
 		for (auto& FishItem : FishingComponent.MoochedFish)
@@ -78,6 +78,16 @@ class AFishCharacter : AFishEntity
 	bool IsLocallyControlled_FishChar()
 	{
 		return IsLocallyControlled();
+	}
+
+	UFUNCTION()
+	bool GetNearbyPlayers(float Radius = 1000.0f, TArray<AActor>&out NearbyPlayers = TArray<AActor>())
+	{
+		TArray<EObjectTypeQuery> ObjectTypes;
+		ObjectTypes.Add(EObjectTypeQuery::Pawn);
+		TArray<AActor> IgnoreActors;
+		IgnoreActors.Add(this);
+		return System::SphereOverlapActors(GetActorLocation(), Radius, ObjectTypes, AFishCharacter, IgnoreActors, NearbyPlayers);
 	}
 };
 

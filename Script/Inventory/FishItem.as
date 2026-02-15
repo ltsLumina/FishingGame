@@ -1,7 +1,7 @@
 UCLASS(Meta = (PrioritizeCategories = "Item", AutoExpandCategories="Logic"))
 class UFishItem : UItem
 {
-	UPROPERTY(Category = "Fish", ExposeOnSpawn, SaveGame)
+	UPROPERTY(Category = "Fish", ExposeOnSpawn, SaveGame, Meta=(ShowOnlyInnerProperties))
 	FFishItemData FishData;
 
 	UFUNCTION(Category = "Fish | Info", BlueprintPure)
@@ -49,7 +49,7 @@ class UFishItem : UItem
 	UFUNCTION(Category = "Fish | Info", BlueprintPure)
 	float GetCatchRate()
 	{
-		return FishData.CatchRate;
+		return FishData.CatchChance;
 	}
 
 	UFUNCTION(Category = "Fish | Info", BlueprintPure)
@@ -82,7 +82,7 @@ struct FFishItemData
 	 * If the catch fails, the fish escapes.
 	 */
 	UPROPERTY(Category = "Fish | Info", Meta = (UIMin = "0.0", UIMax = "100.0", Delta = "0.5", Units = "%"))
-	float CatchRate = 95.0f;
+	float CatchChance = 95.0f;
 
 	/**
 	 * Recommended player level to catch this fish.

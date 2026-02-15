@@ -1,7 +1,7 @@
 event void FOnStateChange(EFishingState NewState);
 event void FOnSelectBait(UBait Bait);
-event void FOnFishHooked(UFishItem FishItem);
-event void FOnFishCaught(AFish Fish);
+event void FOnFishHooked(UFishItem FishItem, UBait Bait, UFishingHoleComponent FishingHole);
+event void FOnFishCaught(AFish Fish, UBait Bait, UFishingHoleComponent FishingHole);
 
 class UFishingComponent : UFishComponentBase
 {
@@ -17,14 +17,13 @@ class UFishingComponent : UFishComponentBase
 		return CurrentState == EFishingState::Fishing;
 	}
 
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(Category = "Fishing | State", EditDefaultsOnly, VisibleInstanceOnly)
 	UBait CurrentBait;
 
 	/**
 	 * Current time elapsed on the hook timer.
 	 */
-	// replicated so clients can read other players' timers
-	UPROPERTY(Category = "Fishing | State", Meta = (Units = "s"), VisibleAnywhere)
+	UPROPERTY(Category = "Fishing | State", Meta = (Units = "s"), VisibleInstanceOnly)
 	float BiteTimer = 0;
 
 	/**
@@ -57,14 +56,6 @@ class UFishingComponent : UFishComponentBase
 	}
 
 	/**
-	 * Status effects currently applied to the player while fishing.
-	 * Key is the effect name.
-	 * Value is the amount of stacks.
-	 */
-	UPROPERTY(Category = "Fishing | State", VisibleAnywhere)
-	TMap<FName, int> StatusEffects;
-
-	/**
 	 * The fish that is currently hooked.
 	 * Determined when fishing starts.
 	 */
@@ -88,16 +79,102 @@ class UFishingComponent : UFishComponentBase
 	UPROPERTY(Category = "Fishing | Area", VisibleAnywhere)
 	TArray<UFishItem> CurrentCatchableFish;
 
+	UPROPERTY(VisibleInstanceOnly)
+	UFishItem CurrentMoochableFish;
+
+	UPROPERTY(VisibleInstanceOnly)
+	UFishItem PreviouslyCaughtFish;
+
 	UPROPERTY()
 	FCatchContext CatchContext;
 
-	void UpdateCatchableFish()
+	/* Events */
+
+	UPROPERTY(Category = "Events")
+	FOnStateChange OnStateChange;
+
+	UPROPERTY(Category = "Events")
+	FOnSelectBait OnSelectBait;
+
+	/**
+	 * Called after the fish has been hooked, but before the reeling-in process begins.
+	 */
+	UPROPERTY(Category = "Events")
+	FOnFishHooked OnFishHooked;
+
+	/**
+	 * Called after the fish has been spawned on the client, but before it is added to the player's inventory.
+	 */
+	UPROPERTY(Category = "Events")
+	FOnFishCaught OnFishCaught;
+
+	/* End */
+
+	FTimerHandle MissedTimerHandle;
+
+	ATimeManager TimeManager;
+	AWeatherManager WeatherManager;
+
+	UFUNCTION(BlueprintPure)
+	bool HasRequiredLicence()
+	{
+		return PlayerState.InventoryComponent.Licences.HasTagExact(CurrentFishingHole.RequiredLicence);
+	}
+
+	void PostInitialize(AFishCharacter InCharacter, AFishPlayerState InPlayerState, float InInitializationTime) override
+	{
+		TimeManager = Gameplay::GetActorOfClass(ATimeManager);
+		WeatherManager = Gameplay::GetActorOfClass(AWeatherManager);
+
+		Super::PostInitialize(InCharacter, InPlayerState, InInitializationTime);
+	}
+
+	UFUNCTION(BlueprintOverride)
+	void Tick(float DeltaSeconds)
+	{
+		BP_Tick(DeltaSeconds);
+
+		if (!GetIsFishing())
+			return;
+
+		if (BiteTimer > 0)
+		{
+			BiteTimer -= DeltaSeconds;
+			if (BiteTimer <= 0)
+			{
+				SetState(EFishingState::FishOnHook);
+				BiteTimer = 0;
+
+				// Only runs once when the hook proc happens.
+				if (!System::IsTimerActiveHandle(MissedTimerHandle) && CurrentFish != nullptr)
+					BP_FishOnHook(); // Shows the Hook Notification in Blueprints.
+
+				MissedTimerHandle = System::SetTimer(this, n"Missed", TimeToReelIn, false);
+			}
+		}
+
+		FishOnHook = System::IsTimerActiveHandle(MissedTimerHandle);
+	}
+
+	UFUNCTION(BlueprintEvent, DisplayName = "Tick")
+	void BP_Tick(float DeltaSeconds)
+	{}
+
+	UFUNCTION(Category = "Fishing")
+	void SetState(EFishingState NewState)
+	{
+		CurrentState = NewState;
+		OnStateChange.Broadcast(NewState);
+	}
+
+	void UpdateCatchableFish(UFishingHoleComponent Hole)
 	{
 		if (Character == nullptr || TimeManager == nullptr || WeatherManager == nullptr)
 			return;
 
 		CurrentCatchableFish.Empty();
 
+		CurrentFishingHole = Hole;
 		if (CurrentFishingHole == nullptr)
 			return;
 
@@ -148,85 +225,11 @@ class UFishingComponent : UFishComponentBase
 		}
 	}
 
-	/* Events */
-
-	UPROPERTY(Category = "Events")
-	FOnStateChange OnStateChange;
-
-	UPROPERTY(Category = "Events")
-	FOnSelectBait OnSelectBait;
-
-	/**
-	 * Called after the fish has been hooked, but before the reeling-in process begins.
-	 */
-	UPROPERTY(Category = "Events")
-	FOnFishHooked OnFishHooked;
-
-	/**
-	 * Called after the fish has been spawned on the client, but before it is added to the player's inventory.
-	 */
-	UPROPERTY(Category = "Events")
-	FOnFishCaught OnFishCaught;
-
-	/* End */
-
-	FTimerHandle MissedTimerHandle;
-
-	ATimeManager TimeManager;
-	AWeatherManager WeatherManager;
-
-	void PostInitialize(AFishCharacter InCharacter, AFishPlayerState InPlayerState, float InInitializationTime) override
-	{
-		TimeManager = Gameplay::GetActorOfClass(ATimeManager);
-		WeatherManager = Gameplay::GetActorOfClass(AWeatherManager);
-
-		Super::PostInitialize(InCharacter, InPlayerState, InInitializationTime);
-	}
-
-	UFUNCTION(BlueprintOverride)
-	void Tick(float DeltaSeconds)
-	{
-		BP_Tick(DeltaSeconds);
-
-		if (!GetIsFishing())
-			return;
-
-		if (BiteTimer > 0)
-		{
-			BiteTimer -= DeltaSeconds;
-			if (BiteTimer <= 0)
-			{
-				SetState(EFishingState::FishOnHook);
-				BiteTimer = 0;
-
-				// Only runs once when the hook proc happens.
-				if (!System::IsTimerActiveHandle(MissedTimerHandle) && CurrentFish != nullptr)
-					BP_FishOnHook(); // Shows the Hook Notification in Blueprints.
-
-				MissedTimerHandle = System::SetTimer(this, n"Missed", TimeToReelIn, false);
-			}
-		}
-
-		FishOnHook = System::IsTimerActiveHandle(MissedTimerHandle);
-	}
-
-	UFUNCTION(BlueprintEvent, DisplayName = "Tick")
-	void BP_Tick(float DeltaSeconds)
-	{}
-
-	UFUNCTION(Category = "Fishing")
-	void SetState(EFishingState NewState)
-	{
-		CurrentState = NewState;
-		OnStateChange.Broadcast(NewState);
-	}
-
-	/**
-	 * AKA "Cast"
-	 */
 	UFUNCTION(Category = "Fishing", CallInEditor)
 	void StartFishing()
 	{
+		check(CurrentBait == nullptr);
+		
 		if (CurrentFishingHole == nullptr)
 		{
 			PrintWarning("You are not in a fishing area!", 1.5f);
@@ -257,9 +260,14 @@ class UFishingComponent : UFishComponentBase
 		}
 		else
 		{
-			CurrentFish = SelectFishWeighted();
-			NewBiteTimer = CurrentFish.FishData.BiteTime;
+			CurrentFish = SelectFishWeighted(CurrentCatchableFish);
 
+			float BiteRate;
+			Stats::GetStat(Character, GameplayTags::Stat_Fishing_BiteRate, true, false, BiteRate);
+			NewBiteTimer = CurrentFish.FishData.BiteTime / BiteRate;
+			NewBiteTimer = Math::Max(1, NewBiteTimer); // clamp to min of 1
+
+			// TODO: should be reworked in tandem with Token System
 			for (auto Pair : BiteTimeModifiers)
 			{
 				float Modifier = Pair.Value;
@@ -284,7 +292,14 @@ class UFishingComponent : UFishComponentBase
 
 		BiteTimer = NewBiteTimer;
 
+		if (!HasRequiredLicence())
+		{
+			PrintWarning("Fishing without an appropriate licence! Rewards are reduced.");
+			Gameplay::GetPlayerController(0).GetComponentByClass(UChatComponent).Server_SendConsoleMessage("Fishing without an appropriate licence! Rewards are reduced.");
+		}
+
 		BP_StartFishing();
+		Server_PlayCastMontage();
 	}
 
 	UFUNCTION(Category = "Fishing", CallInEditor)
@@ -300,6 +315,7 @@ class UFishingComponent : UFishComponentBase
 		System::ClearAndInvalidateTimerHandle(MissedTimerHandle);
 
 		BP_StopFishing();
+		Server_StopCastMontage();
 	}
 
 	UFUNCTION(Category = "Fishing", CallInEditor)
@@ -321,14 +337,14 @@ class UFishingComponent : UFishComponentBase
 
 		FFishItemData Data = CurrentFish.FishData;
 
-		float GatheringStat;
-		Stats::GetStat(Character, GameplayTags::Stat_Fishing_Gathering, false, GatheringStat);
-		float GatheringDiff = Math::Max(0.0f, GatheringStat - Data.MinimumGathering);
-		float CurrentCatchRate = Math::Clamp(Data.CatchRate + GatheringDiff * 0.5f, 0.0f, 100.0f);
+		float CatchChanceStat;
+		Stats::GetStat(Character, GameplayTags::Stat_Fishing_CatchChance, true, false, CatchChanceStat);
+		float CurrentCatchChance = Data.CatchChance * CatchChanceStat; // multiplicative percentage addition (e.g, 25% * 50% stat = increase of 12.5%)
+		CurrentCatchChance = Math::Clamp(CurrentCatchChance, 0, 100);
 
-		// Chance to escape - uses Catch Rate 0-100
+		// Chance to escape - uses Catch Chance 0-100
 		float CatchRoll = Math::RandRange(0.0f, 100.0f);
-		if (CatchRoll > CurrentCatchRate)
+		if (CatchRoll > CurrentCatchChance)
 		{
 			Print("The fish escaped your hook!", 2.5f, FLinearColor::Yellow);
 			Missed();
@@ -343,7 +359,6 @@ class UFishingComponent : UFishComponentBase
 			{
 				Print(f"You've hooked a rare \"{CurrentFish.BaseData.ItemName}\"!\nA stack of Angler's Art has been granted.", 3, FLinearColor::Green);
 				PlayerState.TokenComponent.AddToken(GameplayTags::Token_Ability_AnglersArt);
-				//StatusEffects.Add(FName("Angler's Art"), 1); // TODO: separate system with data assets so I can display the icon.
 			}
 		}
 
@@ -362,27 +377,35 @@ class UFishingComponent : UFishComponentBase
 		PreviouslyCaughtFish = CurrentFish;
 		StopFishing();
 
+		OnFishHooked.Broadcast(CaughtFish, CurrentBait, CurrentFishingHole);
 		BP_Hook(CaughtFish);
-		OnFishHooked.Broadcast(CaughtFish);
+		Server_PlayHookMontage(CaughtFish);
 	}
 
-	UPROPERTY(VisibleInstanceOnly)
-	UFishItem CurrentMoochableFish;
+	UFUNCTION()
+	void Missed()
+	{
+		if (CurrentState == EFishingState::NotFishing)
+			return;
 
-	UPROPERTY(VisibleInstanceOnly)
-	UFishItem PreviouslyCaughtFish;
+		MoochedFish.Empty();
+
+		Print("The fish got away!", 2.5f, FLinearColor::Yellow);
+		BP_Missed(CurrentFish);
+		StopFishing();
+	}
 
 	/**
 	 * Selects a fish to be caught using weighted random selection based on fish rarity.
 	 */
-	UFishItem SelectFishWeighted()
+	UFishItem SelectFishWeighted(TArray<UFishItem>& Fishes)
 	{
 		UFishItem ResultFish = nullptr;
 
 		// Determine the fish that will bite when fishing starts
 		// Weighted random selection using AFish::GetCatchRate(Rarity) -> 0..100
 		float TotalWeight = 0.0f;
-		for (auto& FishItem : CurrentCatchableFish)
+		for (auto& FishItem : Fishes)
 		{
 			float Weight = Fish::GetRarityWeight(FishItem);
 			if (Weight < 0.0f)
@@ -393,14 +416,15 @@ class UFishingComponent : UFishComponentBase
 		// Fallback to uniform random if something went wrong or all weights are zero
 		if (TotalWeight <= 0.0f)
 		{
-			CurrentFish = CurrentCatchableFish[Math::RandRange(0, CurrentCatchableFish.Num() - 1)];
 			Print("All fish have zero catch rate weights; selecting uniformly at random.", 2.5f, FLinearColor::Yellow);
+			ResultFish = Fishes[Math::RandRange(0, Fishes.Num() - 1)];
+			return ResultFish;
 		}
 		else
 		{
 			float Roll = Math::RandRange(0.0f, TotalWeight);
 			float Accum = 0.0f;
-			for (auto& FishItem : CurrentCatchableFish)
+			for (auto& FishItem : Fishes)
 			{
 				float Weight = Fish::GetRarityWeight(FishItem);
 				if (Weight < 0.0f)
@@ -426,7 +450,9 @@ class UFishingComponent : UFishComponentBase
 		Fish.SetOwner(GetOwner());
 
 		Fish.OnSpawn(FishItem);
-		Fish.OnCaught(Cast<AFishCharacter>(GetOwner()));
+#if EDITOR
+		Fish.OnCaught(Character);
+#endif
 
 		SpawnFish_Client(FishClass, FishItem);
 	}
@@ -441,12 +467,14 @@ class UFishingComponent : UFishComponentBase
 		Fish.SetOwner(GetOwner());
 
 		Fish.OnSpawn(FishItem);
-		OnFishCaught.Broadcast(Fish);
+		OnFishCaught.Broadcast(Fish, CurrentBait, CurrentFishingHole);
 
 		for (int i = 0; i < CatchContext.Quantity; i++)
 		{
 			FInventoryInstanceData InventoryInstance;
-			InventoryInstance.FishInstanceData = Fish::InstanceData::MakeFishInstanceData(FishItem.FishData); // create new instance data for each fish, so they aren't identical. The Clone trait adds a fish to the inventory with identical instance data instead.
+
+			// create new instance data for each fish, so they aren't identical. The Clone trait adds a fish to the inventory with identical instance data instead.
+			InventoryInstance.FishInstanceData = Fish::InstanceData::MakeFishInstanceData(FishItem.FishData);
 
 			PlayerState.InventoryComponent.AddItem(Fish.Item, InventoryInstance, 1);
 		}
@@ -454,39 +482,72 @@ class UFishingComponent : UFishComponentBase
 		CatchContext = FCatchContext();
 	}
 
+	// #region RPCs
+
+	// cast
+
+	UFUNCTION(Server)
+	void Server_PlayCastMontage()
+	{
+		Multicast_PlayCastMontage();
+	}
+
+	UFUNCTION(BlueprintEvent, NetMulticast, NotBlueprintCallable)
+	void Multicast_PlayCastMontage()
+	{}
+
+	UFUNCTION(Server)
+	void Server_StopCastMontage()
+	{
+		Multicast_StopCastMontage();
+	}
+
+	UFUNCTION(BlueprintEvent, NetMulticast, NotBlueprintCallable)
+	void Multicast_StopCastMontage()
+	{}
+
+	// hook
+
+	UFUNCTION(Server)
+	void Server_PlayHookMontage(UFishItem FishItem)
+	{
+		Multicast_PlayHookMontage(FishItem);
+	}
+
+	UFUNCTION(BlueprintEvent, NetMulticast, NotBlueprintCallable)
+	void Multicast_PlayHookMontage(UFishItem FishItem)
+	{}
+
+	UFUNCTION(Server)
+	void Server_StopHookMontage()
+	{
+		Multicast_StopHookMontage();
+	}
+
+	UFUNCTION(BlueprintEvent, NetMulticast, NotBlueprintCallable)
+	void Multicast_StopHookMontage()
+	{}
+	// #endregion
+
+	// #region BP Events
+	UFUNCTION(BlueprintEvent, DisplayName = "Start Fishing")
+	void BP_StartFishing()
+	{}
+
+	UFUNCTION(BlueprintEvent, DisplayName = "Stop Fishing")
+	void BP_StopFishing()
+	{}
+
 	/**
 	 * Called when a fish is successfully hooked and the player begins reeling it in.
 	 */
-	UFUNCTION(BlueprintEvent, DisplayName = "Hook Fish")
+	UFUNCTION(BlueprintEvent, DisplayName = "Hook")
 	void BP_Hook(UFishItem CaughtFish)
 	{}
-
-	UFUNCTION()
-	void Missed()
-	{
-		if (CurrentState == EFishingState::NotFishing)
-			return;
-
-		MoochedFish.Empty();
-
-		Print("The fish got away!", 2.5f, FLinearColor::Yellow);
-		BP_Missed(CurrentFish);
-		StopFishing();
-	}
 
 	UFUNCTION(BlueprintEvent, DisplayName = "Missed Fish")
 	void BP_Missed(UFishItem MissedFish)
 	{}
-
-	UFUNCTION(BlueprintEvent, DisplayName = "Start Fishing")
-	void BP_StartFishing()
-	{
-	}
-
-	UFUNCTION(BlueprintEvent, DisplayName = "Stop Fishing")
-	void BP_StopFishing()
-	{
-	}
 
 	/**
 	 * Called when a fish bites the hook.
@@ -494,7 +555,9 @@ class UFishingComponent : UFishComponentBase
 	UFUNCTION(BlueprintEvent, DisplayName = "Fish On Hook")
 	void BP_FishOnHook()
 	{}
+	// #endregion
 
+	// #region Helpers
 	UFUNCTION(BlueprintPure, Category = "Fishing", DisplayName = "Is State")
 	bool IsState(EFishingState StateToCheck)
 	{
@@ -512,13 +575,14 @@ class UFishingComponent : UFishComponentBase
 	{
 		return StatesToCheck.Contains(CurrentState);
 	}
+	// #endregion
 };
 
 struct FCatchContext
 {
 	UPROPERTY()
 	UFishItem FishItem;
-	
+
 	UPROPERTY()
 	int Quantity = 1;
 }

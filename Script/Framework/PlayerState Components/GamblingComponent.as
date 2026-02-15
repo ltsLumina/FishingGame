@@ -32,11 +32,11 @@ class UGamblingComponent : UFishComponentBase
     {
         Super::PostInitialize(InCharacter, InPlayerState, InInitializationTime);
         
-        Character.FishingComponent.OnFishCaught.AddUFunction(this, n"OnFishCaught");
+        InCharacter.FishingComponent.OnFishCaught.AddUFunction(this, n"OnFishCaught");
     }
 
     UFUNCTION(NotBlueprintCallable)
-    private void OnFishCaught(AFish Fish)
+    private void OnFishCaught(AFish Fish, UBait Bait, UFishingHoleComponent FishingHole)
     {
         if (BettingPlayers.Num() == 0)
             return;
@@ -84,8 +84,8 @@ class UGamblingComponent : UFishComponentBase
             // Bettor wins
             int Winnings = AmountBet * 2;
             TotalWinnings += Winnings;
-            UStatsComponent::Get(Self).GainGil(Winnings);
-            UStatsComponent::Get(Target).GainGil(-AmountBet);
+            //UInventoryComponent::Get(Self).GainGil(Winnings);
+            //UInventoryComponent::Get(Target).GainGil(-AmountBet);
             
             Notifications::AddNotification(f"You earned {Winnings} Gil from your bet!", 5.0f);
             FishingAttempts = 0;
@@ -93,8 +93,8 @@ class UGamblingComponent : UFishComponentBase
         else if (FishingAttempts <= 0)
         {
             // Bettor loses, opponent wins
-            UStatsComponent::Get(Self).GainGil(-AmountBet);
-            UStatsComponent::Get(Target).GainGil(AmountBet);
+            //UInventoryComponent::Get(Self).GainGil(-AmountBet);
+            //UInventoryComponent::Get(Target).GainGil(AmountBet);
             
             Notifications::AddNotification(f"You lost your bet! (-{AmountBet} Gil)", 5.0f);
             AmountBet = 0;

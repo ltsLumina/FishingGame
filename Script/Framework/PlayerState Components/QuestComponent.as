@@ -195,7 +195,7 @@ class UQuestComponent : UFishComponentBase
 
 		// Grant rewards
 		auto Reward = Entry.Quest.Reward;
-		PlayerState.StatsComponent.GainGil(Reward.Gil);
+		PlayerState.CurrencyComponent.GainCurrency(ECurrency::Money, Reward.Money);
 		PlayerState.ExperienceComponent.GainExperience(Reward.Experience);
 		if (Reward.GrantsItem)
 		{
@@ -232,7 +232,7 @@ class UQuestComponent : UFishComponentBase
 	UFUNCTION(Category = "Save Game")
 	bool SaveQuests()
 	{
-		auto SaveGame = NewObject(this, UQuestSaveGame);
+		auto SaveGame = Gameplay::CreateSaveGameObject(UQuestSaveGame);
 		SaveGame.SavedQuestLog = QuestLog;
 		SaveGame.SavedCompletedQuests = CompletedQuests;
 		return Gameplay::SaveGameToSlot(SaveGame, "PlayerQuestLog", 0);

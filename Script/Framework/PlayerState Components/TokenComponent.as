@@ -335,14 +335,14 @@ struct FTokenEntry
 	UPROPERTY(BlueprintReadOnly)
 	int MaxAmount;
 
-	UPROPERTY(BlueprintHidden)
-	FString RemainingTimeString;
-
-	UPROPERTY(NotVisible)
+	UPROPERTY(NotVisible, Meta=(Units="s"))
 	float Duration;
 
-	UPROPERTY(NotVisible, BlueprintReadOnly)
+	UPROPERTY(NotVisible, BlueprintReadOnly, Meta=(Units="s"))
 	float RemainingTime;
+
+	UPROPERTY(BlueprintHidden)
+	FString RemainingTimeString;
 
 	UPROPERTY(BlueprintReadOnly)
 	bool RefreshDuration;
@@ -366,6 +366,9 @@ struct FTokenDefinition
 {
 	UPROPERTY(Category = "Details", BlueprintReadOnly)
 	bool DisplayMaxStackCount = true;
+
+	UPROPERTY(Category = "Details", BlueprintReadOnly)
+	bool BlinkWhenExpiring = true;
 
 	UPROPERTY(Category = "Details")
 	FText TokenName;
@@ -392,6 +395,36 @@ namespace Token
 	}
 
 	UFUNCTION(BlueprintPure, Category = "Token")
+	mixin int GetAmount(FTokenEntry Entry)
+	{
+		return Entry.Amount;
+	}
+
+	UFUNCTION(BlueprintPure, Category = "Token")
+	mixin int GetMaxAmount(FTokenEntry Entry)
+	{
+		return Entry.MaxAmount;
+	}
+	
+	UFUNCTION(BlueprintPure, Category = "Token")
+	mixin float GetDuration(FTokenEntry Entry)
+	{
+		return Entry.Duration;
+	}
+
+	UFUNCTION(BlueprintPure, Category = "Token")
+	mixin float GetRemainingTime(FTokenEntry Entry)
+	{
+		return Entry.RemainingTime;
+	}
+
+	UFUNCTION(BlueprintPure, Category = "Token")
+	mixin bool GetRefreshDuration(FTokenEntry Entry)
+	{
+		return Entry.RefreshDuration;
+	}
+
+	UFUNCTION(BlueprintPure, Category = "Token")
 	mixin FText GetCooldownName(FText EffectName)
 	{
 		FString ToString = EffectName.ToString();
@@ -401,5 +434,38 @@ namespace Token
 		}
 
 		return EffectName;
+	}
+
+	namespace Definition
+	{
+		UFUNCTION(BlueprintPure, Category = "Token")
+		mixin bool GetDisplayMaxStackCount(FTokenDefinition Definition)
+		{
+			return Definition.DisplayMaxStackCount;
+		}
+
+		UFUNCTION(BlueprintPure, Category = "Token")
+		mixin bool GetBlinkWhenExpiring(FTokenDefinition Definition)
+		{
+			return Definition.BlinkWhenExpiring;
+		}
+
+		UFUNCTION(BlueprintPure, Category = "Token")
+		mixin FText GetTokenName(FTokenDefinition Definition)
+		{
+			return Definition.TokenName;
+		}
+
+		UFUNCTION(BlueprintPure, Category = "Token")
+		mixin FText GetDescription(FTokenDefinition Definition)
+		{
+			return Definition.Description;
+		}
+
+		UFUNCTION(BlueprintPure, Category = "Token")
+		mixin UTexture2D GetIcon(FTokenDefinition Definition)
+		{
+			return Definition.Icon;
+		}
 	}
 }

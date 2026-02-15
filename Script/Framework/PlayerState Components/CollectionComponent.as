@@ -21,7 +21,7 @@ struct FCollectionEntry
 
 class UCollectionComponent : UFishComponentBase
 {
-	UPROPERTY()
+	UPROPERTY(Category = "Collection", EditFixedSize, VisibleInstanceOnly)
 	TArray<FCollectionEntry> CollectedItems;
 
 	UPROPERTY(Category = "Events")
@@ -52,7 +52,7 @@ class UCollectionComponent : UFishComponentBase
 	}
 
 	UFUNCTION(NotBlueprintCallable)
-	private void AddToCollectionByFish(AFish Fish)
+	private void AddToCollectionByFish(AFish Fish, UBait Bait, UFishingHoleComponent FishingHole)
 	{
 		if (Fish.Item != nullptr)
 		{

@@ -20,8 +20,8 @@ class UAbilityHandlerComponent : UFishComponentBase
 	void PostInitialize(AFishCharacter InCharacter, AFishPlayerState InPlayerState, float InInitializationTime) override
 	{
 		Super::PostInitialize(InCharacter, InPlayerState, InInitializationTime);
-		Abilities.Empty();
 
+		Abilities.Empty();
 		AbilityUnlockTable.GetAllRows(UnlockInfos);
 		check(UnlockInfos.Num() > 0, "AbilityUnlockTable has no rows!");
 		check(UnlockInfos[0].Ability != nullptr, "AbilityUnlockTable has invalid AbilityData references! (IT CLEARED ITSELF AGAINNNNNNNNNNNNNNNNNNN)");
@@ -173,16 +173,25 @@ class UAbilityHandlerComponent : UFishComponentBase
 
 		return true;
 	}
+
+	UAbilityData LoadAbility(TSoftObjectPtr<UAbilityData> SoftAbilityData)
+	{
+		auto LoadedAblity = System::LoadAsset_Blocking(SoftAbilityData);
+		if (!IsValid(LoadedAblity))
+		{
+			PrintError("AbilityHandlerComponent LoadAbility: Failed to load ability data asset from soft reference!");
+			return nullptr;
+		}
+
+		return Cast<UAbilityData>(LoadedAblity);
+	}
 };
 
-UAbilityData LoadAbility(TSoftObjectPtr<UAbilityData> SoftAbilityData)
+struct FAbilityUnlockInfo
 {
-	auto LoadedAblity = System::LoadAsset_Blocking(SoftAbilityData);
-	if (!IsValid(LoadedAblity))
-	{
-		PrintError("AbilityHandlerComponent LoadAbility: Failed to load ability data asset from soft reference!");
-		return nullptr;
-	}
+	UPROPERTY(Category = "Ability", SaveGame)
+	TSoftObjectPtr<UAbilityData> Ability;
 
-	return Cast<UAbilityData>(LoadedAblity);
+	UPROPERTY(Category = "Ability", Meta = (UIMin = "1", UIMax = "100"), SaveGame)
+	int UnlockLevel = 1;
 }

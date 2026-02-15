@@ -16,7 +16,7 @@ class UQuest : UPrimaryDataAsset
 	UPROPERTY(Category = "Quest | Info")
 	UTexture2D Icon;
 
-	UPROPERTY(Category = "Quest | Objectives", EditInline, Instanced)
+	UPROPERTY(Category = "Quest | Objectives", EditInline, Instanced, NoClear)
 	TArray<UQuestObjective> Objectives;
 
 	UPROPERTY(Category = "Quest | Reward")
@@ -29,6 +29,12 @@ class UQuest : UPrimaryDataAsset
 
 		for (auto& Objective : Objectives)
 		{
+			if (!IsValid(Objective))
+			{
+				throw(f"{QuestName} has a nullptr objective!" + f"\n{Paths::GetBaseFilename(GetPathName())}");
+				continue;
+			}
+
 			if (Objective.IsA(UCatchFishObjective))
 			{
 				auto FishObjective = Cast<UCatchFishObjective>(Objective);
@@ -69,18 +75,18 @@ class UQuest : UPrimaryDataAsset
 struct FQuestReward
 {
 	UPROPERTY(Category = "Quest | Reward")
-	int32 Gil = 50;
+	int32 Money = 50;
 
 	UPROPERTY(Category = "Quest | Reward")
 	int32 Experience = 100;
 
-	UPROPERTY(Category = "Quest | Reward", Meta = (InlineEditConditionToggle), BlueprintHidden)
+	UPROPERTY(Category = "Quest | Reward", Meta = (InlineEditConditionToggle), BlueprintReadOnly)
 	bool GrantsItem;
 
 	UPROPERTY(Category = "Quest | Reward", Meta = (EditCondition = "GrantsItem"))
 	TMap<UBait, int> Items;
 
-	UPROPERTY(Category = "Quest | Reward", Meta = (InlineEditConditionToggle), BlueprintHidden)
+	UPROPERTY(Category = "Quest | Reward", Meta = (InlineEditConditionToggle), BlueprintReadOnly)
 	bool GrantsFishingRod;
 
 	UPROPERTY(Category = "Quest | Reward", Meta = (EditCondition = "GrantsFishingRod"))

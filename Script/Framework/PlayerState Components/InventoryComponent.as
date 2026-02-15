@@ -8,8 +8,13 @@ enum EInventoryChangeType
 	Removed
 };
 
+UCLASS(Abstract)
 class UInventoryComponent : UFishComponentBase
 {
+	UPROPERTY(Category = "Licence", VisibleInstanceOnly, Meta = (Categories="Licence"))
+	FGameplayTagContainer Licences;
+	default Licences.AddTag(GameplayTags::Licence_Zone1);
+	
 	UPROPERTY(Category = "Rod", EditDefaultsOnly)
 	URodData DefaultRodData;
 
@@ -17,11 +22,11 @@ class UInventoryComponent : UFishComponentBase
 	UFishingRod EquippedRod;
 
 #if EDITOR
-	UPROPERTY(Category = "Rod", EditFixedSize, Meta = (TitleProperty = "TraitName", EditFixedOrder))
+	UPROPERTY(Category = "Rod", VisibleInstanceOnly, EditFixedSize, Meta = (TitleProperty = "TraitName", EditFixedOrder))
 	TArray<FDebugTraitInfo> TraitInfos;
 #endif
 
-	UPROPERTY(Category = "Inventory", EditFixedSize, Meta = (TitleProperty = "SlotName", EditFixedOrder))
+	UPROPERTY(Category = "Inventory", VisibleInstanceOnly, EditFixedSize, Meta = (TitleProperty = "SlotName", EditFixedOrder))
 	TArray<FInventorySlot> Items;
 
 	UPROPERTY(Category = "Inventory", EditDefaultsOnly)
@@ -91,10 +96,13 @@ class UInventoryComponent : UFishComponentBase
 #if EDITOR
 		TraitInfos.Empty();
 #endif
+
+		AppliedTraits.Empty();
+		System::CollectGarbage(); // terrible solution but it works so far
 	}
 
 	void EquipRod(UFishingRod NewRod)
-	{
+	{	
 		if (EquippedRod != nullptr)
 		{
 			OnRodUnequipped.Broadcast(EquippedRod);
@@ -107,6 +115,14 @@ class UInventoryComponent : UFishComponentBase
 			// apply rod stat modifiers
 			for (auto& TraitClass : EquippedRod.Traits)
 			{
+				if (TraitClass == nullptr) 
+				{
+					throw("TraitClass is nullptr!");
+					continue;
+				}
+
+				if (Character == nullptr) Character = GetFishCharacterBase();
+
 				auto Trait = NewObject(this, TraitClass);
 				Trait.Init(Character.FishingComponent, PlayerState.StatsComponent, PlayerState.TokenComponent);
 				AppliedTraits.Add(Trait);
@@ -130,7 +146,7 @@ class UInventoryComponent : UFishComponentBase
 	}
 
 	// literally just used to prevent garbage collection of traits
-	UPROPERTY()
+	UPROPERTY(NotEditable, NotVisible, BlueprintHidden)
 	TArray<UTrait> AppliedTraits;
 
 	UFUNCTION(Category = "Inventory")

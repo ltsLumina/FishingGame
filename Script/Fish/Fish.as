@@ -68,7 +68,7 @@ namespace Fish
 		{
 			return FishInstanceData.SizeData.IsTiny;
 		}
-	
+
 		UFUNCTION(Category = "Fish | Size", BlueprintPure)
 		mixin bool GetIsLarge(FFishInstanceData& FishInstanceData)
 		{
@@ -141,7 +141,10 @@ namespace Fish
 			UFUNCTION(Category = "Fish | Tag", BlueprintPure)
 			EFishTag RollTag()
 			{
-				float Roll = Math::RandRange(0.0f, 100.0f);
+				float LuckStat;
+				Stats::GetStat(GetFishCharacterBase(), GameplayTags::Stat_Fishing_Luck, false, false, LuckStat);
+				float Roll = Math::RandRange(0.0f, 100.0f) + LuckStat; // E.g., 5% luck would be a flat 5% increase to getting a tag.
+
 				if (Roll < UMBRAL_CHANCE)
 					return EFishTag::Umbral;
 				else if (Roll < UMBRAL_CHANCE + ASTRAL_CHANCE)
@@ -170,6 +173,21 @@ class AFish : AActor
 
 	default bReplicates = true;
 
+	bool OnSpawnCalled;
+
+	UFUNCTION(BlueprintOverride)
+	void BeginPlay()
+	{
+		System::SetTimerForNextTick(this, "Foo");
+	}
+
+	UFUNCTION(NotBlueprintCallable)
+	private void Foo()
+	{
+		if (!OnSpawnCalled)
+			throw("OnSpawn was not called!");
+	}
+
 	/**
 	 * @note Must be called after spawning the fish to initialize it!
 	 */
@@ -189,8 +207,11 @@ class AFish : AActor
 		}
 
 		FishInstanceData = Fish::InstanceData::MakeFishInstanceData(Data);
+
+		OnSpawnCalled = true;
 	}
 
+#if EDITOR
 	void OnCaught(AFishCharacter Catcher)
 	{
 		auto FishData = Item.FishData;
@@ -199,10 +220,7 @@ class AFish : AActor
 		FString HookInformation = f"{Item.GetItemName()} \nSize: {FishInstanceData.SizeData.Size} cm \nWeight: {FishInstanceData.SizeData.Weight} kg \nType: {FishData.FishType} \nRarity: {FishData.Rarity} \nSize Category: {SizeInformation} \nTag: {FishInstanceData.Tag:n}";
 		Print(f"{Catcher.ActorNameOrLabel} caught a {HookInformation}", 3.5f, FLinearColor::DPink);
 	}
-
-	UFUNCTION(BlueprintEvent, DisplayName = "Reeled In")
-	void BP_OnCaught(AFishCharacter Catcher)
-	{}
+#endif
 };
 
 enum EFishType
@@ -216,7 +234,7 @@ enum EFishType
 
 enum EFishRarity
 {
-	/**
+	/*
 	 * 100% spawn rate weight.
 	 */
 	Basic,
