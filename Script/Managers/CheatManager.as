@@ -52,7 +52,9 @@ class UFishCheatManager : UCheatManager
         auto DebugRod = EditorAsset::GetEditorAsset(f"/Game/FishingGame/Blueprints/Rods/{RodName}.{RodName}");
 
         auto PS = GetFishPlayerStateBase();
-        PS.InventoryComponent.EquipRod(FishingRod::GenerateRod(this, Cast<URodData>(DebugRod)));
+        auto Rod = FishingRod::GenerateRod(this, Cast<URodData>(DebugRod));
+        PS.InventoryComponent.EquipRod(Rod);
+        Print(f"[Cheat] Equipped a new rod! ({Rod.Data.RodName})", 5.0f, FLinearColor::Green);
         #endif
     }
 
@@ -69,7 +71,7 @@ class UFishCheatManager : UCheatManager
         }
 
         PS.OwnedTitles.AddUnique(TitleName);
-        Print(f"Granted title \"{TitleName}\"!", 5.0f, FLinearColor::Green);
+        Print(f"[Cheat] Granted title \"{TitleName}\"!", 5.0f, FLinearColor::Green);
     }
 
     UFUNCTION(Exec)
@@ -78,11 +80,11 @@ class UFishCheatManager : UCheatManager
         auto PS = GetFishPlayerStateBase();
         FTokenEntry NewEntry;
         int CurrentTokens;
-        bool bSuccess = PS.TokenComponent.AddTokenForDuration(Token, Amount, MaxTokens, Duration, RefreshDuration, Identifier, CurrentTokens, NewEntry);
+        bool bSuccess = PS.TokenComponent.AddTokenForDuration(Token, Amount, MaxTokens, Duration, RefreshDuration, FOnTokenExpiredDelegate(), Identifier, CurrentTokens, NewEntry);
 
         if (bSuccess)
         {
-            Print(f"[Cheat] Granted {Amount}x token \"{Token}\"!", 5.0f, FLinearColor::Yellow);
+            Print(f"[Cheat] Granted {Amount}x token \"{Token}\"!", 5.0f, FLinearColor::Green);
         }
     }
 }

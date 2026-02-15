@@ -147,7 +147,7 @@ class UFishGameInstance : UAdvancedFriendsGameInstance
 	{
 		auto SaveGame = Gameplay::LoadGameFromSlot("LobbyData", 0);
 		if (SaveGame == nullptr)
-			return ELoadResult::SuccessNoData;
+			return ELoadResult::NoData;
 
 		auto LoadedSave = Cast<ULobbySaveGame>(SaveGame);
 		if (LoadedSave == nullptr)

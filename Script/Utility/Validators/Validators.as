@@ -1,12 +1,12 @@
 #if EDITOR
 namespace BlueprintValidation
 {
-    /**
-     * Returns the generated blueprint asset from a given asset.
-     * This reference can cast to the appropriate class to access its properties.
-     * Not to be confused with Editor::GetBlueprintAsset, which returns the UBlueprint object, which does not have the properties of the blueprint class.
-     */
-	UFUNCTION(Category = "Validation", Meta=(WorldContext="InAsset"))
+	/**
+	 * Returns the generated blueprint asset from a given asset.
+	 * This reference can cast to the appropriate class to access its properties.
+	 * Not to be confused with Editor::GetBlueprintAsset, which returns the UBlueprint object, which does not have the properties of the blueprint class.
+	 */
+	UFUNCTION(Category = "Validation", Meta = (WorldContext = "InAsset"))
 	const UObject GetBlueprint(UObject InAsset)
 	{
 		auto Blueprint = Editor::GetBlueprintAsset(InAsset);
@@ -20,46 +20,58 @@ namespace BlueprintValidation
 		return BlueprintAsset;
 	}
 
-    /**
-     * Gathers all components from a blueprint asset.
-     * @param InAsset The blueprint asset to gather components from.
-     * @param Components The array to store the gathered components.
-     * @return True if components were found, false otherwise.
-     */
-    UFUNCTION(Category = "Validation", Meta=(WorldContext="InAsset"))
-    bool GetBlueprintComponents(UObject InAsset, TArray<UObject>&out Components)
-    {
-        auto Blueprint = Editor::GetBlueprintAsset(InAsset);
-        TArray<FSubobjectDataHandle> SubobjectData;
+	UFUNCTION(Category = "Validation", Meta = (WorldContext = "InAsset"))
+	const UObject GetBlueprintGeneratedClass(UObject InAsset)
+	{
+		return Editor::GeneratedClass(Editor::GetBlueprintAsset(InAsset));
+	}
+
+	UFUNCTION(Category = "Validation", Meta = (WorldContext = "InAsset"))
+	const UObject GetBlueprintCDO(UObject InAsset)
+	{
+		return Editor::GeneratedClass(Editor::GetBlueprintAsset(InAsset)).GetDefaultObject();
+	}
+
+	/**
+	 * Gathers all components from a blueprint asset.
+	 * @param InAsset The blueprint asset to gather components from.
+	 * @param Components The array to store the gathered components.
+	 * @return True if components were found, false otherwise.
+	 */
+	UFUNCTION(Category = "Validation", Meta = (WorldContext = "InAsset"))
+	bool GetBlueprintComponents(UObject InAsset, TArray<UObject>&out Components)
+	{
+		auto Blueprint = Editor::GetBlueprintAsset(InAsset);
+		TArray<FSubobjectDataHandle> SubobjectData;
 		Subsystem::GetEngineSubsystem(USubobjectDataSubsystem).GatherSubobjectDataForBlueprint(Blueprint, SubobjectData);
-        for (auto& Component : SubobjectData)
-        {
-            FSubobjectData Data;
-            SubobjectData::GetData(Component, Data);
+		for (auto& Component : SubobjectData)
+		{
+			FSubobjectData Data;
+			SubobjectData::GetData(Component, Data);
 
-            Components.Add(SubobjectData::GetObject(Data));
-        }
+			Components.Add(SubobjectData::GetObject(Data));
+		}
 
-        return Components.Num() > 0;
-    }
+		return Components.Num() > 0;
+	}
 
-    UFUNCTION(Category = "Validation", Meta=(WorldContext="InAsset"))
-    UObject GetBlueprintComponent(UObject InAsset, UClass ComponentClass)
-    {
-        TArray<UObject> Components;
-        if (GetBlueprintComponents(InAsset, Components))
-        {
-            for (int i = 0; i < Components.Num(); i++)
-            {
-                if (Components[i].IsA(ComponentClass))
-                {
-                    return Components[i];
-                }
-            }
-        }
+	UFUNCTION(Category = "Validation", Meta = (WorldContext = "InAsset"))
+	UObject GetBlueprintComponent(UObject InAsset, UClass ComponentClass)
+	{
+		TArray<UObject> Components;
+		if (GetBlueprintComponents(InAsset, Components))
+		{
+			for (int i = 0; i < Components.Num(); i++)
+			{
+				if (Components[i].IsA(ComponentClass))
+				{
+					return Components[i];
+				}
+			}
+		}
 
-        return nullptr;
-    }
+		return nullptr;
+	}
 }
 
 class UFishValidator : UEditorValidatorBase
@@ -73,90 +85,92 @@ class UFishValidator : UEditorValidatorBase
 
 	UPROPERTY(Category = "Validation", BlueprintReadOnly, Meta = (Multiline))
 	FText ValidationMessage = FText::FromString("Please provide a validation message.");
-    
+
 	UFUNCTION(BlueprintOverride)
 	bool CanValidate(EDataValidationUsecase InUsecase) const
 	{
-        return true;
+		return true;
 	}
-    
+
 	UFUNCTION(BlueprintOverride)
 	bool CanValidateAsset(UObject InAsset) const
 	{
-        auto Blueprint = Editor::GetBlueprintAsset(InAsset);
-        bool IsBlueprint = Blueprint != nullptr;
-        UClass GeneratedBlueprint = IsBlueprint ? Editor::GetBlueprintAsset(InAsset).GeneratedClass : nullptr;
+		auto Blueprint = Editor::GetBlueprintAsset(InAsset);
+		bool IsBlueprint = Blueprint != nullptr;
+		UClass GeneratedBlueprint = IsBlueprint ? Editor::GetBlueprintAsset(InAsset).GeneratedClass : nullptr;
 
-        for (auto& ValidatedClass : ValidatedClasses)
-        {
-            if (InAsset.IsA(ValidatedClass) || (ValidateBlueprint && IsBlueprint && GeneratedBlueprint.IsChildOf(ValidatedClass)))
-            {
-                return true;
-            }
-        }
-        return false;
+		for (auto& ValidatedClass : ValidatedClasses)
+		{
+			if (InAsset.IsA(ValidatedClass) || (ValidateBlueprint && IsBlueprint && GeneratedBlueprint.IsChildOf(ValidatedClass)))
+			{
+				return true;
+			}
+		}
+		return false;
 	}
 }
 
 class UQuestValidator : UFishValidator
 {
-    default ValidatedClasses.Add(UQuest);
+	default ValidatedClasses.Add(UQuest);
 
-    UFUNCTION(BlueprintOverride)
-    EDataValidationResult ValidateLoadedAsset(UObject InAsset)
-    {
-        auto Quest = Cast<UQuest>(InAsset);
-        if (Quest.Objectives.Num() == 0)
-        {
-            AssetFails(InAsset, FText::FromString("Quest has no objectives!"));
-            return EDataValidationResult::Invalid;
-        }
+	UFUNCTION(BlueprintOverride)
+	EDataValidationResult ValidateLoadedAsset(UObject InAsset)
+	{
+		auto Quest = Cast<UQuest>(InAsset);
+		if (Quest.Objectives.Num() == 0)
+		{
+			AssetFails(InAsset, FText::FromString("Quest has no objectives!"));
+			return EDataValidationResult::Invalid;
+		}
 
-        for (auto& Objective : Quest.Objectives)
-        {
-            if (Objective == nullptr)
-            {
-                AssetFails(InAsset, FText::FromString("Quest has a null objective!"));
-                return EDataValidationResult::Invalid;
-            }
-        }
+		for (auto& Objective : Quest.Objectives)
+		{
+			if (Objective == nullptr)
+			{
+				AssetFails(InAsset, FText::FromString("Quest has a null objective!"));
+				return EDataValidationResult::Invalid;
+			}
+		}
 
-        return EDataValidationResult::Valid;
-    }
+		return EDataValidationResult::Valid;
+	}
 }
 
 class UAbilityTableValidator : UFishValidator
 {
 	default ValidatedClasses.Add(UDataTable);
 
-    UFUNCTION(BlueprintOverride)
-    bool CanValidate(EDataValidationUsecase InUsecase) const
-    {
-        return false;
-    }
+	UFUNCTION(BlueprintOverride)
+	bool CanValidate(EDataValidationUsecase InUsecase) const
+	{
+		return false;
+	}
 
 	UFUNCTION(BlueprintOverride)
 	EDataValidationResult ValidateLoadedAsset(UObject InAsset)
 	{
-        auto DataTable = Cast<UDataTable>(InAsset);
-        TArray<FAbilityUnlockInfo> Rows;
-        DataTable.GetAllRows(Rows);
-        for (auto& Row : Rows)
-        {
-            if (Row.Ability.IsNull())
-            {
-                AssetFails(InAsset, FText::FromString("\nAbilityUnlockTable has invalid AbilityData references in the AbilityHandlerComponent! \nDo NOT save the asset. If possible, undo your last changes, then right-click the asset and select 'Reload'."));
-                return EDataValidationResult::Invalid;
-            }
-        }
-        
-        return EDataValidationResult::Valid;
+		auto DataTable = Cast<UDataTable>(InAsset);
+		TArray<FAbilityUnlockInfo> Rows;
+		DataTable.GetAllRows(Rows);
+        if (Rows.IsEmpty()) return EDataValidationResult::Invalid;
+
+		for (auto& Row : Rows)
+		{
+			if (Row.Ability.IsNull())
+			{
+				AssetFails(InAsset, FText::FromString("\nAbilityUnlockTable has invalid AbilityData references in the AbilityHandlerComponent! \nDo NOT save the asset. If possible, undo your last changes, then right-click the asset and select 'Reload'."));
+				return EDataValidationResult::Invalid;
+			}
+		}
+
+		return EDataValidationResult::Valid;
 	}
 }
 
 class UIDValidator : UFishValidator
 {
-    default ValidatedClasses.Add(UQuest);
+	default ValidatedClasses.Add(UQuest);
 	default ValidatedClasses.Add(UItem);
 	default ValidatedClasses.Add(AFishNPC);
 
@@ -189,7 +203,7 @@ class UIDValidator : UFishValidator
 
 		if (IsBlueprint)
 		{
-            auto BlueprintAsset = BlueprintValidation::GetBlueprint(InAsset);
+			auto BlueprintAsset = BlueprintValidation::GetBlueprint(InAsset);
 			if (BlueprintAsset.IsA(AFishNPC))
 			{
 				auto NPC = Cast<AFishNPC>(BlueprintAsset);
@@ -202,6 +216,42 @@ class UIDValidator : UFishValidator
 			}
 		}
 
+		return EDataValidationResult::Valid;
+	}
+}
+
+class UTraitValidator : UFishValidator
+{
+	default ValidatedClasses.Add(UTrait);
+
+	UFUNCTION(BlueprintOverride)
+	EDataValidationResult ValidateLoadedAsset(UObject InAsset)
+	{
+		auto Trait = Cast<UTrait>(BlueprintValidation::GetBlueprintCDO(InAsset));
+
+		TMap<FName, bool> Conditions;
+		Conditions.Add(n"Name", Trait.TraitName.IsEmptyOrWhitespace());
+		Conditions.Add(n"Description", Trait.Description.IsEmptyOrWhitespace());
+		Conditions.Add(n"BasicEffect", Trait.BasicEffect.IsEmptyOrWhitespace());
+		Conditions.Add(n"EnhancedEffect", (Trait.CanBeEnhanced && Trait.EnhancedEffect.IsEmptyOrWhitespace()));
+
+		for (auto& Condition : Conditions)
+		{
+			if (Condition.Value)
+			{
+				if (Condition.Key.IsEqual(n"Name"))
+				{
+					Trait.TraitName = ObjectNames::NicifyVariableName(Trait.GetName(), "Trait_");
+					AssetWarning(InAsset, FText::FromString("Trait had a missing name. A default one was generated based on the file name."));
+                    continue;
+				}
+
+				AssetFails(InAsset, FText::FromString(f"{Trait.Name}'s {Condition.Key} is empty!"));
+				return EDataValidationResult::Invalid;
+			}
+		}
+
+		AssetPasses(InAsset);
 		return EDataValidationResult::Valid;
 	}
 }

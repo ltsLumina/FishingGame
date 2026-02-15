@@ -1,21 +1,29 @@
 event void FOnTokenAdded(FTokenEntry TokenEntry);
 event void FOnTokenRemoved(FTokenEntry TokenEntry);
 event void FOnTokenExpired(FTokenEntry TokenEntry);
-event void FOnTokenCooldownAdded(FGameplayTag Token, float Duration, FText EffectName);
-event void FOnTokenCooldownExpired(FGameplayTag Token);
+event void FOnCooldownTokenAdded(FCooldownTokenEntry CooldownToken);
+event void FOnTokenCooldownExpired(FCooldownTokenEntry CooldownToken);
 
+delegate void FOnTokenExpiredDelegate(FTokenEntry ExpiredToken);
+delegate void FOnCooldownTokenExpiredDelegate(FCooldownTokenEntry ExpiredToken);
+
+UCLASS(Abstract, Meta= (PrioritizeCategories = "Tokens"))
 class UTokenComponent : UFishComponentBase
 {
 	/**
 	 * Tokens are granted by certain abilities or traits to modify fishing behavior (e.g., ignoring conditions).
 	 * For instance, an ability may grant a "Thaliak's Favor" token, which can be used by other abilities.
 	 * **Key:** FGameplayTag representing the token type.
-	 * **Value:** Float representing the amount of tokens (stacks) the player has.
+	 * **Value:** int representing the amount of tokens (stacks) of 'Key' type the player has.
 	 * @see FTokenEntry
 	 */
 	UPROPERTY(Category = "Tokens", VisibleInstanceOnly, BlueprintReadOnly)
 	TMap<FGameplayTag, int> Tokens;
 
+	/**
+	 * The currently active tokens and their corresponding entry.
+	 * @see FTokenEntry
+	 */
 	UPROPERTY(Category = "Tokens", VisibleInstanceOnly, BlueprintReadOnly)
 	TArray<FTokenEntry> ActiveTokens;
 
@@ -23,7 +31,7 @@ class UTokenComponent : UFishComponentBase
 	 * Tokens that are currently on cooldown and cannot be granted again until the cooldown expires.
 	 */
 	UPROPERTY(Category = "Tokens", VisibleInstanceOnly, BlueprintReadOnly)
-	TMap<FGameplayTag, float> CooldownTokens;
+	TMap<FGameplayTag, FCooldownTokenEntry> CooldownTokens;
 
 	UPROPERTY(Category = "Events")
 	FOnTokenAdded OnTokenAdded;
@@ -35,10 +43,10 @@ class UTokenComponent : UFishComponentBase
 	FOnTokenExpired OnTokenExpired;
 
 	UPROPERTY(Category = "Events")
-	FOnTokenCooldownAdded OnTokenCooldownAdded;
+	FOnCooldownTokenAdded OnCooldownTokenAdded;
 
 	UPROPERTY(Category = "Events")
-	FOnTokenCooldownExpired OnTokenCooldownExpired;
+	FOnTokenCooldownExpired OnCooldownTokenExpired;
 
 	default ComponentTickInterval = 0;
 
@@ -71,25 +79,32 @@ class UTokenComponent : UFishComponentBase
 						Entry.Amount = Math::Max(Entry.Amount - 1, 0);
 						Entry.RemainingTime = Entry.Duration;
 						Entry.RemainingTimeString = f"{Entry.RemainingTime:.1f}s/{Entry.Duration:.1f}s";
+						Entry.TokenExpired.ExecuteIfBound(Entry);
+
 						ActiveTokens[i] = Entry;
-						Print(f"Token {Entry.Tag} expired, but more remain. \nNew amount: {Tokens[Entry.Tag]}", 3.0f, FLinearColor::LucBlue);
 						OnTokenExpired.Broadcast(Entry);
+						Print(f"Token {Entry.Tag} expired, but more remain. \nNew amount: {Tokens[Entry.Tag]}", 3.0f, FLinearColor::LucBlue);
 					}
 					else // last token expired
 					{
-						FTokenEntry ExpiredEntry = FTokenEntry(Entry.Tag, 0, Entry.MaxAmount, -1.0f, Entry.ID);
-						ExpiredEntry.RemainingTime = 0.0f;
-						ExpiredEntry.RemainingTimeString = "Expired";
+						FTokenEntry LastEntry = FTokenEntry(Entry.Tag, 0, Entry.MaxAmount, -1.0f, Entry.ID);
+						LastEntry.RemainingTime = 0.0f;
+						LastEntry.RemainingTimeString = "Expired";
+						Entry.TokenExpired.ExecuteIfBound(LastEntry);
+
 						ActiveTokens.RemoveAt(i);
-						OnTokenExpired.Broadcast(ExpiredEntry);
+						OnTokenExpired.Broadcast(LastEntry);
 					}
 				}
 				else // not refreshing duration, just remove the token entry
 				{
-					FTokenEntry ExpiredEntry = FTokenEntry(Entry.Tag, 0, Entry.MaxAmount, -1.0f, Entry.ID);
+					FTokenEntry NonRefreshEntry = FTokenEntry(Entry.Tag, 0, Entry.MaxAmount, -1.0f, Entry.ID);
+					Entry.TokenExpired.ExecuteIfBound(NonRefreshEntry);
+
 					RemoveToken(Entry.Tag, Entry.Amount);
+
 					ActiveTokens.RemoveAt(i);
-					OnTokenExpired.Broadcast(ExpiredEntry);
+					OnTokenExpired.Broadcast(NonRefreshEntry);
 				}
 			}
 		}
@@ -98,14 +113,26 @@ class UTokenComponent : UFishComponentBase
 		{
 			TArray<FGameplayTag> Keys;
 			CooldownTokens.GetKeys(Keys);
+
 			FGameplayTag Token = Keys[i];
-			float& Duration = CooldownTokens[Token];
+
+			FCooldownTokenEntry Entry;
+			CooldownTokens.Find(Token, Entry);
+
+			float& Duration = Entry.Duration;
+			FOnCooldownTokenExpiredDelegate& Delegate = Entry.TokenExpired;
 
 			Duration -= DeltaSeconds;
 			if (Duration <= 0.0f)
 			{
 				CooldownTokens.Remove(Token);
-				OnTokenCooldownExpired.Broadcast(Token);
+				Delegate.ExecuteIfBound(Entry);
+				OnCooldownTokenExpired.Broadcast(Entry);
+			}
+			else
+			{
+				// TMap.Find returns a copy, so we write the new value of the duration back into the map.
+				CooldownTokens[Token] = Entry;
 			}
 		}
 	}
@@ -207,8 +234,8 @@ class UTokenComponent : UFishComponentBase
 	 * @param TokenEntry Output parameter to receive the details of the added token entry.
 	 * @return True if the token was added successfully, false if the maximum token limit was reached.
 	 */
-	UFUNCTION(Category = "Fishing | Tokens", Meta = (ReturnDisplayName = "Success", Categories = "Token", AdvancedDisplay = "Identifier"))
-	bool AddTokenForDuration(FGameplayTag Token, int Amount, int MaxTokens = 1, float Duration = 5.0f, bool RefreshDuration = true, FName Identifier = NAME_None, int&out CurrentTokens = 0.0f, FTokenEntry&out TokenEntry = FTokenEntry())
+	UFUNCTION(Category = "Fishing | Tokens", Meta = (ReturnDisplayName = "Success", Categories = "Token", AdvancedDisplay = "TokenExpired, Identifier"))
+	bool AddTokenForDuration(FGameplayTag Token, int Amount = 1, int MaxTokens = 1, float Duration = 5.0f, bool RefreshDuration = true, FOnTokenExpiredDelegate TokenExpired = FOnTokenExpiredDelegate, FName Identifier = NAME_None, int&out CurrentTokens = 0.0f, FTokenEntry&out TokenEntry = FTokenEntry())
 	{
 		if (IsTokenOnCooldown(Token)) // optional cooldown token check
 		{
@@ -234,6 +261,7 @@ class UTokenComponent : UFishComponentBase
 		FTokenEntry NewEntry = FTokenEntry(Token, Amount, MaxTokens, Duration, Identifier);
 		NewEntry.RemainingTime = Duration;
 		NewEntry.RemainingTimeString = Duration > 0.0f ? f"{Duration:.1f}s/{Duration:.1f}s" : "Expired";
+		NewEntry.TokenExpired = TokenExpired;
 
 		if (RefreshDuration)
 		{
@@ -241,7 +269,7 @@ class UTokenComponent : UFishComponentBase
 			for (int i = 0; i < ActiveTokens.Num(); i++)
 			{
 				FTokenEntry ExistingEntry = ActiveTokens[i];
-				if (ExistingEntry.Tag == Token && ExistingEntry.ID == Identifier)
+				if (ExistingEntry.Tag == Token && ExistingEntry.ID == Identifier) // ID == Identifier is true by default if no identifier is set.
 				{
 					// Refresh the countdown
 					ExistingEntry.Duration = Duration;
@@ -292,31 +320,42 @@ class UTokenComponent : UFishComponentBase
 		return CooldownTokens.Contains(Token);
 	}
 
-	UFUNCTION(Category = "Fishing | Tokens", Meta = (Categories = "Token"))
-	void AddCooldownToken(FGameplayTag Token, float Duration = 5, FText EffectName = FText::FromString("Unknown Cooldown"))
+	/**
+	 * Adds a cooldown token. While a cooldown token is active, subsequent tokens of the same tag cannot be added.
+	 * For example, if you add a Token.Trait.Example token, then add a cooldown token with the same tag, attempting to add further tokens will fail.
+	 * @param Token The token to add.
+	 * @param Duration The duration in seconds for which the token is valid.
+	 * @param EffectName The name of the effect associated with the token.
+	 */
+	UFUNCTION(Category = "Fishing | Tokens", Meta = (Categories = "Token", AdvancedDisplay = "TokenExpired"))
+	void AddCooldownToken(FGameplayTag Token, float Duration = 5, FText EffectName = FText::FromString("Unknown Cooldown"), FOnCooldownTokenExpiredDelegate TokenExpired = FOnCooldownTokenExpiredDelegate())
 	{
 		if (!IsTokenOnCooldown(Token))
 		{
-			CooldownTokens.Add(Token, Duration);
-			OnTokenCooldownAdded.Broadcast(Token, Duration, EffectName);
+			FCooldownTokenEntry Entry = FCooldownTokenEntry(Token, Duration, EffectName, TokenExpired);
+
+			CooldownTokens.Add(Token, Entry);
+			OnCooldownTokenAdded.Broadcast(Entry);
 		}
 	}
 
 	/**
-	 * Add a one-shot token for traits that want to fire once and immediately go on cooldown.
+	 * Add a one-shot ("fire and forget") token for traits that want to fire once and immediately go on cooldown.
 	 * Does not support stacking. If the token is already on cooldown, it will not be added, and the function will return false.
 	 * @param Token The token to add.
-	 * @param Duration The duration in seconds for which the token is valid.
+	 * @param CooldownDuration The duration in seconds for which the token is valid.
 	 * @param EffectName The name of the effect associated with the token.
 	 * @return True if the token is not already on cooldown, false otherwise.
 	 */
-	UFUNCTION(Category = "Fishing | Tokens", Meta = (Categories = "Token", ExpandBoolAsExecs = "ReturnValue"))
-	bool AddTokenOneShot(FGameplayTag Token, float Duration = 5, FText EffectName = FText::FromString("Unknown Cooldown"))
+	UFUNCTION(Category = "Fishing | Tokens", Meta = (Categories = "Token", ExpandBoolAsExecs = "ReturnValue", AdvancedDisplay = "TokenExpired"))
+	bool AddTokenOneShot(FGameplayTag Token, float CooldownDuration = 5, FText EffectName = FText::FromString("Unknown Cooldown"), FOnCooldownTokenExpiredDelegate TokenExpired = FOnCooldownTokenExpiredDelegate())
 	{
 		if (!IsTokenOnCooldown(Token))
 		{
-			CooldownTokens.Add(Token, Duration);
-			OnTokenCooldownAdded.Broadcast(Token, Duration, EffectName);
+			auto Entry = FCooldownTokenEntry(Token, CooldownDuration, EffectName, TokenExpired);
+
+			CooldownTokens.Add(Token, Entry);
+			OnCooldownTokenAdded.Broadcast(Entry);
 			return true;
 		}
 
@@ -335,10 +374,10 @@ struct FTokenEntry
 	UPROPERTY(BlueprintReadOnly)
 	int MaxAmount;
 
-	UPROPERTY(NotVisible, Meta=(Units="s"))
+	UPROPERTY(BlueprintReadOnly, Meta = (Units = "s"))
 	float Duration;
 
-	UPROPERTY(NotVisible, BlueprintReadOnly, Meta=(Units="s"))
+	UPROPERTY(BlueprintReadOnly, NotVisible, Meta = (Units = "s"))
 	float RemainingTime;
 
 	UPROPERTY(BlueprintHidden)
@@ -347,7 +386,10 @@ struct FTokenEntry
 	UPROPERTY(BlueprintReadOnly)
 	bool RefreshDuration;
 
-	UPROPERTY()
+	UPROPERTY(BlueprintReadOnly)
+	FOnTokenExpiredDelegate TokenExpired;
+
+	UPROPERTY(BlueprintReadOnly)
 	FName ID = NAME_None;
 
 	FTokenEntry(FGameplayTag InTag, int InAmount, int InMaxAmount, float InDuration, FName InID)
@@ -364,27 +406,62 @@ struct FTokenEntry
 
 struct FTokenDefinition
 {
-	UPROPERTY(Category = "Details", BlueprintReadOnly)
+	/**
+	 * Displays the current and max amount of tokens on the token HUD.
+	 */
+	UPROPERTY(Category = "Settings", BlueprintReadOnly)
 	bool DisplayMaxStackCount = true;
 
-	UPROPERTY(Category = "Details", BlueprintReadOnly)
+	/**
+	 * Displays the remaining time on the token.
+	 */
+	UPROPERTY(Category = "Settings", BlueprintReadOnly)
+	bool DisplayTimeRemaining = true;
+
+	/**
+	 * Fades the effect text in and out to indicate that the effect is expiring in < 5 seconds.
+	 */
+	UPROPERTY(Category = "Settings", BlueprintReadOnly)
 	bool BlinkWhenExpiring = true;
 
-	UPROPERTY(Category = "Details")
+	UPROPERTY(Category = "Details", BlueprintReadOnly)
 	FText TokenName;
 
-	UPROPERTY(Category = "Details", Meta = (MultiLine))
+	UPROPERTY(Category = "Details", BlueprintReadOnly, Meta = (MultiLine))
 	FText Description;
 
-	UPROPERTY(Category = "Visuals")
+	UPROPERTY(Category = "Visuals", BlueprintReadOnly)
 	UTexture2D Icon;
 
 	/**
-	 * Only used to quickly view gameplay tags in editor. Do not use or set this anywhere!s
+	 * Only used to quickly view gameplay tags in editor. Do not use or set this anywhere!
 	 */
-	UPROPERTY(Category = "Debug", BlueprintHidden, NotVisible)
+	UPROPERTY(Category = "Debug", BlueprintHidden, EditDefaultsOnly)
 	private FGameplayTag Helper;
 };
+
+struct FCooldownTokenEntry
+{
+	UPROPERTY(BlueprintReadOnly, Meta = (Categories = "Token"))
+	FGameplayTag Tag;
+
+	UPROPERTY(BlueprintReadOnly)
+	float Duration = 5;
+
+	UPROPERTY(BlueprintReadOnly)
+	FText EffectName = FText::FromString("Unknown Cooldown");
+
+	UPROPERTY(BlueprintReadOnly)
+	FOnCooldownTokenExpiredDelegate TokenExpired = FOnCooldownTokenExpiredDelegate();
+
+	FCooldownTokenEntry(FGameplayTag InTag, float InDuration, FText InEffectName, FOnCooldownTokenExpiredDelegate InTokenExpired)
+	{
+		this.Tag = InTag;
+		this.Duration = InDuration;
+		this.EffectName = InEffectName;
+		this.TokenExpired = InTokenExpired;
+	}
+}
 
 namespace Token
 {
@@ -405,7 +482,7 @@ namespace Token
 	{
 		return Entry.MaxAmount;
 	}
-	
+
 	UFUNCTION(BlueprintPure, Category = "Token")
 	mixin float GetDuration(FTokenEntry Entry)
 	{
@@ -424,16 +501,31 @@ namespace Token
 		return Entry.RefreshDuration;
 	}
 
-	UFUNCTION(BlueprintPure, Category = "Token")
-	mixin FText GetCooldownName(FText EffectName)
+	namespace Cooldown
 	{
-		FString ToString = EffectName.ToString();
-		if (!ToString.Contains("Cooldown"))
+		UFUNCTION(BlueprintPure, Category = "Token", DisplayName = "Get Tag")
+		mixin FGameplayTag GetCooldownTag(FCooldownTokenEntry Entry)
 		{
-			return FText::FromString(f"{ToString} Cooldown");
+			return Entry.Tag;
 		}
 
-		return EffectName;
+		UFUNCTION(BlueprintPure, Category = "Token", DisplayName = "Get Duration")
+		mixin float GetCooldownDuration(FCooldownTokenEntry Entry)
+		{
+			return Entry.Duration;
+		}
+
+		UFUNCTION(BlueprintPure, Category = "Token")
+		mixin FText GetCooldownName(FCooldownTokenEntry Entry)
+		{
+			FString ToString = Entry.EffectName.ToString();
+			if (!ToString.Contains("Cooldown"))
+			{
+				return FText::FromString(f"{ToString} Cooldown");
+			}
+
+			return Entry.EffectName;
+		}
 	}
 
 	namespace Definition
@@ -442,6 +534,12 @@ namespace Token
 		mixin bool GetDisplayMaxStackCount(FTokenDefinition Definition)
 		{
 			return Definition.DisplayMaxStackCount;
+		}
+
+		UFUNCTION(BlueprintPure, Category = "Token")
+		mixin bool GetDisplayTimeRemaining(FTokenDefinition Definition)
+		{
+			return Definition.DisplayTimeRemaining;
 		}
 
 		UFUNCTION(BlueprintPure, Category = "Token")

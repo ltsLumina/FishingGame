@@ -126,24 +126,6 @@ namespace FishingRod
 
 		return String;
 	}
-
-	UFUNCTION(BlueprintPure)
-	mixin FText GetName(URodData RodData)
-	{
-		return RodData.Details.RodName;
-	}
-
-	UFUNCTION(BlueprintPure)
-	mixin FText GetLore(URodData RodData)
-	{
-		return RodData.Details.Lore;
-	}
-	
-	UFUNCTION(BlueprintPure)
-	mixin UTexture2D GetIcon(URodData RodData)
-	{
-		return RodData.Details.Icon;
-	}
 }
 
 enum ERodTier
@@ -162,8 +144,14 @@ enum ERodTier
 
 class URodData : UPrimaryDataAsset
 {
-	UPROPERTY(Category = "Rod")
-	FRodDetails Details;
+	UPROPERTY(DisplayName = "Name")
+	FText RodName = FText::FromString("Fishing Rod");
+
+	UPROPERTY(Meta = (MultiLine))
+	FText Lore = FText::FromString("A basic fishing rod.");
+
+	UPROPERTY()
+	UTexture2D Icon;
 
 	UPROPERTY(Category = "Rod")
 	ERodTier Tier;
@@ -189,18 +177,6 @@ class URodData : UPrimaryDataAsset
 	default Traits.TraitCountChances.Add(30); // 2 traits
 	default Traits.TraitCountChances.Add(20); // 3 traits
 	default Traits.TraitCountChances.Add(5);  // 4 traits
-};
-
-struct FRodDetails
-{
-	UPROPERTY(DisplayName = "Name")
-	FText RodName = FText::FromString("Fishing Rod");
-
-	UPROPERTY(Meta = (MultiLine))
-	FText Lore = FText::FromString("A basic fishing rod.");
-
-	UPROPERTY()
-	UTexture2D Icon;
 };
 
 struct FRodTraits

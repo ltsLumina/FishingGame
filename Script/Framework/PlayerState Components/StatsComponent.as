@@ -4,12 +4,12 @@ event void FOnModifierExpired(FStatModification ExpiredModification);
 UCLASS(Abstract)
 class UStatsComponent : UFishComponentBase
 {
-	UPROPERTY(Category = "Stats", EditDefaultsOnly, Meta = (Categories = "Stat", Units = "%", UIMin = 0, UIMax = 100, Delta = 0.5))
-	TMap<FGameplayTag, float> Stats;
-	default Stats.Add(GameplayTags::Stat_Fishing_ReelSpeed, 100.0f);   // Increases the reel-in animation's play rate. (Higher = Faster reeling)
-	default Stats.Add(GameplayTags::Stat_Fishing_BiteRate, 100.0f);	   // Decreases the time for a fish to bite. (Higher = Quicker bites)
-	default Stats.Add(GameplayTags::Stat_Fishing_CatchChance, 100.0f); // Increases the chance to sucessfully catch a fish. (Higher = Better odds)
-	default Stats.Add(GameplayTags::Stat_Fishing_Luck, 0.0f);		   // Increases the chance for a fish to have a tag. (Higher = better rewards)
+	UPROPERTY(Category = "Stats", EditDefaultsOnly, Meta = (Categories = "Stat", Units = "%", UIMin = 0, UIMax = 200, Delta = 0.5))
+	TMap<FGameplayTag, float> BaseStats;
+	default BaseStats.Add(GameplayTags::Stat_Fishing_ReelSpeed, 100.0f);   // Increases the reel-in animation's play rate. (Higher = Faster reeling)
+	default BaseStats.Add(GameplayTags::Stat_Fishing_BiteRate, 100.0f);	   // Decreases the time for a fish to bite. (Higher = Quicker bites)
+	default BaseStats.Add(GameplayTags::Stat_Fishing_CatchChance, 100.0f); // Increases the chance to sucessfully catch a fish. (Higher = Better odds)
+	default BaseStats.Add(GameplayTags::Stat_Fishing_Luck, 0.0f);		   // Increases the chance for a fish to have a tag. (Higher = better rewards)
 
 	UPROPERTY(Category = "Stats", VisibleInstanceOnly, Meta = (Categories = "Stat"))
 	private TMap<FGameplayTag, float> AdditiveModifiers;
@@ -22,7 +22,7 @@ class UStatsComponent : UFishComponentBase
 	TMap<FString, float> CurrentStats;
 #endif
 
-	UPROPERTY(Category = "Stats", Meta = (TitleProperty = "{StatTag} ({RemainingTimeString})"))
+	UPROPERTY(Category = "Stats", VisibleInstanceOnly, Meta = (TitleProperty = "{StatTag} ({RemainingTimeString})"))
 	private TArray<FStatModification> ActiveModifications;
 
 	UPROPERTY(Category = "Events")
@@ -66,7 +66,7 @@ class UStatsComponent : UFishComponentBase
 #if EDITOR
 		// 'CurrentStats' is an outliner-only thing to easily read the player's current stats.
 		CurrentStats = TMap<FString, float>();
-		for (auto& StatPair : Stats)
+		for (auto& StatPair : BaseStats)
 		{
 			float ModifiedValue = StatPair.Value;
 
@@ -123,15 +123,15 @@ class UStatsComponent : UFishComponentBase
 		{
 			if (BaseValue)
 			{
-				OutValue = Stats[StatTag];
+				OutValue = BaseStats[StatTag];
 			}
 			else if (!HasModifier(StatTag))
 			{
-				OutValue = Stats[StatTag];
+				OutValue = BaseStats[StatTag];
 			}
 			else
 			{
-				float ModifiedValue = Stats[StatTag];
+				float ModifiedValue = BaseStats[StatTag];
 
 				// additive modifiers first
 				if (AdditiveModifiers.Contains(StatTag))
@@ -155,7 +155,7 @@ class UStatsComponent : UFishComponentBase
 	UFUNCTION(Category = "Stats", BlueprintPure, Meta = (Categories = "Stat"))
 	bool HasStat(FGameplayTag StatTag)
 	{
-		return Stats.Contains(StatTag);
+		return BaseStats.Contains(StatTag);
 	}
 
 	TMap<FGameplayTag, FName> TrackedModifiers;
@@ -334,7 +334,7 @@ class UStatsComponent : UFishComponentBase
 	bool SaveStats()
 	{
 		auto SaveGame = Gameplay::CreateSaveGameObject(UStatsSaveGame);
-		SaveGame.SavedStats = Stats;
+		SaveGame.SavedStats = BaseStats;
 		return Gameplay::SaveGameToSlot(SaveGame, "PlayerStats", 0);
 	}
 
@@ -345,13 +345,13 @@ class UStatsComponent : UFishComponentBase
 
 		auto SaveGame = Gameplay::LoadGameFromSlot("PlayerStats", 0);
 		if (SaveGame == nullptr)
-			return ELoadResult::SuccessNoData;
+			return ELoadResult::NoData;
 
 		auto LoadedSave = Cast<UStatsSaveGame>(SaveGame);
 		if (LoadedSave == nullptr)
 			return ELoadResult::Failure;
 
-		Stats = LoadedSave.SavedStats;
+		BaseStats = LoadedSave.SavedStats;
 		return ELoadResult::Success;
 	}
 };

@@ -176,7 +176,7 @@ class UCollectionComponent : UFishComponentBase
 	{
 		auto SaveGame = Gameplay::LoadGameFromSlot("PlayerCollection", 0);
 		if (SaveGame == nullptr)
-			return ELoadResult::SuccessNoData;
+			return ELoadResult::NoData;
 
 		auto LoadedSave = Cast<UInventorySaveGame>(SaveGame);
 		if (LoadedSave == nullptr)

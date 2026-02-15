@@ -114,7 +114,7 @@ class UCurrencyComponent : UFishComponentBase
 	{
 		auto SaveGame = Gameplay::LoadGameFromSlot("PlayerCurrencies", 0);
 		if (SaveGame == nullptr)
-			return ELoadResult::SuccessNoData;
+			return ELoadResult::NoData;
 
 		auto LoadedSave = Cast<UCurrencySaveGame>(SaveGame);
 		if (LoadedSave == nullptr)

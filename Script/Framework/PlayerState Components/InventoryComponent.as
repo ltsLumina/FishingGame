@@ -418,7 +418,7 @@ class UInventoryComponent : UFishComponentBase
 
 		auto SaveGame = Gameplay::LoadGameFromSlot("PlayerInventory", 0);
 		if (SaveGame == nullptr)
-			return ELoadResult::SuccessNoData;
+			return ELoadResult::NoData;
 
 		auto LoadedSave = Cast<UInventorySaveGame>(SaveGame);
 		if (LoadedSave == nullptr)

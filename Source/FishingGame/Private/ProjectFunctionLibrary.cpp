@@ -1,7 +1,7 @@
-#include "ProjectVersionGetter.h"
+#include "ProjectFunctionLibrary.h"
 #include "Misc/ConfigCacheIni.h"
 
-FString UProjectVersionGetter::GetGameVersion()
+FString UProjectFunctionLibrary::GetGameVersion()
 {
 	FString Version;
 

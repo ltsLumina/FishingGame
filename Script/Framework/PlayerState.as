@@ -123,7 +123,7 @@ class AFishPlayerState : APlayerState
 			case ELoadResult::Success:
 				Print("Titles loaded from save.", 3.0f, FLinearColor::Green);
 				break;
-			case ELoadResult::SuccessNoData:
+			case ELoadResult::NoData:
 				Print("No titles save found.", 3.0f, FLinearColor::Yellow);
 				break;
 			case ELoadResult::Failure:
@@ -138,7 +138,7 @@ class AFishPlayerState : APlayerState
 			case ELoadResult::Success:
 				Print("Stats loaded from save.", 3.0f, FLinearColor::Green);
 				break;
-			case ELoadResult::SuccessNoData:
+			case ELoadResult::NoData:
 				Print("No stats save found.", 3.0f, FLinearColor::Yellow);
 				break;
 			case ELoadResult::Failure:
@@ -151,7 +151,7 @@ class AFishPlayerState : APlayerState
 			case ELoadResult::Success:
 				Print("Inventory loaded from save.", 3.0f, FLinearColor::Green);
 				break;
-			case ELoadResult::SuccessNoData:
+			case ELoadResult::NoData:
 				Print("No inventory save found.", 3.0f, FLinearColor::Yellow);
 				break;
 			case ELoadResult::Failure:
@@ -164,7 +164,7 @@ class AFishPlayerState : APlayerState
 			case ELoadResult::Success:
 				Print("Experience loaded from save.", 3.0f, FLinearColor::Green);
 				break;
-			case ELoadResult::SuccessNoData:
+			case ELoadResult::NoData:
 				Print("No experience save found.", 3.0f, FLinearColor::Yellow);
 				break;
 			case ELoadResult::Failure:
@@ -177,7 +177,7 @@ class AFishPlayerState : APlayerState
 			case ELoadResult::Success:
 				Print("Quests loaded from save.", 3.0f, FLinearColor::Green);
 				break;
-			case ELoadResult::SuccessNoData:
+			case ELoadResult::NoData:
 				Print("No quest log save found.", 3.0f, FLinearColor::Yellow);
 				break;
 			case ELoadResult::Failure:
@@ -190,7 +190,7 @@ class AFishPlayerState : APlayerState
 			case ELoadResult::Success:
 				Print("Collection loaded from save.", 3.0f, FLinearColor::Green);
 				break;
-			case ELoadResult::SuccessNoData:
+			case ELoadResult::NoData:
 				Print("No collection save found.", 3.0f, FLinearColor::Yellow);
 				break;
 			case ELoadResult::Failure:
@@ -203,7 +203,7 @@ class AFishPlayerState : APlayerState
 			case ELoadResult::Success:
 				Print("Currencies loaded from save.", 3.0f, FLinearColor::Green);
 				break;
-			case ELoadResult::SuccessNoData:
+			case ELoadResult::NoData:
 				Print("No Currencies save found.", 3.0f, FLinearColor::Yellow);
 				break;
 			case ELoadResult::Failure:
@@ -238,7 +238,7 @@ class AFishPlayerState : APlayerState
 	{
 		auto SaveGame = Gameplay::LoadGameFromSlot("PlayerTitles", 0);
 		if (SaveGame == nullptr)
-			return ELoadResult::SuccessNoData;
+			return ELoadResult::NoData;
 
 		auto LoadedSave = Cast<UTitlesSaveGame>(SaveGame);
 		if (LoadedSave == nullptr)
@@ -269,7 +269,7 @@ class AFishPlayerState : APlayerState
 enum ELoadResult
 {
 	Success,
-	SuccessNoData,
+	NoData,
 	Failure
 }
 

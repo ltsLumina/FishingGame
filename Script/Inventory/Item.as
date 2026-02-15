@@ -1,6 +1,6 @@
 class UItem : UPrimaryDataAsset
 {
-	UPROPERTY(Category = "Item", ExposeOnSpawn, SaveGame, Meta=(ShowOnlyInnerProperties))
+	UPROPERTY(Category = "Item", ExposeOnSpawn, SaveGame, Meta = (ShowOnlyInnerProperties))
 	FItemData BaseData;
 
 	UFUNCTION(Category = "Item | Info", BlueprintPure)
@@ -40,11 +40,11 @@ class UItem : UPrimaryDataAsset
 	}
 }
 
-USTRUCT(Meta=(HiddenByDefault))
+USTRUCT(Meta = (HiddenByDefault))
 struct FItemData
 {
 	UPROPERTY(Category = "Item | Info", DisplayName = "ID", SaveGame)
-    FName ID = n"default_item";
+	FName ID = n"default_item";
 
 	UPROPERTY(Category = "Item | Info", DisplayName = "Name", SaveGame)
 	FText ItemName = FText::FromString("Default Item");
@@ -68,4 +68,23 @@ FText GenerateDisplayName(FString Filename)
 	FString Chopped = Filename.RightChop(3); // removes BP_/DA_ prefixes
 	FString WithSpaces = Chopped.Replace("_", " ");
 	return FText::FromString(WithSpaces.ToDisplayName());
+}
+
+namespace ObjectNames
+{
+	/**
+	 * The name of this function and its namespace are a nod to the Unity engine.
+	 */
+	UFUNCTION(Category = "Utility", BlueprintPure)
+	FText NicifyVariableName(FName Name, FString PrefixToRemove = "")
+	{
+		FString ToString = Name.ToString();
+		ToString.RemoveFromStart("Generated");
+		ToString.RemoveFromStart("Default__");
+		ToString.RemoveFromEnd("_C");
+		ToString.RemoveFromStart(PrefixToRemove);
+		
+		FString WithSpaces = ToString.Replace("_", " ");
+		return FText::FromString(WithSpaces.ToDisplayName());
+	}
 }

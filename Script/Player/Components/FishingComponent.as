@@ -1,5 +1,8 @@
 event void FOnStateChange(EFishingState NewState);
 event void FOnSelectBait(UBait Bait);
+event void FOnCast();
+event void FOnBite();
+event void FOnReel();
 event void FOnFishHooked(UFishItem FishItem, UBait Bait, UFishingHoleComponent FishingHole);
 event void FOnFishCaught(AFish Fish, UBait Bait, UFishingHoleComponent FishingHole);
 
@@ -108,6 +111,27 @@ class UFishingComponent : UFishComponentBase
 	UPROPERTY(Category = "Events")
 	FOnFishCaught OnFishCaught;
 
+	/**
+	 * Called when the state has changed to EFishingState::Fishing
+	 * This event is primarly used by Traits to activate at different stages of fishing.
+	 */
+	UPROPERTY(Category = "Events")
+	FOnCast OnCast;
+
+	/**
+	 * Called when the state has changed to EFishingState::FishOnHook
+	 * This event is primarly used by Traits to activate at different stages of fishing.
+	 */
+	UPROPERTY(Category = "Events")
+	FOnBite OnBite;
+
+	/**
+	 * Called when the state has changed to EFishingState::ReelingIn
+	 * This event is primarly used by Traits to activate at different stages of fishing.
+	 */
+	UPROPERTY(Category = "Events")
+	FOnReel OnReel;
+
 	/* End */
 
 	FTimerHandle MissedTimerHandle;
@@ -165,6 +189,26 @@ class UFishingComponent : UFishComponentBase
 	{
 		CurrentState = NewState;
 		OnStateChange.Broadcast(NewState);
+
+		if (CurrentFishingHole != nullptr) 
+			UpdateCatchableFish(CurrentFishingHole);
+
+		switch (NewState)
+		{
+			case EFishingState::NotFishing:
+				break;
+			case EFishingState::Fishing:
+			OnCast.Broadcast();
+				break;
+			case EFishingState::FishOnHook:
+			OnBite.Broadcast();
+				break;
+			case EFishingState::ReelingIn:
+			OnReel.Broadcast();
+				break;
+			case EFishingState::CaughtFish:
+				break;
+		}
 	}
 
 	void UpdateCatchableFish(UFishingHoleComponent Hole)
@@ -229,7 +273,7 @@ class UFishingComponent : UFishComponentBase
 	void StartFishing()
 	{
 		check(CurrentBait == nullptr);
-		
+
 		if (CurrentFishingHole == nullptr)
 		{
 			PrintWarning("You are not in a fishing area!", 1.5f);

@@ -57,3 +57,15 @@ namespace Widget
 		return Cast<UWidget>(Widget.GetOuter().GetOuter());
 	}
 }
+
+namespace Asserts
+{
+	/**
+	 * Throw's a blueprint exception.
+	 */
+	UFUNCTION(Category = "Asserts", Meta=(CompactNodeTitle="throw"))
+	void Throw(FString Message)
+	{
+		Print(f"Blueprint Exception: {Message}\n{Exception::GetFormattedCallStack()}", 8.0f, FLinearColor::Red);
+	}
+}

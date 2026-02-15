@@ -243,7 +243,7 @@ class UQuestComponent : UFishComponentBase
 	{
 		auto SaveGame = Gameplay::LoadGameFromSlot("PlayerQuestLog", 0);
 		if (SaveGame == nullptr)
-			return ELoadResult::SuccessNoData;
+			return ELoadResult::NoData;
 
 		auto LoadedSave = Cast<UQuestSaveGame>(SaveGame);
 		if (LoadedSave == nullptr)

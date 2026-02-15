@@ -20,7 +20,7 @@ class UExperienceComponent : UFishComponentBase
 
 	default bReplicates = true;
 
-//#region Helper Functions
+//#region Helper Functions*
 	/**
 	 * @return the amount of XP to reach InLevel from the current amount of XP.
 	 * For example, if you're currently at 500 XP, and need 750 to reach InLevel, this will return (750-200= 550) XP.
@@ -112,9 +112,7 @@ class UExperienceComponent : UFishComponentBase
 			RequiredXP = EXPGainCurve.GetFloatValue(Level + 1);
 		}
 
-		if (LevelUps > 0) return true;
-
-		return false;
+		return LevelUps > 0;
 	}
 
 	UFUNCTION()
@@ -162,7 +160,7 @@ class UExperienceComponent : UFishComponentBase
 	{
 		auto SaveGame = Gameplay::LoadGameFromSlot("PlayerExperience", 0);
 		if (SaveGame == nullptr)
-			return ELoadResult::SuccessNoData;
+			return ELoadResult::NoData;
 
 		auto LoadedSave = Cast<UExperienceSaveGame>(SaveGame);
 		if (LoadedSave == nullptr)
