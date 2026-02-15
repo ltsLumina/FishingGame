@@ -96,6 +96,9 @@ class UInventoryComponent : UFishComponentBase
 #if EDITOR
 		TraitInfos.Empty();
 #endif
+
+		AppliedTraits.Empty();
+		System::CollectGarbage(); // terrible solution but it works so far
 	}
 
 	void EquipRod(UFishingRod NewRod)

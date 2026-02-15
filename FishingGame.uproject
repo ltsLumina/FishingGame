@@ -55,8 +55,8 @@
 			"Enabled": true
 		},
 		{
-			"Name": "Inkpot",
-			"Enabled": true
+			"Name": "Paper2D",
+			"Enabled": false
 		}
 	]
 }

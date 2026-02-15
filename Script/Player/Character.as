@@ -79,6 +79,16 @@ class AFishCharacter : AFishEntity
 	{
 		return IsLocallyControlled();
 	}
+
+	UFUNCTION()
+	bool GetNearbyPlayers(float Radius = 1000.0f, TArray<AActor>&out NearbyPlayers = TArray<AActor>())
+	{
+		TArray<EObjectTypeQuery> ObjectTypes;
+		ObjectTypes.Add(EObjectTypeQuery::Pawn);
+		TArray<AActor> IgnoreActors;
+		IgnoreActors.Add(this);
+		return System::SphereOverlapActors(GetActorLocation(), Radius, ObjectTypes, AFishCharacter, IgnoreActors, NearbyPlayers);
+	}
 };
 
 /**

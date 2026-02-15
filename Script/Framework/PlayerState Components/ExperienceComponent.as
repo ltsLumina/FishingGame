@@ -151,7 +151,7 @@ class UExperienceComponent : UFishComponentBase
 	UFUNCTION(Category = "Save Game")
 	bool SaveExperience()
 	{
-		auto SaveGame = NewObject(this, UExperienceSaveGame);
+		auto SaveGame = Gameplay::CreateSaveGameObject(UExperienceSaveGame);
 		SaveGame.Level = Level;
 		SaveGame.CurrentXP = CurrentXP;
 		return Gameplay::SaveGameToSlot(SaveGame, "PlayerExperience", 0);

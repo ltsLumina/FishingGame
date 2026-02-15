@@ -1,35 +1,35 @@
-enum EStat
-{
-	Gathering,
-	Perception,
-	/**
-	 * Multiplier for cast speed (e.g. 1.25 = +25% cast speed)
-	 * Stacks additively.
-	 */
-	CastSpeed,
-	/**
-	 * Multiplier for reel speed (e.g. 1.25 = +25% reel speed)
-	 * Stacks additively.
-	 */
-	ReelSpeed,
-	CatchMultiplier
-}
+event void FOnModifierAdded(FStatModification Modification);
+event void FOnModifierExpired(FStatModification ExpiredModification);
 
+UCLASS(Abstract)
 class UStatsComponent : UFishComponentBase
 {
-	UPROPERTY(Category = "Stats", EditDefaultsOnly, Meta = (Categories = "Stat"))
+	UPROPERTY(Category = "Stats", EditDefaultsOnly, Meta = (Categories = "Stat", Units = "%", UIMin = 0, UIMax = 100, Delta = 0.5))
 	TMap<FGameplayTag, float> Stats;
+	default Stats.Add(GameplayTags::Stat_Fishing_ReelSpeed, 100.0f);   // Increases the reel-in animation's play rate. (Higher = Faster reeling)
+	default Stats.Add(GameplayTags::Stat_Fishing_BiteRate, 100.0f);	   // Decreases the time for a fish to bite. (Higher = Quicker bites)
+	default Stats.Add(GameplayTags::Stat_Fishing_CatchChance, 100.0f); // Increases the chance to sucessfully catch a fish. (Higher = Better odds)
+	default Stats.Add(GameplayTags::Stat_Fishing_Luck, 0.0f);		   // Increases the chance for a fish to have a tag. (Higher = better rewards)
 
-	UPROPERTY(Category = "Stats", VisibleAnywhere, Meta = (Categories = "Stat"))
+	UPROPERTY(Category = "Stats", VisibleInstanceOnly, Meta = (Categories = "Stat"))
 	private TMap<FGameplayTag, float> AdditiveModifiers;
 
-	UPROPERTY(Category = "Stats", VisibleAnywhere, Meta = (Categories = "Stat"))
+	UPROPERTY(Category = "Stats", VisibleInstanceOnly, Meta = (Categories = "Stat"))
 	private TMap<FGameplayTag, float> MultiplicativeModifiers;
 
 #if EDITOR
-	UPROPERTY(Category = "Stats", VisibleAnywhere)
+	UPROPERTY(Category = "Stats", VisibleInstanceOnly, Meta = (Units = "%", UIMin = 0, UIMax = 200))
 	TMap<FString, float> CurrentStats;
 #endif
+
+	UPROPERTY(Category = "Stats", Meta = (TitleProperty = "{StatTag} ({RemainingTimeString})"))
+	private TArray<FStatModification> ActiveModifications;
+
+	UPROPERTY(Category = "Events")
+	FOnModifierAdded OnModifierAdded;
+
+	UPROPERTY(Category = "Events")
+	FOnModifierExpired OnModifierExpired;
 
 	void PostInitialize(AFishCharacter InCharacter, AFishPlayerState InPlayerState,
 						float InInitializationTime) override
@@ -60,10 +60,11 @@ class UStatsComponent : UFishComponentBase
 		}
 	}
 
-#if EDITOR
 	UFUNCTION(BlueprintOverride)
 	void Tick(float DeltaSeconds)
 	{
+#if EDITOR
+		// 'CurrentStats' is an outliner-only thing to easily read the player's current stats.
 		CurrentStats = TMap<FString, float>();
 		for (auto& StatPair : Stats)
 		{
@@ -83,8 +84,37 @@ class UStatsComponent : UFishComponentBase
 
 			CurrentStats.Add(StatPair.Key.ToString(), ModifiedValue);
 		}
-	}
 #endif
+
+		// Handles removing expired modifiers.
+		for (int i = ActiveModifications.Num() - 1; i >= 0; i--)
+		{
+			FStatModification Entry = ActiveModifications[i];
+
+			if (Entry.RemainingTime > 0.0f)
+			{
+				Entry.RemainingTime -= DeltaSeconds;
+				if (Entry.RemainingTime < 0.0f)
+				{
+					Entry.RemainingTime = 0.0f;
+				}
+			}
+
+			float TotalTime = Entry.Duration;
+#if EDITOR
+			Entry.RemainingTimeString = Entry.RemainingTime > 0.0f ? f"{Entry.RemainingTime:.1f}s/{TotalTime:.1f}s" : "Expired";
+#endif
+			ActiveModifications[i] = Entry;
+
+			if (Entry.RemainingTime <= 0.0f)
+			{
+				FStatModification ExpiredEntry = FStatModification(Entry.StatTag, Entry.Amount, Entry.Duration, Entry.StatType, Entry.StackingType, Entry.ID);
+				AddModifier(Entry.StatTag, -Entry.Amount, Entry.StatType, Entry.StackingType);
+				ActiveModifications.RemoveAt(i);
+				OnModifierExpired.Broadcast(ExpiredEntry);
+			}
+		}
+	}
 
 	UFUNCTION(Category = "Stats", BlueprintPure, Meta = (Categories = "Stat", ReturnDisplayName = "Has Stat", AdvancedDisplay = "BaseValue"))
 	bool GetStat(FGameplayTag StatTag, bool BaseValue = false, float& OutValue = -1.0f)
@@ -133,18 +163,18 @@ class UStatsComponent : UFishComponentBase
 	/**
 	 * Adds to a stat using a gameplay tag identifier.
 	 * @param Amount The amount to add to the stat (can be negative to subtract).
-	 * @param Type The type of stat (flat or percentage).
+	 * @param StatType The type of stat (flat or percentage).
 	 * @param StackingType The stacking type (additive or multiplicative). Decides how multiple modifiers to the same stat are combined.
 	 * @note For percentage-based stats, provide the amount as a whole number (e.g., 25 for 25%).
 	 */
 	UFUNCTION(Category = "Stats", Meta = (Categories = "Stat", AdvancedDisplay = "Identifier"))
-	void AddModifier(FGameplayTag Stat, float Amount, EStatType Type, EStackingType StackingType, FName Identifier = NAME_None)
+	void AddModifier(FGameplayTag Stat, float Amount, EStatType StatType, EStackingType StackingType, FName Identifier = NAME_None)
 	{
 		if (!Stat.IsValid())
 			PrintError(f"Invalid Stat GameplayTag provided!}");
 
 		float FinalAmount = Amount;
-		if (Type == EStatType::Percentage)
+		if (StatType == EStatType::Percentage)
 		{
 			FinalAmount = 1.0f + (Percent::To(Amount)); // convert percentage to multiplier
 		}
@@ -178,9 +208,11 @@ class UStatsComponent : UFishComponentBase
 		}
 	}
 
-	UFUNCTION(Category = "Stats", Meta = (Categories = "Stat"))
+	UFUNCTION(Category = "Stats", Meta = (Categories = "Stat", DeprecatedFunction, DeprecationMessage = "THIS FUNCTION SHOULD NOT BE USED. NEEDS TO BE REFACTORED TO SUBTRACT THE STAT, NOT REMOVE IT COMPLETELY."))
 	void RemoveModifier(FGameplayTag Stat)
 	{
+		throw("THIS FUNCTION SHOULD NOT BE USED. NEEDS TO BE REFACTORED TO SUBTRACT THE STAT, NOT REMOVE IT COMPLETELY.");
+
 		if (AdditiveModifiers.Contains(Stat))
 		{
 			AdditiveModifiers.Remove(Stat);
@@ -198,35 +230,29 @@ class UStatsComponent : UFishComponentBase
 		MultiplicativeModifiers.Empty();
 	}
 
-	private TArray<FStatModification> ActiveModifications;
-	private int NextModificationIndex = 0;
-
 	/**
 	 * Adds a stat modifier that lasts for a specified duration.
 	 * @param Stat The gameplay tag identifying the stat.
 	 * @param Amount The amount to modify the stat by.
 	 * @param Duration The duration (in seconds) the modifier should last.
-	 * @param Type The type of stat (flat or percentage).
-	 * @param ModifierType The stacking type (additive or multiplicative).
+	 * @param StatType The type of stat (flat or percentage).
+	 * @param StackingType The stacking type (additive or multiplicative).
 	 * @param Identifier An optional identifier for the modifier to allow for targeted removal.
 	 * @param NewValue Output parameter to receive the modified stat value after applying the modifier. Shorthand for GetStat after adding the modifier.
 	 * @return A timer handle that can be used to track the duration of the modifier.
 	 */
-	UFUNCTION(Category = "Stats", Meta = (AdvancedDisplay = "Identifier", ReturnDisplayName = "Timer Handle"))
-	FTimerHandle AddModifierForDuration(FGameplayTag Modifier, float Amount, float Duration, EStatType Type, EStackingType ModifierType = EStackingType::Additive, FName Identifier = NAME_None, float&out NewValue = -1.0f)
+	UFUNCTION(Category = "Stats", Meta = (AdvancedDisplay = "Identifier", ReturnDisplayName = "Timer Handle", Categories = "Stat"))
+	void AddModifierForDuration(FGameplayTag Modifier, float Amount, float Duration, EStatType StatType, EStackingType StackingType = EStackingType::Additive, FName Identifier = NAME_None, float&out NewValue = -1.0f)
 	{
-		AddModifier(Modifier, Amount, Type, ModifierType);
+		AddModifier(Modifier, Amount, StatType, StackingType);
 		GetStat(Modifier, false, NewValue);
 
-		FStatModification Modification;
-
-		NextModificationIndex++;
-		Modification.TimerHandle = System::SetTimer(this, n"UndoStatModification", Duration, false);
-
-		Modification = FStatModification(Identifier, NextModificationIndex, EStat::Gathering, Modifier, true, Amount);
+		FStatModification Modification = FStatModification(Modifier, Amount, Duration, StatType, StackingType, Identifier);
+		Modification.Duration = Duration;
+		Modification.RemainingTime = Duration;
+		Modification.RemainingTimeString = Duration > 0.0f ? f"{Duration:.1f}s/{Duration:.1f}s" : "Expired";
 		ActiveModifications.Add(Modification);
-
-		return Modification.TimerHandle;
+		OnModifierAdded.Broadcast(Modification);
 	}
 
 	/**
@@ -259,9 +285,9 @@ class UStatsComponent : UFishComponentBase
 		if (ActiveModifications.Num() == 0)
 			return;
 
-		FStatModification Mod = ActiveModifications[0]; // FIFO (first in, first out) - not the australian thing lol
+		FStatModification Mod = ActiveModifications[0];						   // FIFO (first in, first out) - not the australian thing lol
 
-		RemoveModifier(Mod.StatTag);
+		AddModifier(Mod.StatTag, -Mod.Amount, Mod.StatType, Mod.StackingType); // subtract the stat instead of removing it
 
 		ActiveModifications.RemoveAt(0);
 	}
@@ -279,7 +305,6 @@ class UStatsComponent : UFishComponentBase
 			if (ActiveModifications[i].ID == Identifier)
 			{
 				RemoveModifier(ActiveModifications[i].StatTag);
-				System::ClearAndInvalidateTimerHandle(ActiveModifications[i].TimerHandle);
 				ActiveModifications.RemoveAt(i);
 				return true;
 			}
@@ -308,7 +333,7 @@ class UStatsComponent : UFishComponentBase
 	UFUNCTION(Category = "Data")
 	bool SaveStats()
 	{
-		auto SaveGame = NewObject(this, UStatsSaveGame);
+		auto SaveGame = Gameplay::CreateSaveGameObject(UStatsSaveGame);
 		SaveGame.SavedStats = Stats;
 		return Gameplay::SaveGameToSlot(SaveGame, "PlayerStats", 0);
 	}
@@ -331,71 +356,68 @@ class UStatsComponent : UFishComponentBase
 	}
 };
 
-struct FStats
-{
-	UPROPERTY(Category = "Stats")
-	int Gathering = 0;
-
-	// higher chance of catching rare fish
-	UPROPERTY(Category = "Stats")
-	int Perception = 0;
-
-	/**
-	 * Multiplier for reel speed (e.g. 1.25 = +25% reel speed)
-	 * Stacks additively.
-	 */
-	UPROPERTY(Category = "Stats", Transient, Meta = (Units = "x", UIMin = "0.25", UIMax = "5.0"))
-	float ReelSpeed = 1;
-}
-
 struct FStatModification
 {
-	UPROPERTY()
-	FName ID;
-
-	UPROPERTY()
-	int Index;
-
-	UPROPERTY()
-	EStat Stat;
-
-	UPROPERTY(Meta = (Categories = "Stat"))
+	UPROPERTY(Meta = (Categories = "Stat"), BlueprintReadOnly, VisibleInstanceOnly)
 	FGameplayTag StatTag;
 
-	UPROPERTY()
-	bool bIsAdditive;
+	UPROPERTY(BlueprintReadOnly, VisibleInstanceOnly)
+	float Amount;
 
-	UPROPERTY()
-	float Amount;		 // Used for additive modifications
+	UPROPERTY(BlueprintReadOnly, VisibleInstanceOnly)
+	EStatType StatType;
 
-	UPROPERTY()
-	float PreviousValue; // Used for set modifications
+	UPROPERTY(BlueprintReadOnly, VisibleInstanceOnly)
+	EStackingType StackingType;
 
-	/**
-	 * Handle to the timer that will call UndoStatModification when the duration expires.
-	 */
-	UPROPERTY()
-	FTimerHandle TimerHandle;
+	UPROPERTY(BlueprintReadOnly, VisibleInstanceOnly, Meta = (Units = "s"))
+	float Duration;
 
-	FStatModification(FName InID = NAME_None, int InIndex = 0, EStat InStat = EStat::Gathering, FGameplayTag InStatTag = FGameplayTag(), bool InbIsAdditive = true, float InAmount = 0.0f)
+	UPROPERTY(BlueprintReadOnly, VisibleInstanceOnly, Meta = (Units = "s"))
+	float RemainingTime;
+
+	UPROPERTY(BlueprintHidden, VisibleInstanceOnly)
+	FString RemainingTimeString;
+
+	UPROPERTY(BlueprintReadOnly, VisibleInstanceOnly)
+	FName ID;
+
+	FStatModification(FGameplayTag InStatTag, float InAmount, float InDuration, EStatType InStatType, EStackingType InStackingType, FName InID = NAME_None)
 	{
-		this.ID = InID;
-		this.Index = Index;
-		this.Stat = Stat;
 		this.StatTag = InStatTag;
-		this.bIsAdditive = bIsAdditive;
-		this.Amount = Amount;
+		this.Amount = InAmount;
+		this.Duration = InDuration;
+		this.StatType = InStatType;
+		this.StackingType = InStackingType;
+		this.ID = InID;
 	}
 }
 
 namespace Stats
 {
-	UFUNCTION(BlueprintPure, Meta = (Categories = "Stat", ReturnDisplayName = "Has Stat", AdvancedDisplay = "BaseValue"))
-	bool GetStat(AFishCharacter Character, FGameplayTag StatTag, bool BaseValue = false, float&out Value = -1.0f)
+	/**
+	 * @param Character The character of whom to get the stats of.
+	 * @param StatTag The gameplay tag for which stat to get.
+	 * @param AsDecimal If true, the value is returned as a decimal rather than the whole number it is stored as.
+	 * @param BaseValue If true, returns the base value of the stat, ignoring all current modifications. Else returns the currently modified value of the stat.
+	 * @param Value The returned value.
+	 * @return True if the player has this stat, else false.
+	 */
+	UFUNCTION(BlueprintPure, Meta = (Categories = "Stat", ReturnDisplayName = "Has Stat", AdvancedDisplay = "BaseValue,AsDecimal"))
+	bool GetStat(AFishCharacter Character, FGameplayTag StatTag, bool AsDecimal = false, bool BaseValue = false, float&out Value = -1.0f)
 	{
-		return Character.FishState.StatsComponent.GetStat(StatTag, BaseValue, Value);
+		bool HasStat = Character.FishState.StatsComponent.GetStat(StatTag, BaseValue, Value);
+
+		float Whole = Value;
+		float Decimal = Percent::To(Value);
+		Value = AsDecimal ? Decimal : Whole;
+
+		return HasStat;
 	}
 
+	/**
+	 *
+	 */
 	UFUNCTION(BlueprintPure, Meta = (Categories = "Stat"))
 	bool GetStatModifier(AFishCharacter Character, FGameplayTag StatTag, float&out Value)
 	{

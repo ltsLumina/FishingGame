@@ -23,7 +23,7 @@ class UFishingComponent : UFishComponentBase
 	/**
 	 * Current time elapsed on the hook timer.
 	 */
-	UPROPERTY(Category = "Fishing | State", Meta = (Units = "s"), VisibleAnywhere)
+	UPROPERTY(Category = "Fishing | State", Meta = (Units = "s"), VisibleInstanceOnly)
 	float BiteTimer = 0;
 
 	/**
@@ -175,7 +175,8 @@ class UFishingComponent : UFishComponentBase
 		CurrentCatchableFish.Empty();
 
 		CurrentFishingHole = Hole;
-		if (CurrentFishingHole == nullptr) return;
+		if (CurrentFishingHole == nullptr)
+			return;
 
 		for (auto& FishItem : CurrentFishingHole.CatchableFish)
 		{
@@ -227,6 +228,8 @@ class UFishingComponent : UFishComponentBase
 	UFUNCTION(Category = "Fishing", CallInEditor)
 	void StartFishing()
 	{
+		check(CurrentBait == nullptr);
+		
 		if (CurrentFishingHole == nullptr)
 		{
 			PrintWarning("You are not in a fishing area!", 1.5f);
@@ -258,7 +261,11 @@ class UFishingComponent : UFishComponentBase
 		else
 		{
 			CurrentFish = SelectFishWeighted(CurrentCatchableFish);
-			NewBiteTimer = CurrentFish.FishData.BiteTime;
+
+			float BiteRate;
+			Stats::GetStat(Character, GameplayTags::Stat_Fishing_BiteRate, true, false, BiteRate);
+			NewBiteTimer = CurrentFish.FishData.BiteTime / BiteRate;
+			NewBiteTimer = Math::Max(1, NewBiteTimer); // clamp to min of 1
 
 			// TODO: should be reworked in tandem with Token System
 			for (auto Pair : BiteTimeModifiers)
@@ -288,7 +295,6 @@ class UFishingComponent : UFishComponentBase
 		if (!HasRequiredLicence())
 		{
 			PrintWarning("Fishing without an appropriate licence! Rewards are reduced.");
-			Notifications::AddNotification("Fishing without an appropriate licence!");
 			Gameplay::GetPlayerController(0).GetComponentByClass(UChatComponent).Server_SendConsoleMessage("Fishing without an appropriate licence! Rewards are reduced.");
 		}
 
@@ -331,14 +337,14 @@ class UFishingComponent : UFishComponentBase
 
 		FFishItemData Data = CurrentFish.FishData;
 
-		float GatheringStat;
-		Stats::GetStat(Character, GameplayTags::Stat_Fishing_Gathering, false, GatheringStat);
-		float GatheringDiff = Math::Max(0.0f, GatheringStat - Data.MinimumGathering);
-		float CurrentCatchRate = Math::Clamp(Data.CatchRate + GatheringDiff * 0.5f, 0.0f, 100.0f);
+		float CatchChanceStat;
+		Stats::GetStat(Character, GameplayTags::Stat_Fishing_CatchChance, true, false, CatchChanceStat);
+		float CurrentCatchChance = Data.CatchChance * CatchChanceStat; // multiplicative percentage addition (e.g, 25% * 50% stat = increase of 12.5%)
+		CurrentCatchChance = Math::Clamp(CurrentCatchChance, 0, 100);
 
-		// Chance to escape - uses Catch Rate 0-100
+		// Chance to escape - uses Catch Chance 0-100
 		float CatchRoll = Math::RandRange(0.0f, 100.0f);
-		if (CatchRoll > CurrentCatchRate)
+		if (CatchRoll > CurrentCatchChance)
 		{
 			Print("The fish escaped your hook!", 2.5f, FLinearColor::Yellow);
 			Missed();
@@ -444,7 +450,9 @@ class UFishingComponent : UFishComponentBase
 		Fish.SetOwner(GetOwner());
 
 		Fish.OnSpawn(FishItem);
-		Fish.OnCaught(Cast<AFishCharacter>(GetOwner()));
+#if EDITOR
+		Fish.OnCaught(Character);
+#endif
 
 		SpawnFish_Client(FishClass, FishItem);
 	}
@@ -464,7 +472,9 @@ class UFishingComponent : UFishComponentBase
 		for (int i = 0; i < CatchContext.Quantity; i++)
 		{
 			FInventoryInstanceData InventoryInstance;
-			InventoryInstance.FishInstanceData = Fish::InstanceData::MakeFishInstanceData(FishItem.FishData); // create new instance data for each fish, so they aren't identical. The Clone trait adds a fish to the inventory with identical instance data instead.
+
+			// create new instance data for each fish, so they aren't identical. The Clone trait adds a fish to the inventory with identical instance data instead.
+			InventoryInstance.FishInstanceData = Fish::InstanceData::MakeFishInstanceData(FishItem.FishData);
 
 			PlayerState.InventoryComponent.AddItem(Fish.Item, InventoryInstance, 1);
 		}

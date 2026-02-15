@@ -3,8 +3,6 @@ class UItem : UPrimaryDataAsset
 	UPROPERTY(Category = "Item", ExposeOnSpawn, SaveGame, Meta=(ShowOnlyInnerProperties))
 	FItemData BaseData;
 
-	// Getters for easier access to item data in BLueprints. Getters rather than doing Item -> BaseData -> Break Struct, everytime
-
 	UFUNCTION(Category = "Item | Info", BlueprintPure)
 	FName GetID()
 	{

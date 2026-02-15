@@ -172,12 +172,14 @@ class URodData : UPrimaryDataAsset
 	 * The base stats this rod provides when equipped.
 	 * Stats are applied when the rod is equipped.
 	 * These stats are always applied as a flat, additive stat.
+	 * Example: Player's current stat for ReelSpeed is 1.0. Equipping a rod with 1.5 in ReelSpeed will increase the total to 2.5.
 	 */
-	UPROPERTY(Category = "Rod", Meta = (Categories = "Stat", ForceInlineRow, EditFixedSize))
+	UPROPERTY(Category = "Rod", Meta = (Categories = "Stat", ForceInlineRow, EditFixedSize, Units="%", UIMin=0, UIMax=100, Delta=0.01))
 	TMap<FGameplayTag, float> BaseStats;
-	default BaseStats.Add(GameplayTags::Stat_Fishing_Gathering, 0.0f);
-	default BaseStats.Add(GameplayTags::Stat_Fishing_Perception, 0.0f);
 	default BaseStats.Add(GameplayTags::Stat_Fishing_ReelSpeed, 0.0f);
+	default BaseStats.Add(GameplayTags::Stat_Fishing_BiteRate, 0.0f);
+	default BaseStats.Add(GameplayTags::Stat_Fishing_CatchChance, 0.0f);
+	default BaseStats.Add(GameplayTags::Stat_Fishing_Luck, 0.0f);
 
 	UPROPERTY(Category = "Rod")
 	FRodTraits Traits;

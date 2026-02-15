@@ -232,7 +232,7 @@ class UQuestComponent : UFishComponentBase
 	UFUNCTION(Category = "Save Game")
 	bool SaveQuests()
 	{
-		auto SaveGame = NewObject(this, UQuestSaveGame);
+		auto SaveGame = Gameplay::CreateSaveGameObject(UQuestSaveGame);
 		SaveGame.SavedQuestLog = QuestLog;
 		SaveGame.SavedCompletedQuests = CompletedQuests;
 		return Gameplay::SaveGameToSlot(SaveGame, "PlayerQuestLog", 0);

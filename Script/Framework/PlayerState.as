@@ -227,7 +227,7 @@ class AFishPlayerState : APlayerState
 
 	bool SaveTitles()
 	{
-		auto SaveGame = NewObject(this, UTitlesSaveGame);
+		auto SaveGame = Gameplay::CreateSaveGameObject(UTitlesSaveGame);
 		SaveGame.SavedTitle = Title;
 		SaveGame.SavedOwnedTitles = OwnedTitles;
 
