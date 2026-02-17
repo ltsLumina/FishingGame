@@ -5,7 +5,8 @@ event void FOnInventoryChanged(FName ItemID, FInventorySlot InventorySlot, EInve
 enum EInventoryChangeType
 {
 	Added,
-	Removed
+	Removed,
+	Cleared,
 };
 
 UCLASS(Abstract)

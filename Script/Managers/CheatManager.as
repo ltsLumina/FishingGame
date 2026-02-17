@@ -87,4 +87,10 @@ class UFishCheatManager : UCheatManager
             Print(f"[Cheat] Granted {Amount}x token \"{Token}\"!", 5.0f, FLinearColor::Green);
         }
     }
+
+    UFUNCTION(Exec)
+    void Respawn()
+    {
+        Gameplay::GetPlayerPawn(0).SetActorLocation(FVector());
+    }
 }

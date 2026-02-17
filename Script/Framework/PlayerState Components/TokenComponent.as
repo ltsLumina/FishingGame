@@ -74,7 +74,8 @@ class UTokenComponent : UFishComponentBase
 			{
 				if (Entry.RefreshDuration)
 				{
-					if (RemoveToken(Entry.Tag, 1) > 0) // There are still tokens left, restart the countdown for the next stack
+					int NewAmount;
+					if (RemoveToken(Entry.Tag, 1, NewAmount) && NewAmount > 0) // There are still tokens left, restart the countdown for the next stack
 					{
 						Entry.Amount = Math::Max(Entry.Amount - 1, 0);
 						Entry.RemainingTime = Entry.Duration;
@@ -101,7 +102,8 @@ class UTokenComponent : UFishComponentBase
 					FTokenEntry NonRefreshEntry = FTokenEntry(Entry.Tag, 0, Entry.MaxAmount, -1.0f, Entry.ID);
 					Entry.TokenExpired.ExecuteIfBound(NonRefreshEntry);
 
-					RemoveToken(Entry.Tag, Entry.Amount);
+					int NewAmount;
+					RemoveToken(Entry.Tag, Entry.Amount, NewAmount);
 
 					ActiveTokens.RemoveAt(i);
 					OnTokenExpired.Broadcast(NonRefreshEntry);
@@ -147,6 +149,8 @@ class UTokenComponent : UFishComponentBase
 	UFUNCTION(Category = "Fishing | Tokens", Meta = (ReturnDisplayName = "New Amount", Categories = "Token"))
 	int AddToken(FGameplayTag Token, int Amount = 1)
 	{
+		ThrowIf(Amount < 0, "Cannot add negative tokens!");
+		
 		if (Tokens.Contains(Token))
 		{
 			Tokens[Token] += Amount;
@@ -162,26 +166,37 @@ class UTokenComponent : UFishComponentBase
 	/**
 	 * Removes a specific token from the player's fishing component.
 	 * @param Token The token to remove.
-	 * @param Amount The amount to remove.
-	 * @return The new total amount of the token after removal, or -1 if the token did not exist.
+	 * @param Amount The amount to remove. Anything less than 1 will remove all tokens of that type.
+	 * @param NewAmount The new total amount of the token after removal.
+	 * @return True if a token was removed, false otherwise.
 	 * @note This function does not invoke the OnTokenRemoved event! Use AddTokenForDuration to manage tokens with duration and trigger the event.
 	 */
-	UFUNCTION(Category = "Fishing | Tokens", Meta = (ReturnDisplayName = "New Amount", Categories = "Token"))
-	int RemoveToken(FGameplayTag Token, int Amount = 1)
+	UFUNCTION(Category = "Fishing | Tokens", Meta = (ReturnDisplayName = "Success", Categories = "Token"))
+	bool RemoveToken(FGameplayTag Token, int Amount = 1, int&out NewAmount = -1)
 	{
 		if (Tokens.Contains(Token))
 		{
+			if (Amount < 1)
+			{
+				Tokens[Token] = 0;
+				NewAmount = 0;
+				return true;
+			}
+
 			Tokens[Token] = Math::Max(Tokens[Token] - Amount, 0); // prevent negative values
 			if (Tokens[Token] <= 0)
 			{
 				Tokens.Remove(Token);
-				return 0.0f;
+				return true;
 			}
-			return Tokens[Token];
+
+			NewAmount = Tokens[Token];
+			return true;
 		}
 		else
 		{
-			return -1;
+			NewAmount = -1;
+			return false;
 		}
 	}
 

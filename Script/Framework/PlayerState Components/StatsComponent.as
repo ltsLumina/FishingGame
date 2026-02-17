@@ -117,17 +117,17 @@ class UStatsComponent : UFishComponentBase
 	}
 
 	UFUNCTION(Category = "Stats", BlueprintPure, Meta = (Categories = "Stat", ReturnDisplayName = "Has Stat", AdvancedDisplay = "BaseValue"))
-	bool GetStat(FGameplayTag StatTag, bool BaseValue = false, float& OutValue = -1.0f)
+	bool GetStat(FGameplayTag StatTag, bool BaseValue = false, float&out Value = -1.0f)
 	{
 		if (HasStat(StatTag))
 		{
 			if (BaseValue)
 			{
-				OutValue = BaseStats[StatTag];
+				Value = BaseStats[StatTag];
 			}
 			else if (!HasModifier(StatTag))
 			{
-				OutValue = BaseStats[StatTag];
+				Value = BaseStats[StatTag];
 			}
 			else
 			{
@@ -145,7 +145,7 @@ class UStatsComponent : UFishComponentBase
 					ModifiedValue *= MultiplicativeModifiers[StatTag];
 				}
 
-				OutValue = ModifiedValue;
+				Value = ModifiedValue;
 			}
 			return true;
 		}
@@ -176,7 +176,8 @@ class UStatsComponent : UFishComponentBase
 		float FinalAmount = Amount;
 		if (StatType == EStatType::Percentage)
 		{
-			FinalAmount = 1.0f + (Percent::To(Amount)); // convert percentage to multiplier
+			//FinalAmount = 1.0f + (Percent::To(Amount)); // convert percentage to multiplier
+			FinalAmount = Amount;
 		}
 
 		if (StackingType == EStackingType::Additive)
@@ -242,7 +243,7 @@ class UStatsComponent : UFishComponentBase
 	 * @return A timer handle that can be used to track the duration of the modifier.
 	 */
 	UFUNCTION(Category = "Stats", Meta = (AdvancedDisplay = "Identifier", ReturnDisplayName = "Timer Handle", Categories = "Stat"))
-	void AddModifierForDuration(FGameplayTag Modifier, float Amount, float Duration, EStatType StatType, EStackingType StackingType = EStackingType::Additive, FName Identifier = NAME_None, float&out NewValue = -1.0f)
+	void AddModifierForDuration(FGameplayTag Modifier, float Amount, float Duration, EStatType StatType = EStatType::Percentage, EStackingType StackingType = EStackingType::Additive, FName Identifier = NAME_None, float&out NewValue = -1.0f)
 	{
 		AddModifier(Modifier, Amount, StatType, StackingType);
 		GetStat(Modifier, false, NewValue);

@@ -74,7 +74,7 @@ namespace BlueprintValidation
 	}
 }
 
-class UFishValidator : UEditorValidatorBase
+class UFishValidatorBase : UEditorValidatorBase
 {
 	UPROPERTY(Category = "Validation")
 	TArray<TSubclassOf<UObject>> ValidatedClasses;
@@ -110,7 +110,7 @@ class UFishValidator : UEditorValidatorBase
 	}
 }
 
-class UQuestValidator : UFishValidator
+class UQuestValidator : UFishValidatorBase
 {
 	default ValidatedClasses.Add(UQuest);
 
@@ -137,7 +137,7 @@ class UQuestValidator : UFishValidator
 	}
 }
 
-class UAbilityTableValidator : UFishValidator
+class UAbilityTableValidator : UFishValidatorBase
 {
 	default ValidatedClasses.Add(UDataTable);
 
@@ -168,7 +168,7 @@ class UAbilityTableValidator : UFishValidator
 	}
 }
 
-class UIDValidator : UFishValidator
+class UIDValidator : UFishValidatorBase
 {
 	default ValidatedClasses.Add(UQuest);
 	default ValidatedClasses.Add(UItem);
@@ -220,7 +220,7 @@ class UIDValidator : UFishValidator
 	}
 }
 
-class UTraitValidator : UFishValidator
+class UTraitValidator : UFishValidatorBase
 {
 	default ValidatedClasses.Add(UTrait);
 
