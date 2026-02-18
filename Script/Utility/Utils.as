@@ -161,10 +161,31 @@ namespace Line
 		}
 		return false;
 	}
+
+	TArray<FVector2D> Normalize(const TArray<FVector2D>& Points)
+{
+    if (Points.Num() == 0) return Points;
+
+    FVector2D Min = Points[0], Max = Points[0];
+    for (const FVector2D& P : Points) {
+        Min.X = Math::Min(Min.X, P.X); Min.Y = Math::Min(Min.Y, P.Y);
+        Max.X = Math::Max(Max.X, P.X); Max.Y = Math::Max(Max.Y, P.Y);
+    }
+
+    FVector2D Size = Max - Min;
+    float Scale = Math::Max(Size.X, Size.Y);
+    if (Scale < 1.f) Scale = 1.f;
+
+    TArray<FVector2D> Normalized;
+    for (const FVector2D& P : Points) {
+        Normalized.Add((P - Min) / Scale);
+    }
+    return Normalized;
+}
 }
 
 UFUNCTION(BlueprintPure)
-bool DoesPolylineSelfIntersect(const TArray<FVector2D>& Points)
+bool DoesPolylineSelfIntersect(const TArray<FVector2D>& Points, FVector2D&out OutIntersectionPoint)
 {
 	const int32 NumPoints = Points.Num();
 	if (NumPoints < 4)
@@ -186,7 +207,7 @@ bool DoesPolylineSelfIntersect(const TArray<FVector2D>& Points)
 			const FVector2D& B1 = Points[j];
 			const FVector2D& B2 = Points[j + 1];
 
-			if (Line::DoSegmentsIntersect(A1, A2, B1, B2))
+			if (Line::GetIntersectionPoint(A1, A2, B1, B2, OutIntersectionPoint))
 				return true;
 		}
 	}
@@ -342,4 +363,67 @@ bool IsPointTouchingImage(FVector2D PaintPoint, UWidget Target, FGeometry MyGeo)
 		return true;
 	}
 	return false;
+}
+
+UFUNCTION(BlueprintPure)
+bool IsMatch(const TArray<FVector2D>& Drawn, const TArray<FVector2D>& Template, float Tolerance = 0.2f)
+{
+    if (Drawn.Num() < 2 || Template.Num() < 2) return false;
+
+    TArray<FVector2D> NormDrawn = Line::Normalize(Drawn);
+    TArray<FVector2D> NormTemp = Line::Normalize(Template);
+
+    float TotalDistance = 0.0f;
+    const int32 Samples = 10;
+
+    for (int32 i = 0; i < Samples; ++i)
+    {
+        // Get point at % of the way through the list
+        float DrawnIdx = (i * (NormDrawn.Num() - 1.0f)) / (Samples - 1.0f);
+        float TempIdx = (i * (NormTemp.Num() - 1.0f)) / (Samples - 1.0f);
+
+        TotalDistance += NormDrawn[DrawnIdx].Distance(NormTemp[TempIdx]);
+    }
+
+    // Average error: 0.0 is a perfect match, > 0.5 is very different
+    float AverageError = TotalDistance / Samples;
+    return AverageError < Tolerance;
+}
+
+UFUNCTION()
+void SaveVectorArrayToText(TArray<FVector2D> VectorArray, FString FileName)
+{
+    FString CombinedString = "";
+
+    for (const FVector2D& Vec : VectorArray)
+    {
+        // Converts vector to "(X=, Y=, Z=)" format and adds a newline
+        CombinedString += Vec.ToString() + "\r\n";
+    }
+
+    FString SavePath = f"{FPaths::ProjectSavedDir()}/{FileName}";
+	FFileHelper::SaveStringToFile(CombinedString, SavePath);
+}
+
+UFUNCTION()
+void LoadVectorArrayManual(FString FileName, TArray<FVector2D>&out OutVectorArray)
+{
+    FString FullFilePath = f"{FPaths::ProjectSavedDir()}/{FileName}";
+    FString FileContent;
+
+    if (FFileHelper::LoadFileToString(FileContent, FullFilePath))
+    {
+        TArray<FString> Lines;
+        // Splits the string at every newline; 'true' ignores empty entries
+        FileContent.ParseIntoArray(Lines, "\r\n", true);
+
+        for (const FString& Line : Lines)
+        {
+            FVector2D LoadedVector;
+            if (LoadedVector.InitFromString(Line))
+            {
+                OutVectorArray.Add(LoadedVector);
+            }
+        }
+    }
 }
