@@ -174,14 +174,14 @@ class UStatsComponent : UFishComponentBase
 			PrintError(f"Invalid Stat GameplayTag provided!}");
 
 		float FinalAmount = Amount;
-		if (StatType == EStatType::Percentage)
-		{
-			//FinalAmount = 1.0f + (Percent::To(Amount)); // convert percentage to multiplier
-			FinalAmount = Amount;
-		}
 
 		if (StackingType == EStackingType::Additive)
 		{
+			if (StatType == EStatType::Percentage)
+			{
+				FinalAmount = Amount;
+			}
+
 			if (AdditiveModifiers.Contains(Stat))
 			{
 				AdditiveModifiers[Stat] += FinalAmount;
@@ -193,6 +193,11 @@ class UStatsComponent : UFishComponentBase
 		}
 		else if (StackingType == EStackingType::Multiplicative)
 		{
+			if (StatType == EStatType::Percentage)
+			{
+				FinalAmount = 1.0f + (Percent::To(Amount)); // convert percentage to multiplier
+			}
+
 			if (MultiplicativeModifiers.Contains(Stat))
 			{
 				MultiplicativeModifiers[Stat] *= FinalAmount;
@@ -209,11 +214,9 @@ class UStatsComponent : UFishComponentBase
 		}
 	}
 
-	UFUNCTION(Category = "Stats", Meta = (Categories = "Stat", DeprecatedFunction, DeprecationMessage = "THIS FUNCTION SHOULD NOT BE USED. NEEDS TO BE REFACTORED TO SUBTRACT THE STAT, NOT REMOVE IT COMPLETELY."))
+	UFUNCTION(Category = "Stats", Meta = (Categories = "Stat"))
 	void RemoveModifier(FGameplayTag Stat)
 	{
-		throw("THIS FUNCTION SHOULD NOT BE USED. NEEDS TO BE REFACTORED TO SUBTRACT THE STAT, NOT REMOVE IT COMPLETELY.");
-
 		if (AdditiveModifiers.Contains(Stat))
 		{
 			AdditiveModifiers.Remove(Stat);
