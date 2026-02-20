@@ -44,6 +44,8 @@ class AFishController : APlayerController
 		auto InputComponent = UInputComponent::GetOrCreate(this);
 
 		InputComponent.BindKey(EKeys::AnyKey, EInputEvent::IE_Pressed, FInputActionHandlerDynamicSignature(this, n"AnyKey"));
+		InputComponent.BindKey(EKeys::LeftMouseButton, EInputEvent::IE_Pressed, FInputActionHandlerDynamicSignature(this, n"Draw"));
+		InputComponent.BindKey(EKeys::LeftMouseButton, EInputEvent::IE_Released, FInputActionHandlerDynamicSignature(this, n"Undraw"));
 	}
 
 	UFUNCTION()
@@ -82,6 +84,20 @@ class AFishController : APlayerController
 			auto FishCharacter = GetFishCharacterBase();
 			FishCharacter.HotbarSlotPressed(SlotIndex);
 		}
+	}
+
+	bool IsDrawing;
+
+	UFUNCTION()
+	void Draw(FKey PressedKey)
+	{
+		IsDrawing = true;
+	}
+
+	UFUNCTION()
+	void Undraw(FKey PressedKey)
+	{
+		IsDrawing = false;
 	}
 
 	UFUNCTION()

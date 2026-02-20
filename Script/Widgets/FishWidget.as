@@ -223,7 +223,7 @@ class UFishWidget : UFishWidgetBase
 	}
 
 	UFUNCTION(Category = "Fish Widget", DisplayName = "Remove From Parent", Meta = (AdvancedDisplay = "FadeOut, FadeOutCompleted"), Keywords = "remove from parent")
-	void RemoveFromParent_Internal(bool FadeOut = true, FOnWidgetFadeComplete FadeOutCompleted = FOnWidgetFadeComplete())
+	void BP_RemoveFromParent(bool FadeOut = true, FOnWidgetFadeComplete FadeOutCompleted = FOnWidgetFadeComplete())
 	{
 		if (FadeOut)
 		{

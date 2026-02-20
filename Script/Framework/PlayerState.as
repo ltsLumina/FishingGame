@@ -36,6 +36,9 @@ class AFishPlayerState : APlayerState
 	UPROPERTY(Category = "Components", BlueprintReadOnly, NotVisible)
 	UCurrencyComponent CurrencyComponent;
 
+	UPROPERTY(Category = "Components", BlueprintReadOnly, NotVisible)
+	UMinigameComponent MinigameComponent;
+
 	UPROPERTY(Category = "Player Info | Title")
 	FOnTitleUnlocked OnTitleUnlocked;
 
@@ -55,6 +58,7 @@ class AFishPlayerState : APlayerState
 		GamblingComponent = UGamblingComponent::Get(this);
 		TokenComponent = UTokenComponent::Get(this);
 		CurrencyComponent = UCurrencyComponent::Get(this);
+		MinigameComponent = UMinigameComponent::Get(this);
 	}
 
 	UFUNCTION(BlueprintOverride)
