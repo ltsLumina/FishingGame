@@ -38,16 +38,6 @@ class AFishController : APlayerController
 	UPROPERTY(Category = "Interaction | Events")
 	FOnEndDialogue OnEndDialogue;
 
-	UFUNCTION(BlueprintOverride)
-	void BeginPlay()
-	{
-		auto InputComponent = UInputComponent::GetOrCreate(this);
-
-		InputComponent.BindKey(EKeys::AnyKey, EInputEvent::IE_Pressed, FInputActionHandlerDynamicSignature(this, n"AnyKey"));
-		InputComponent.BindKey(EKeys::LeftMouseButton, EInputEvent::IE_Pressed, FInputActionHandlerDynamicSignature(this, n"Draw"));
-		InputComponent.BindKey(EKeys::LeftMouseButton, EInputEvent::IE_Released, FInputActionHandlerDynamicSignature(this, n"Undraw"));
-	}
-
 	UFUNCTION()
 	void AnyKey(FKey PressedKey)
 	{
@@ -86,19 +76,8 @@ class AFishController : APlayerController
 		}
 	}
 
+	UPROPERTY()
 	bool IsDrawing;
-
-	UFUNCTION()
-	void Draw(FKey PressedKey)
-	{
-		IsDrawing = true;
-	}
-
-	UFUNCTION()
-	void Undraw(FKey PressedKey)
-	{
-		IsDrawing = false;
-	}
 
 	UFUNCTION()
 	void Click()

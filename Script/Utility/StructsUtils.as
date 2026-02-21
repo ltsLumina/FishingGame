@@ -4,6 +4,12 @@ struct FMinMaxInt
     int Min;
     UPROPERTY()
     int Max;
+
+    FMinMaxInt(int InMin, int InMax)
+    {
+        Min = InMin;
+        Max = InMax;
+    }
 };
 
 struct FMinMaxFloat

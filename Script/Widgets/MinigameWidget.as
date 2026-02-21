@@ -1,47 +1,73 @@
 class UMinigameWidget : UFishWidget
 {
+	UPROPERTY(BindWidget)
+	UImage Background;
+
+	UPROPERTY(BindWidget)
+	UImage FishImg;
+
+	UPROPERTY(BindWidget)
+	UProgressBar FishHealthBar;
+
+	UPROPERTY(BindWidget)
+	UProgressBar PlayerHealthBar;
+
 	UPROPERTY(VisibleAnywhere)
 	FMinigameData Data;
 
-    UPROPERTY(VisibleAnywhere)
+	UPROPERTY(VisibleAnywhere)
 	TArray<FVector2D> Points;
 
-	FGeometry Geometry;
-	FVector2D TargetPos;
-
-    UPROPERTY(BindWidget)
-	UImage Background;
-    
-    UPROPERTY(BindWidget)
-	UImage FishImg;
-
+	UPROPERTY(BlueprintReadOnly)
 	UMinigameComponent MinigameComponent;
 
+	FVector2D TargetPos;
+	float InterpSpeed;
+
+	UFUNCTION(BlueprintOverride)
+	void OnPaint(FPaintContext& Context) const
+	{
+		Widget::DrawLines(Context, Points, FLinearColor::LucBlue, true, 10.0f);
+	}
+
+	float MaxHP;
 	void PostInitialize(AFishCharacter InCharacter, AFishPlayerState InFishState) override
 	{
 		Super::PostInitialize(InCharacter, InFishState);
 
 		MinigameComponent = UMinigameComponent::Get(PlayerState);
 
-		Geometry = GetCachedGeometry();
-		TargetPos = GetRandomPos(Geometry);
+		TargetPos = GetRandomPos();
+
+		MaxHP = MinigameComponent.FishHealth;
+
+		InterpSpeed = Data.FishItem.FishData.Behaviour.InterpSpeed;
+
+		Data.FishItem.FishData.Behaviour.Execute();
 	}
 
-	FVector2D GetRandomPos(FGeometry InGeometry)
+	FVector2D GetRandomPos()
 	{
-		return FVector2D(Math::RandRange(0, InGeometry.LocalSize.X), Math::RandRange(0, InGeometry.LocalSize.X));
+		auto Size = GetDesiredSize().X / 2;
+		return FVector2D(Math::RandRange(-Size, Size), Math::RandRange(-Size, Size));
 	}
 
 	UFUNCTION(BlueprintOverride)
 	void Tick(FGeometry MyGeometry, float InDeltaTime)
 	{
 		Super::Tick(MyGeometry, InDeltaTime);
-		Geometry = GetCachedGeometry();
 
-        auto PC = Cast<AFishController>(Gameplay::GetPlayerController(0));
-        bool IsDrawing = PC.IsDrawing;
+		FishHealthBar.SetPercent(Math::NormalizeToRange(MinigameComponent.FishHealth, 0, MaxHP));
+		PlayerHealthBar.SetPercent(Math::NormalizeToRange(MinigameComponent.PlayerHealth, 0, 3));
+
+		Move(InDeltaTime);
+
+		bool IsDrawing = GetFishControllerBase().IsDrawing;
 		if (!IsDrawing)
-			return; // if (IsDrawing), i.e., are we holding left click
+		{
+			ClearLine();
+			return;
+		}
 
 		float32 MouseX = 0;
 		float32 MouseY = 0;
@@ -61,21 +87,11 @@ class UMinigameWidget : UFishWidget
 				FVector2D IntersectPoint;
 				if (Line::DoesPolylineSelfIntersect(Points, IntersectPoint))
 				{
-
-                    if (Line::IsImageInLasso(Points, FishImg, MyGeometry))
-                    {
-                        ClearLine();
-                        //Gameplay::PlaySound2D() // successful loop sound
-                        Data.FishHealth--;
-
-                        if (Data.FishHealth <= 0)
-                        {
-                            BP_RemoveFromParent();
-                            //Gameplay::PlaySound2D() win sound
-
-                            MinigameComponent.MinigameFinished.Broadcast(EMinigameResult::Success);
-                        }
-                    }
+					if (Line::IsImageInLasso(Points, FishImg, MyGeometry))
+					{
+						ClearLine();
+						MinigameComponent.DealDamage(1);
+					}
 				}
 			}
 			else
@@ -86,6 +102,20 @@ class UMinigameWidget : UFishWidget
 		else
 		{
 			TakeDamage(1);
+		}
+	}
+
+	void Move(float DeltaSeconds)
+	{
+		auto PanelSlot = Cast<UCanvasPanelSlot>(FishImg.Slot);
+		FVector2D Pos = PanelSlot.GetPosition();
+
+		FVector2D Result = Math::Vector2DInterpConstantTo(Pos, TargetPos, DeltaSeconds, InterpSpeed);
+		PanelSlot.SetPosition(Result);
+
+		if (Pos.Equals(TargetPos, 25.0f))
+		{
+			TargetPos = GetRandomPos();
 		}
 	}
 
@@ -220,7 +250,6 @@ namespace Line
 		return Normalized;
 	}
 
-	UFUNCTION(BlueprintPure)
 	bool DoesPolylineSelfIntersect(const TArray<FVector2D>& Points, FVector2D&out OutIntersectionPoint)
 	{
 		const int32 NumPoints = Points.Num();
@@ -419,7 +448,7 @@ namespace Line
 			float DrawnIdx = (i * (NormDrawn.Num() - 1.0f)) / (Samples - 1.0f);
 			float TempIdx = (i * (NormTemp.Num() - 1.0f)) / (Samples - 1.0f);
 
-			TotalDistance += NormDrawn[DrawnIdx].Distance(NormTemp[TempIdx]);
+			TotalDistance += NormDrawn[int32(DrawnIdx)].Distance(NormTemp[int32(TempIdx)]);
 		}
 
 		// Average error: 0.0 is a perfect match, > 0.5 is very different

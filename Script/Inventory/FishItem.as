@@ -125,6 +125,12 @@ struct FFishItemData
 	UPROPERTY(Category = "Fish | Info", EditInline)
 	TArray<UFishCondition> Conditions;
 
+	UPROPERTY(Category = "Fish | Minigame")
+	FMinMaxInt HealthRange = FMinMaxInt(3, 10);
+
+	UPROPERTY(Category = "Fish | Minigame", EditInline)
+	UMinigameFishBehaviour Behaviour;
+
 	/**
 	 * Sell price to vendors.
 	 */

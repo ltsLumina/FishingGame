@@ -36,18 +36,25 @@ class UMinigameComponent : UFishComponentBase
 	UFUNCTION()
 	void StartMinigame(UFishItem FishItem)
 	{
+		FishHealth = Math::RandRange(10, 25);
+		
 		UUserWidget Widget = WidgetBlueprint::CreateWidget(MinigameWidgetClass, Gameplay::GetPlayerController(0));
 
 		MinigameWidget = Cast<UMinigameWidget>(Widget);
 		MinigameWidget.Data = FMinigameData(PlayerHealth, FishHealth, FishItem);
-        
+
+		Widget::SetInputMode_GameAndUIEx(Gameplay::GetPlayerController(0), MinigameWidget, EMouseLockMode::LockOnCapture, false);
+
 		Widget.AddToViewport();
 	}
 
 	UFUNCTION()
-	void EndMinigame()
+	void EndMinigame(EMinigameResult Result)
 	{
+		Widget::SetInputMode_GameAndUIEx(Gameplay::GetPlayerController(0), nullptr, EMouseLockMode::DoNotLock, true);
+
 		MinigameWidget.BP_RemoveFromParent();
+		MinigameFinished.Broadcast(Result);
 	}
 
 	UFUNCTION()
@@ -59,7 +66,7 @@ class UMinigameComponent : UFishComponentBase
 		StartDamageImmunity();
 
 		PlayerHealth -= Damage;
-		Print(f"Took Damage!");
+		Print(f"Took Damage!", 2, FLinearColor::Red);
 
 		// Gameplay::PlaySound2D()
 
@@ -67,6 +74,19 @@ class UMinigameComponent : UFishComponentBase
 		{
 			MinigameWidget.BP_RemoveFromParent();
 			MinigameFinished.Broadcast(EMinigameResult::Failure);
+		}
+	}
+
+	UFUNCTION()
+	void DealDamage(int Damage)
+	{
+		FishHealth--;
+		//Gameplay::PlaySound2D() // successful loop sound
+
+		if (FishHealth <= 0)
+		{
+			// Gameplay::PlaySound2D() win sound
+			EndMinigame(EMinigameResult::Success);
 		}
 	}
 
