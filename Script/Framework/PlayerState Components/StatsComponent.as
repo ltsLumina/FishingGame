@@ -43,7 +43,7 @@ class UStatsComponent : UFishComponentBase
 	UFUNCTION(NotBlueprintCallable)
 	private void RodUnequipped(UFishingRod OldRod)
 	{
-		auto RodStats = OldRod.Data.BaseStats;
+		auto RodStats = OldRod.RodItem.RodData.BaseStats;
 		for (auto& StatPair : RodStats)
 		{
 			RemoveModifier(StatPair.Key);
@@ -53,7 +53,7 @@ class UStatsComponent : UFishComponentBase
 	UFUNCTION()
 	private void RodEquipped(UFishingRod NewRod)
 	{
-		auto RodStats = NewRod.Data.BaseStats;
+		auto RodStats = NewRod.RodItem.RodData.BaseStats;
 		for (auto& StatPair : RodStats)
 		{
 			AddModifier(StatPair.Key, StatPair.Value, EStatType::Flat, EStackingType::Additive);

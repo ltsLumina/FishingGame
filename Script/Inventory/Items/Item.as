@@ -3,6 +3,9 @@ class UItem : UPrimaryDataAsset
 	UPROPERTY(Category = "Item", ExposeOnSpawn, SaveGame, Meta = (ShowOnlyInnerProperties))
 	FItemData BaseData;
 
+	UPROPERTY(Category = "Item | Widget", ExposeOnSpawn)
+	TSubclassOf<UUserWidget> TooltipWidget;
+
 	UFUNCTION(Category = "Item | Info", BlueprintPure)
 	FName GetID()
 	{

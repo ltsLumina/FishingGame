@@ -11,12 +11,6 @@ class UFishItem : UItem
 	}
 
 	UFUNCTION(Category = "Fish | Info", BlueprintPure)
-	int GetMinimumGathering()
-	{
-		return FishData.MinimumGathering;
-	}
-
-	UFUNCTION(Category = "Fish | Info", BlueprintPure)
 	float GetExperienceValue()
 	{
 		return FishData.ExperienceValue;
@@ -90,12 +84,6 @@ struct FFishItemData
 	 */
 	UPROPERTY(Category = "Fish | Info", Meta = (UIMin = "1", UIMax = "100"), SaveGame)
 	int RecommendedLevel = 1;
-
-	UPROPERTY(Category = "Fish | Info", Meta = (UIMin = "0", UIMax = "1000", Delta = "1"))
-	int MinimumGathering = 0;
-
-	UPROPERTY(Category = "Fish | Info", Meta = (UIMin = "0", UIMax = "1000", Delta = "1"))
-	int MinimumPerception = 0;
 
 	/**
 	 * Experience points awarded when this fish is caught.

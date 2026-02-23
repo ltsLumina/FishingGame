@@ -17,7 +17,7 @@ class UInventoryComponent : UFishComponentBase
 	default Licences.AddTag(GameplayTags::Licence_Zone1);
 	
 	UPROPERTY(Category = "Rod", EditDefaultsOnly)
-	URodData DefaultRodData;
+	URodItem DefaultRodData;
 
 	UPROPERTY(Category = "Rod", VisibleInstanceOnly)
 	UFishingRod EquippedRod;
@@ -64,7 +64,7 @@ class UInventoryComponent : UFishComponentBase
 	void HandleRodEquipped(UFishingRod NewRod)
 	{
 #if EDITOR
-		Print(f"Equipped rod: {NewRod.Data.Name} with {NewRod.Traits.Num()} traits.", 3.0f, FLinearColor::Purple);
+		Print(f"Equipped rod: {NewRod.RodItem.Name} with {NewRod.Traits.Num()} traits.", 3.0f, FLinearColor::Purple);
 		PrintTraitDebugInfo(NewRod);
 #endif
 	}
@@ -131,7 +131,7 @@ class UInventoryComponent : UFishComponentBase
 				bool IsEnhanced = false;
 				if (Trait.CanBeEnhanced)
 				{
-					float Chance = FishingRod::GetEnhanceChance(EquippedRod.Data.Tier);
+					float Chance = FishingRod::GetEnhanceChance(EquippedRod.RodItem.RodData.Tier);
 					IsEnhanced = Percent::RollPercentChance(Chance);
 					if (IsEnhanced) Print(f"Trait {Trait.TraitName} was enhanced! ({Chance}% chance)", 3.0f, FLinearColor::Purple);
 				}
@@ -401,7 +401,7 @@ class UInventoryComponent : UFishComponentBase
 			}
 		}
 
-		SaveGame.SavedRod = EquippedRod.Data;
+		SaveGame.SavedRod = EquippedRod.RodItem;
 		SaveGame.SavedRodTraits = EquippedRod.Traits;
 
 		SaveGame.SavedItemClass = SavedItemClass;

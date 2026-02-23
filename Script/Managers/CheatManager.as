@@ -52,9 +52,9 @@ class UFishCheatManager : UCheatManager
         auto DebugRod = EditorAsset::GetEditorAsset(f"/Game/FishingGame/Blueprints/Rods/{RodName}.{RodName}");
 
         auto PS = GetFishPlayerStateBase();
-        auto Rod = FishingRod::GenerateRod(this, Cast<URodData>(DebugRod));
+        auto Rod = FishingRod::GenerateRod(this, Cast<URodItem>(DebugRod));
         PS.InventoryComponent.EquipRod(Rod);
-        Print(f"[Cheat] Equipped a new rod! ({Rod.Data.RodName})", 5.0f, FLinearColor::Green);
+        Print(f"[Cheat] Equipped a new rod! ({Rod.RodItem.BaseData.ItemName})", 5.0f, FLinearColor::Green);
         #endif
     }
 

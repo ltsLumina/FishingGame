@@ -78,7 +78,7 @@ class UGamblingComponent : UFishComponentBase
     void TryResolveBet(AFish CaughtFish)
     {
         FishingAttempts--;
-
+        
         if (CaughtFish.Item.GetID() == RequiredFish)
         {
             // Bettor wins
