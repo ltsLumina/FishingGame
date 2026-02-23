@@ -1,6 +1,4 @@
-event void FOnRodEquipped(UFishingRod NewRod);
-event void FOnRodUnequipped(UFishingRod OldRod);
-event void FOnInventoryChanged(FName ItemID, FInventorySlot InventorySlot, EInventoryChangeType Change);
+event void FOnInventoryChanged(FName ItemID, int Index, FInventorySlot InventorySlot, EInventoryChangeType Change);
 
 enum EInventoryChangeType
 {
@@ -12,143 +10,16 @@ enum EInventoryChangeType
 UCLASS(Abstract)
 class UInventoryComponent : UFishComponentBase
 {
-	UPROPERTY(Category = "Licence", VisibleInstanceOnly, Meta = (Categories="Licence"))
-	FGameplayTagContainer Licences;
-	default Licences.AddTag(GameplayTags::Licence_Zone1);
-	
-	UPROPERTY(Category = "Rod", EditDefaultsOnly)
-	URodItem DefaultRodData;
-
-	UPROPERTY(Category = "Rod", VisibleInstanceOnly)
-	UFishingRod EquippedRod;
-
-#if EDITOR
-	UPROPERTY(Category = "Rod", VisibleInstanceOnly, EditFixedSize, Meta = (TitleProperty = "TraitName", EditFixedOrder))
-	TArray<FDebugTraitInfo> TraitInfos;
-#endif
 
 	UPROPERTY(Category = "Inventory", VisibleInstanceOnly, EditFixedSize, Meta = (TitleProperty = "SlotName", EditFixedOrder))
 	TArray<FInventorySlot> Items;
 
-	UPROPERTY(Category = "Inventory", EditDefaultsOnly)
-	TMap<UBait, int> Baits;
+	default bReplicates = false;
 
-	UPROPERTY(Category = "Rod | Events")
-	FOnRodEquipped OnRodEquipped;
-
-	UPROPERTY(Category = "Rod | Events")
-	FOnRodUnequipped OnRodUnequipped;
+	default bWaitForOwningActorInitialized = false;
 
 	UPROPERTY(Category = "Inventory")
 	FOnInventoryChanged OnInventoryChanged;
-
-	default bReplicates = false;
-
-	default bWaitForOwningActorInitialized = true;
-
-	void PostInitialize(AFishCharacter InCharacter, AFishPlayerState InPlayerState,
-						float InInitializationTime) override
-	{
-		Super::PostInitialize(InCharacter, InPlayerState, InInitializationTime);
-
-		OnRodEquipped.AddUFunction(this, n"HandleRodEquipped");
-		OnRodUnequipped.AddUFunction(this, n"HandleRodUnequipped");
-
-		if (EquippedRod == nullptr && !Gameplay::DoesSaveGameExist("PlayerInventory", 0))
-		{
-			EquipRod(FishingRod::GenerateRod(this, DefaultRodData));
-		}
-	}
-
-	UFUNCTION(NotBlueprintCallable)
-	void HandleRodEquipped(UFishingRod NewRod)
-	{
-#if EDITOR
-		Print(f"Equipped rod: {NewRod.RodItem.Name} with {NewRod.Traits.Num()} traits.", 3.0f, FLinearColor::Purple);
-		PrintTraitDebugInfo(NewRod);
-#endif
-	}
-
-#if EDITOR
-	void PrintTraitDebugInfo(UFishingRod Rod)
-	{
-		TraitInfos.Empty();
-
-		TArray<FString> TraitNames;
-		for (auto& TraitClass : Rod.Traits)
-		{
-			auto Trait = TraitClass.GetDefaultObject();
-
-			FDebugTraitInfo Info;
-			Info.TraitName = Trait.TraitName.ToString();
-			Info.Description = Trait.Description.ToString();
-			Info.Effect = Trait.BasicEffect.ToString();
-
-			TraitNames.Add(Info.TraitName);
-			TraitInfos.Add(Info);
-		}
-		Print("Traits: " + String::JoinStringArray(TraitNames, ", "), 3.0f, FLinearColor::Purple);
-	}
-#endif
-
-	UFUNCTION(NotBlueprintCallable)
-	void HandleRodUnequipped(UFishingRod OldRod)
-	{
-#if EDITOR
-		TraitInfos.Empty();
-#endif
-
-		AppliedTraits.Empty();
-		System::CollectGarbage(); // terrible solution but it works so far
-	}
-
-	void EquipRod(UFishingRod NewRod)
-	{	
-		if (EquippedRod != nullptr)
-		{
-			OnRodUnequipped.Broadcast(EquippedRod);
-		}
-
-		EquippedRod = NewRod;
-
-		if (EquippedRod != nullptr)
-		{
-			// apply rod stat modifiers
-			for (auto& TraitClass : EquippedRod.Traits)
-			{
-				if (TraitClass == nullptr) 
-				{
-					throw("TraitClass is nullptr!");
-					continue;
-				}
-
-				if (Character == nullptr) Character = GetFishCharacterBase();
-
-				auto Trait = NewObject(this, TraitClass);
-				Trait.Init(Character.FishingComponent, PlayerState.StatsComponent, PlayerState.TokenComponent);
-				AppliedTraits.Add(Trait);
-
-				bool IsEnhanced = false;
-				if (Trait.CanBeEnhanced)
-				{
-					float Chance = FishingRod::GetEnhanceChance(EquippedRod.RodItem.RodData.Tier);
-					IsEnhanced = Percent::RollPercentChance(Chance);
-					if (IsEnhanced) Print(f"Trait {Trait.TraitName} was enhanced! ({Chance}% chance)", 3.0f, FLinearColor::Purple);
-				}
-
-				if (!IsEnhanced)
-					Trait.ApplyTrait(Character, PlayerState);
-				else
-					Trait.ApplyTraitEnhanced(Character, PlayerState);
-			}
-
-			OnRodEquipped.Broadcast(EquippedRod);
-		}
-	}
-
-	// literally just used to prevent garbage collection of traits
-	UPROPERTY(NotEditable, NotVisible, BlueprintHidden)
-	TArray<UTrait> AppliedTraits;
 
 	UFUNCTION(Category = "Inventory")
 	void AddItem(UItem Item, FInventoryInstanceData InstanceData, int Quantity = 1)
@@ -174,7 +45,7 @@ class UInventoryComponent : UFishComponentBase
 			Items[SlotIndex] = Slot;
 		}
 
-		OnInventoryChanged.Broadcast(Item.BaseData.ID, Slot, EInventoryChangeType::Added);
+		OnInventoryChanged.Broadcast(Item.BaseData.ID, -1, Slot, EInventoryChangeType::Added);
 	}
 
 	UFUNCTION(Category = "Inventory", Meta = (ReturnDisplayName = "Found"))
@@ -244,12 +115,29 @@ class UInventoryComponent : UFishComponentBase
 				auto RemovedItem = Items[i];
 				Items[i] = FInventorySlot(); // Clear the slot instead of removing it
 				bRemoved = true;
-				OnInventoryChanged.Broadcast(ID, RemovedItem, EInventoryChangeType::Removed);
+				OnInventoryChanged.Broadcast(ID, i, RemovedItem, EInventoryChangeType::Removed);
 				if (!RemoveDuplicates)
 					break;
 			}
 		}
 		return bRemoved;
+	}
+
+	UFUNCTION(Category = "Inventory")
+	bool RemoveItemByGUID(FGuid InGUID)
+	{
+		for (int i = 0; i < Items.Num(); i++)
+		{
+			if (Items[i].Item != nullptr && Items[i].Item.GUID == InGUID)
+			{
+				auto RemovedItem = Items[i];
+				Items[i] = FInventorySlot(); // Clear the slot instead of removing it
+				OnInventoryChanged.Broadcast(RemovedItem.Item.BaseData.ID, i, RemovedItem, EInventoryChangeType::Removed);
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	UFUNCTION(Category = "Inventory")
@@ -259,7 +147,7 @@ class UInventoryComponent : UFishComponentBase
 		{
 			auto RemovedItem = Items[Index];
 			Items[Index] = FInventorySlot(); // Clear the slot instead of removing it
-			OnInventoryChanged.Broadcast(RemovedItem.Item.BaseData.ID, RemovedItem, EInventoryChangeType::Removed);
+			OnInventoryChanged.Broadcast(RemovedItem.Item.BaseData.ID, Index, RemovedItem, EInventoryChangeType::Removed);
 			return true;
 		}
 		return false;
@@ -278,25 +166,11 @@ class UInventoryComponent : UFishComponentBase
 			if (Items[i].Item == Slot.Item && (ItemFilter.Num() == 0 || ItemFilter.Contains(Slot.Item.GetClass())))
 			{
 				Items[i] = FInventorySlot(); // Clear the slot instead of removing it
-				OnInventoryChanged.Broadcast(Slot.Item.BaseData.ID, Slot, EInventoryChangeType::Removed);
+				OnInventoryChanged.Broadcast(Slot.Item.BaseData.ID, i, Slot, EInventoryChangeType::Removed);
 				return true;
 			}
 		}
 		return false;
-	}
-
-	UFUNCTION(Category = "Inventory | Bait")
-	void AddBait(UBait Bait, int Quantity = 1)
-	{
-		if (Baits.Contains(Bait))
-		{
-			Baits[Bait] += Quantity;
-		}
-		else
-		{
-			Baits.Add(Bait, Quantity);
-		}
-		Print("Added " + Quantity + " x " + Bait.BaitName.ToString() + " to bait inventory.", 3.0);
 	}
 
 	UFUNCTION(Category = "Inventory")
@@ -304,7 +178,7 @@ class UInventoryComponent : UFishComponentBase
 	{
 		Items.Empty();
 		// Print("Cleared inventory.");
-		OnInventoryChanged.Broadcast(FName("Everything"), FInventorySlot(), EInventoryChangeType::Removed);
+		OnInventoryChanged.Broadcast(FName("Everything"), -1, FInventorySlot(), EInventoryChangeType::Removed);
 	}
 
 	UFUNCTION(Category = "Inventory", BlueprintPure, Meta = (CompactNodeTitle = "Contains", Keywords = "has,find"))
@@ -351,25 +225,6 @@ class UInventoryComponent : UFishComponentBase
 		return TotalValue;
 	}
 
-	UFUNCTION(Category = "Inventory | Bait")
-	void ConsumeBait(UBait Bait)
-	{
-		if (!Baits.Contains(Bait))
-			return;
-
-		Baits[Bait] = Math::Max(0, Baits[Bait] - 1);
-
-		if (Baits[Bait] == 0)
-		{
-			auto FishingComponent = UFishingComponent::Get(Character);
-
-			FishingComponent.CurrentBait = nullptr;
-			PrintWarning("You have run out of " + Bait.BaitName.ToString() + "!");
-
-			GetFishHUD().AddNotification(f"You have run out of {Bait.BaitName}");
-		}
-	}
-
 	UFUNCTION(Category = "Inventory", BlueprintPure)
 	bool IsValidSlot(FInventorySlot Slot)
 	{
@@ -401,9 +256,6 @@ class UInventoryComponent : UFishComponentBase
 			}
 		}
 
-		SaveGame.SavedRod = EquippedRod.RodItem;
-		SaveGame.SavedRodTraits = EquippedRod.Traits;
-
 		SaveGame.SavedItemClass = SavedItemClass;
 		SaveGame.SavedBaseData = SavedBaseData;
 		SaveGame.SavedFishData = SavedFishData;
@@ -424,14 +276,6 @@ class UInventoryComponent : UFishComponentBase
 		auto LoadedSave = Cast<UInventorySaveGame>(SaveGame);
 		if (LoadedSave == nullptr)
 			return ELoadResult::Failure;
-
-		auto LoadedRod = FishingRod::GenerateRod(this, LoadedSave.SavedRod);
-		LoadedRod.Traits = LoadedSave.SavedRodTraits; // traits are saved separately to preserve randomization
-		EquipRod(LoadedRod);
-		Print(f"Loaded rod ({LoadedSave.SavedRod.GetName()}) with " + LoadedSave.SavedRodTraits.Num() + " traits from save.", 3.0f, FLinearColor::Purple);
-#if EDITOR
-		PrintTraitDebugInfo(LoadedRod);
-#endif
 
 		int FishIndex = 0;
 

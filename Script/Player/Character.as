@@ -23,6 +23,10 @@ class AFishCharacter : AFishEntity
 	UFUNCTION(BlueprintOverride)
 	void Tick(float DeltaSeconds)
 	{
+		float Value;
+		Stats::GetStat(this, GameplayTags::Stat_Movement_Speed, false, false, Value);
+		CharacterMovement.MaxWalkSpeed = Value;
+
 		UTextRenderComponent TextRender = UTextRenderComponent::Get(this);
 		if (TextRender == nullptr)
 			return;

@@ -37,8 +37,7 @@ class UCollectionComponent : UFishComponentBase
 	}
 
 	UFUNCTION()
-	private void HandleInventoryChanged(FName ItemID, FInventorySlot InventorySlot,
-								EInventoryChangeType Change)
+	private void HandleInventoryChanged(FName ItemID, int Index, FInventorySlot InventorySlot,	EInventoryChangeType Change)
 	{
 		if (Change == EInventoryChangeType::Added)
 		{

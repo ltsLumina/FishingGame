@@ -142,7 +142,7 @@ class UFishingComponent : UFishComponentBase
 	UFUNCTION(BlueprintPure)
 	bool HasRequiredLicence()
 	{
-		return PlayerState.InventoryComponent.Licences.HasTagExact(CurrentFishingHole.RequiredLicence);
+		return PlayerState.EquipmentComponent.Licences.HasTagExact(CurrentFishingHole.RequiredLicence);
 	}
 
 	void PostInitialize(AFishCharacter InCharacter, AFishPlayerState InPlayerState, float InInitializationTime) override

@@ -19,6 +19,9 @@ class AFishPlayerState : APlayerState
 	UInventoryComponent InventoryComponent;
 
 	UPROPERTY(Category = "Components", BlueprintReadOnly, NotVisible)
+	UEquipmentComponent EquipmentComponent;
+
+	UPROPERTY(Category = "Components", BlueprintReadOnly, NotVisible)
 	UExperienceComponent ExperienceComponent;
 
 	UPROPERTY(Category = "Components", BlueprintReadOnly, NotVisible)
@@ -52,6 +55,7 @@ class AFishPlayerState : APlayerState
 	{
 		StatsComponent = UStatsComponent::Get(this);
 		InventoryComponent = UInventoryComponent::Get(this);
+		EquipmentComponent = UEquipmentComponent::Get(this);
 		ExperienceComponent = UExperienceComponent::Get(this);
 		QuestComponent = UQuestComponent::Get(this);
 		CollectionComponent = UCollectionComponent::Get(this);
@@ -160,6 +164,19 @@ class AFishPlayerState : APlayerState
 				break;
 			case ELoadResult::Failure:
 				PrintError("Failed to load inventory from save.", 25.0f);
+				break;
+		}
+
+		switch (EquipmentComponent.LoadEquipment())
+		{
+			case ELoadResult::Success:
+				Print("Equipment loaded from save.", 3.0f, FLinearColor::Green);
+				break;
+			case ELoadResult::NoData:
+				Print("No equipment save found.", 3.0f, FLinearColor::Yellow);
+				break;
+			case ELoadResult::Failure:
+				PrintError("Failed to load equipment from save.", 25.0f);
 				break;
 		}
 

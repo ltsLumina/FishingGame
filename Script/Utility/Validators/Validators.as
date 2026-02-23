@@ -14,7 +14,10 @@ namespace BlueprintValidation
 		TArray<FSubobjectDataHandle> SubobjectData;
 		Subsystem::GetEngineSubsystem(USubobjectDataSubsystem).GatherSubobjectDataForBlueprint(Blueprint, SubobjectData);
 		FSubobjectData Data;
-		SubobjectData::GetData(SubobjectData[0], Data);
+
+		if (SubobjectData.IsValidIndex(0)) SubobjectData::GetData(SubobjectData[0], Data);
+		else return nullptr;
+		
 		auto BlueprintAsset = SubobjectData::GetObjectForBlueprint(Data, Blueprint);
 
 		return BlueprintAsset;
@@ -153,7 +156,8 @@ class UAbilityTableValidator : UFishValidatorBase
 		auto DataTable = Cast<UDataTable>(InAsset);
 		TArray<FAbilityUnlockInfo> Rows;
 		DataTable.GetAllRows(Rows);
-        if (Rows.IsEmpty()) return EDataValidationResult::Invalid;
+		if (Rows.IsEmpty())
+			return EDataValidationResult::Invalid;
 
 		for (auto& Row : Rows)
 		{
@@ -188,6 +192,9 @@ class UIDValidator : UFishValidatorBase
 				AssetWarning(InAsset, FText::FromString("Asset has an incorrect ID. An auto-generated one has been supplied in its place."));
 				return EDataValidationResult::Invalid;
 			}
+
+			AssetPasses(InAsset);
+			return EDataValidationResult::Valid;
 		}
 
 		if (InAsset.IsA(UItem))
@@ -199,6 +206,9 @@ class UIDValidator : UFishValidatorBase
 				AssetWarning(InAsset, FText::FromString("Asset has an incorrect ID. An auto-generated one has been supplied in its place."));
 				return EDataValidationResult::Invalid;
 			}
+
+			AssetPasses(InAsset);
+			return EDataValidationResult::Valid;
 		}
 
 		if (IsBlueprint)
@@ -216,6 +226,7 @@ class UIDValidator : UFishValidatorBase
 			}
 		}
 
+		AssetPasses(InAsset);
 		return EDataValidationResult::Valid;
 	}
 }
@@ -243,7 +254,7 @@ class UTraitValidator : UFishValidatorBase
 				{
 					Trait.TraitName = ObjectNames::NicifyVariableName(Trait.GetName(), "Trait_");
 					AssetWarning(InAsset, FText::FromString("Trait had a missing name. A default one was generated based on the file name."));
-                    continue;
+					continue;
 				}
 
 				AssetFails(InAsset, FText::FromString(f"{Trait.Name}'s {Condition.Key} is empty!"));

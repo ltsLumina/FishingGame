@@ -63,7 +63,7 @@ class UQuestComponent : UFishComponentBase
 	}
 
 	UFUNCTION(NotBlueprintCallable)
-	private void HandleInventoryChanged(FName _0, FInventorySlot _1, EInventoryChangeType _2)
+	private void HandleInventoryChanged(FName _0, int Index, FInventorySlot _1, EInventoryChangeType _2)
 	{
 		for (auto& LogEntry : QuestLog)
 		{
@@ -202,13 +202,13 @@ class UQuestComponent : UFishComponentBase
 			check(Reward.Items.Num() > 0, "Quest reward marked as granting item, but no items specified.");
 			for (auto& Pair : Reward.Items)
 			{
-				PlayerState.InventoryComponent.AddBait(Pair.Key, Pair.Value);
+				PlayerState.EquipmentComponent.AddBait(Pair.Key, Pair.Value);
 			}
 		}
 		if (Reward.GrantsFishingRod)
 		{
 			auto Rod = FishingRod::GenerateRod(Character, Reward.FishingRod);
-			PlayerState.InventoryComponent.EquipRod(Rod); // todo: add to inventory instead
+			PlayerState.EquipmentComponent.EquipRod(Rod); // todo: add to inventory instead
 		}
 
 		QuestLog.Remove(Quest.QuestID);

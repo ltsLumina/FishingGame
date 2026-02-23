@@ -4,12 +4,6 @@ class UInventorySaveGame : USaveGame
     int SavedGil;
     
     UPROPERTY(Category = "Data")
-    URodItem SavedRod;
-
-    UPROPERTY(Category = "Data")
-    TArray<TSubclassOf<UTrait>> SavedRodTraits;
-    
-    UPROPERTY(Category = "Data")
     TArray<TSubclassOf<UItem>> SavedItemClass;
     
     UPROPERTY(Category = "Data")

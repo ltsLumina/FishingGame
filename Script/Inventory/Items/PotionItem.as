@@ -1,4 +1,4 @@
-class UPotionItem : UItem
+class UPotionItem : UConsumableItem
 {
 	UPROPERTY(Category = "Potion | Info", ExposeOnSpawn, SaveGame)
 	FPotionItemData PotionData;

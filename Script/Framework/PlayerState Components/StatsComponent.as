@@ -10,6 +10,8 @@ class UStatsComponent : UFishComponentBase
 	default BaseStats.Add(GameplayTags::Stat_Fishing_BiteRate, 100.0f);	   // Decreases the time for a fish to bite. (Higher = Quicker bites)
 	default BaseStats.Add(GameplayTags::Stat_Fishing_CatchChance, 100.0f); // Increases the chance to sucessfully catch a fish. (Higher = Better odds)
 	default BaseStats.Add(GameplayTags::Stat_Fishing_Luck, 0.0f);		   // Increases the chance for a fish to have a tag. (Higher = better rewards)
+	default BaseStats.Add(GameplayTags::Stat_Movement_Speed, 500.0f);
+	default BaseStats.Add(GameplayTags::Stat_Movement_JumpHeight, 145.0f);
 
 	UPROPERTY(Category = "Stats", VisibleInstanceOnly, Meta = (Categories = "Stat"))
 	private TMap<FGameplayTag, float> AdditiveModifiers;
@@ -36,8 +38,8 @@ class UStatsComponent : UFishComponentBase
 	{
 		Super::PostInitialize(InCharacter, InPlayerState, InInitializationTime);
 
-		PlayerState.InventoryComponent.OnRodUnequipped.AddUFunction(this, n"RodUnequipped");
-		PlayerState.InventoryComponent.OnRodEquipped.AddUFunction(this, n"RodEquipped");
+		PlayerState.EquipmentComponent.OnRodUnequipped.AddUFunction(this, n"RodUnequipped");
+		PlayerState.EquipmentComponent.OnRodEquipped.AddUFunction(this, n"RodEquipped");
 	}
 
 	UFUNCTION(NotBlueprintCallable)

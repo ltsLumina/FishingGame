@@ -3,9 +3,12 @@ class UItem : UPrimaryDataAsset
 	UPROPERTY(Category = "Item", ExposeOnSpawn, SaveGame, Meta = (ShowOnlyInnerProperties))
 	FItemData BaseData;
 
-	UPROPERTY(Category = "Item | Widget", ExposeOnSpawn)
+	FGuid GUID = Guid::NewGuid();
+
+	UPROPERTY(Category = "Item | Widget")
 	TSubclassOf<UUserWidget> TooltipWidget;
 
+	// #region Helpers
 	UFUNCTION(Category = "Item | Info", BlueprintPure)
 	FName GetID()
 	{
@@ -40,6 +43,23 @@ class UItem : UPrimaryDataAsset
 	UTexture2D GetThumbnail()
 	{
 		return BaseData.Thumbnail;
+	}
+	// #endregion
+}
+
+class UConsumableItem : UItem
+{
+	UFUNCTION(BlueprintCallable, BlueprintEvent)
+	void Use(AFishCharacter Consumer)
+	{
+
+	}
+
+	UFUNCTION()
+	protected void Consume()
+	{
+		UInventoryComponent InventoryComponent = UInventoryComponent::Get(Gameplay::GetPlayerCharacter(0).PlayerState);
+		InventoryComponent.RemoveItemByGUID(GUID);
 	}
 }
 
@@ -86,7 +106,7 @@ namespace ObjectNames
 		ToString.RemoveFromStart("Default__");
 		ToString.RemoveFromEnd("_C");
 		ToString.RemoveFromStart(PrefixToRemove);
-		
+
 		FString WithSpaces = ToString.Replace("_", " ");
 		return FText::FromString(WithSpaces.ToDisplayName());
 	}
