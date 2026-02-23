@@ -113,36 +113,6 @@ AFishCharacter GetFishCharacterBase()
 	return Char;
 }
 
-UFUNCTION(BlueprintPure, Category = "Math", Meta = (CompactNodeTitle = "Round", Keywords = "round,decimal,places"))
-float RoundTo(float Value, int DecimalPlaces)
-{
-	float Multiplier = Math::Pow(10.0f, DecimalPlaces);
-	return Math::RoundToFloat(Value * Multiplier) / Multiplier;
-}
-
-/**
- * Whether the game is currently running in the editor.
- */
-UFUNCTION(BlueprintPure, Category = "Editor", Meta = (CompactNodeTitle = "Editor", Keywords = "editor,pc,platform"))
-bool IsEditor()
-{
-#if EDITOR
-	return true;
-#else
-	return false;
-#endif
-}
-
-UFUNCTION(Category = "Editor", Meta = (ExpandBoolAsExecs = "ReturnValue", Keywords = "editor,pc,platform"), DisplayName = "Is Editor")
-bool IsEditor_Expanded()
-{
-#if EDITOR
-	return true;
-#else
-	return false;
-#endif
-}
-
 UFUNCTION(Meta = (ExpandBoolAsExecs = "ReturnValue"), Category = "Pawn", DisplayName = "Is Locally Controlled")
 bool IsLocallyControlled_Static(APawn Pawn)
 {
