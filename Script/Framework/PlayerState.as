@@ -69,7 +69,7 @@ class AFishPlayerState : APlayerState
 	void BeginPlay()
 	{
 #if EDITOR
-		ResetPlayerState();
+		//ResetPlayerState();
 #endif
 		TryLoadPlayerState();
 

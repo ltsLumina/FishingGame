@@ -49,13 +49,18 @@ class UItem : UPrimaryDataAsset
 
 class UConsumableItem : UItem
 {
-	UFUNCTION(BlueprintCallable, BlueprintEvent)
-	void Use(AFishCharacter Consumer)
+	UFUNCTION(Category = "Item")
+	void Use()
 	{
-
+		ItemUsed(GetFishCharacterBase());
+		Consume();
 	}
 
-	UFUNCTION()
+	UFUNCTION(BlueprintEvent)
+	protected void ItemUsed(AFishCharacter Consumer)
+	{
+	}
+
 	protected void Consume()
 	{
 		UInventoryComponent InventoryComponent = UInventoryComponent::Get(Gameplay::GetPlayerCharacter(0).PlayerState);

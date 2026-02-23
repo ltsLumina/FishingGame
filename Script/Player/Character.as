@@ -95,14 +95,10 @@ class AFishCharacter : AFishEntity
 	}
 };
 
-/**
- * Gets the FishCharacter for the specified player index (default 0).
- * Since GetPlayerController(0) always returns the local player, this function will also only return the local player's character.
- */
 UFUNCTION(BlueprintPure)
-AFishCharacter GetFishCharacterBase(int PlayerIndex = 0)
+AFishCharacter GetFishCharacterBase()
 {
-	auto PC = Gameplay::GetPlayerController(PlayerIndex);
+	auto PC = Gameplay::GetPlayerController(0);
 	if (PC == nullptr)
 	{
 		return nullptr;

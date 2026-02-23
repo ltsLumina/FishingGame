@@ -10,7 +10,6 @@ enum EInventoryChangeType
 UCLASS(Abstract)
 class UInventoryComponent : UFishComponentBase
 {
-
 	UPROPERTY(Category = "Inventory", VisibleInstanceOnly, EditFixedSize, Meta = (TitleProperty = "SlotName", EditFixedOrder))
 	TArray<FInventorySlot> Items;
 
@@ -295,7 +294,7 @@ class UInventoryComponent : UFishComponentBase
 			}
 			else
 			{
-				auto Item = NewObject(this, UItem);
+				auto Item = NewObject(this, LoadedSave.SavedItemClass[i]);
 				Item.BaseData = LoadedSave.SavedBaseData[i];
 				AddItem(Item, InstanceData, 1);
 			}

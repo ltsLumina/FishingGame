@@ -9,12 +9,14 @@ namespace BlueprintValidation
 	UFUNCTION(Category = "Validation", Meta = (WorldContext = "InAsset"))
 	const UObject GetBlueprint(UObject InAsset)
 	{
+		if (!InAsset.IsA(AActor)) return nullptr;
+		
 		auto Blueprint = Editor::GetBlueprintAsset(InAsset);
 
 		TArray<FSubobjectDataHandle> SubobjectData;
 		Subsystem::GetEngineSubsystem(USubobjectDataSubsystem).GatherSubobjectDataForBlueprint(Blueprint, SubobjectData);
-		FSubobjectData Data;
 
+		FSubobjectData Data;
 		if (SubobjectData.IsValidIndex(0)) SubobjectData::GetData(SubobjectData[0], Data);
 		else return nullptr;
 		
@@ -214,6 +216,12 @@ class UIDValidator : UFishValidatorBase
 		if (IsBlueprint)
 		{
 			auto BlueprintAsset = BlueprintValidation::GetBlueprint(InAsset);
+			if (BlueprintAsset == nullptr)
+			{
+				AssetPasses(InAsset);
+				return EDataValidationResult::Valid;
+			}
+		
 			if (BlueprintAsset.IsA(AFishNPC))
 			{
 				auto NPC = Cast<AFishNPC>(BlueprintAsset);

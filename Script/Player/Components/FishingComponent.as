@@ -77,10 +77,10 @@ class UFishingComponent : UFishComponentBase
 	UFishingHoleComponent CurrentFishingHole;
 
 	/**
-	 * Considers a wide range of factors (bait, conditions, etc.) to determine which fish can currently be caught.
+	 * Considers a wide range of factors (bait, conditions, etc.) to determine which items can currently be caught.
 	 */
 	UPROPERTY(Category = "Fishing | Area", VisibleAnywhere)
-	TArray<UFishItem> CurrentCatchableFish;
+	TArray<UItem> CurrentLootPool;
 
 	UPROPERTY(VisibleInstanceOnly)
 	UFishItem CurrentMoochableFish;
@@ -190,41 +190,48 @@ class UFishingComponent : UFishComponentBase
 		CurrentState = NewState;
 		OnStateChange.Broadcast(NewState);
 
-		if (CurrentFishingHole != nullptr) 
-			UpdateCatchableFish(CurrentFishingHole);
+		if (CurrentFishingHole != nullptr)
+			UpdateLootPool(CurrentFishingHole);
 
 		switch (NewState)
 		{
 			case EFishingState::NotFishing:
 				break;
 			case EFishingState::Fishing:
-			OnCast.Broadcast();
+				OnCast.Broadcast();
 				break;
 			case EFishingState::FishOnHook:
-			OnBite.Broadcast();
+				OnBite.Broadcast();
 				break;
 			case EFishingState::ReelingIn:
-			OnReel.Broadcast();
+				OnReel.Broadcast();
 				break;
 			case EFishingState::CaughtFish:
 				break;
 		}
 	}
 
-	void UpdateCatchableFish(UFishingHoleComponent Hole)
+	void UpdateLootPool(UFishingHoleComponent Hole)
 	{
 		if (Character == nullptr || TimeManager == nullptr || WeatherManager == nullptr)
 			return;
 
-		CurrentCatchableFish.Empty();
+		CurrentLootPool.Empty();
 
 		CurrentFishingHole = Hole;
 		if (CurrentFishingHole == nullptr)
 			return;
 
-		for (auto& FishItem : CurrentFishingHole.CatchableFish)
+		for (auto& Item : CurrentFishingHole.LootPool)
 		{
-			auto LoadedFishItem = System::LoadAsset_Blocking(FishItem);
+			auto LoadedItem = System::LoadAsset_Blocking(Item);
+			auto LoadedFishItem = Cast<UFishItem>(LoadedItem);
+
+			if (LoadedFishItem.FishData.Rarity > EFishRarity::Prismatic)
+			{
+				Print(f"A rare \"{LoadedFishItem.BaseData.ItemName}\" is available!", 0.0f, FLinearColor::Green);
+			}
+
 			auto Data = LoadedFishItem.FishData;
 
 			if (CurrentBait == nullptr)
@@ -258,14 +265,7 @@ class UFishingComponent : UFishComponentBase
 				}
 			}
 
-			CurrentCatchableFish.Add(LoadedFishItem);
-			for (auto Item : CurrentCatchableFish)
-			{
-				if (Item.FishData.Rarity > EFishRarity::Prismatic)
-				{
-					Print(f"A rare \"{Item.BaseData.ItemName}\" is available!", 0.0f, FLinearColor::Green);
-				}
-			}
+			CurrentLootPool.Add(LoadedFishItem);
 		}
 	}
 
@@ -297,14 +297,22 @@ class UFishingComponent : UFishComponentBase
 			PrintWarning("Fishing without any bait!", 1.5f);
 			MissedTimerHandle = System::SetTimer(this, n"StopFishing", 5, false);
 		}
-		else if (CurrentCatchableFish.Num() == 0)
+		else if (CurrentLootPool.Num() == 0)
 		{
 			PrintWarning("There are no fish to catch here! (Bait and/or Conditions Failed!)", 2.5f);
 			MissedTimerHandle = System::SetTimer(this, n"StopFishing", 5, false);
 		}
 		else
 		{
-			CurrentFish = SelectFishWeighted(CurrentCatchableFish);
+			TArray<UFishItem> FishItems;
+			for (auto& Item : CurrentLootPool)
+			{
+				auto AsFishItem = Cast<UFishItem>(Item);
+				if (AsFishItem != nullptr)
+					FishItems.Add(AsFishItem);
+			}
+
+			CurrentFish = SelectFishWeighted(FishItems);
 
 			float BiteRate;
 			Stats::GetStat(Character, GameplayTags::Stat_Fishing_BiteRate, true, false, BiteRate);

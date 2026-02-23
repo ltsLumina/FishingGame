@@ -27,7 +27,7 @@ class UFishingHoleComponent : UActorComponent
 	default HoleName = FText::FromName(GetName());
 
 	UPROPERTY(Category = "Fishing | Area", VisibleInstanceOnly, Replicated)
-	TArray<TSoftObjectPtr<UFishItem>> CatchableFish;
+	TArray<TSoftObjectPtr<UItem>> LootPool;
 
 	UPROPERTY(Category = "Fishing | Area", VisibleInstanceOnly, Replicated)
 	TArray<AFishCharacter> NearbyPlayers;
@@ -64,7 +64,7 @@ class UFishingHoleComponent : UActorComponent
 				FFishingHoleTableRow Row;
 				if (Table.FindRow(Tag.TagName, Row))
 				{
-					CatchableFish = Row.CatchableFish;
+					LootPool = Row.CatchableFish;
 					break;
 				}
 				else
@@ -80,20 +80,20 @@ class UFishingHoleComponent : UActorComponent
 	UFUNCTION(NotBlueprintCallable)
 	void ValidateCatchableFish()
 	{
-		if (CatchableFish.Num() == 0)
+		if (LootPool.Num() == 0)
 		{
 			PrintError(f"Fishing Hole {HoleName} has no catchable fish set!");
 			return;
 		}
 
-		for (int i = 0; i < CatchableFish.Num(); i++)
+		for (int i = 0; i < LootPool.Num(); i++)
 		{
-			if (CatchableFish[i].IsNull())
+			if (LootPool[i].IsNull())
 			{
 #if EDITOR
 				PrintError(f"Fishing Hole {HoleName} ({GetOwner().GetActorLabel()}) has null entries in its catchable fish list!");
 #endif
-				CatchableFish.RemoveAt(i);
+				LootPool.RemoveAt(i);
 				return;
 			}
 		}
@@ -113,7 +113,7 @@ class UFishingHoleComponent : UActorComponent
 		NearbyPlayers.AddUnique(Character);
 		OnHoleEntered.Broadcast(this);
 
-		FishingComponent.UpdateCatchableFish(this);
+		FishingComponent.UpdateLootPool(this);
 		
 		FishingComponent.OnSelectBait.AddUFunction(this, n"UpdateCatchableFish");
 		FishingComponent.OnFishHooked.AddUFunction(this, n"TrySpectralShift");
@@ -138,7 +138,7 @@ class UFishingHoleComponent : UActorComponent
 		NearbyPlayers.RemoveSingleSwap(Character);
 		OnHoleExited.Broadcast(this);
 
-		FishingComponent.UpdateCatchableFish(nullptr); // clears the catchable fish
+		FishingComponent.UpdateLootPool(nullptr); // clears the catchable fish
 
 		FishingComponent.OnSelectBait.Unbind(this, n"UpdateCatchableFish");
 	}
@@ -146,7 +146,7 @@ class UFishingHoleComponent : UActorComponent
 	UFUNCTION(NotBlueprintCallable)
 	void UpdateCatchableFish(UBait _)
 	{
-		FishingComponent.UpdateCatchableFish(this);
+		FishingComponent.UpdateLootPool(this);
 	}
 
 	UFUNCTION()
@@ -177,7 +177,7 @@ class UFishingHoleComponent : UActorComponent
 
 		Print("The fishing hole has spectral shifted!", 5.0f, FLinearColor::Purple);
 
-		FishingComponent.UpdateCatchableFish(this);
+		FishingComponent.UpdateLootPool(this);
 		for (AFishCharacter PlayerChar : NearbyPlayers)
 		{
 			for (TSubclassOf<UTrait> TraitClass : SpectralTraits)

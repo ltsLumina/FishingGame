@@ -24,7 +24,7 @@ class UEquipmentComponent : UFishComponentBase
 	TArray<FDebugTraitInfo> TraitInfos;
 #endif
 
-	UPROPERTY(Category = "Inventory", EditDefaultsOnly, VisibleInstanceOnly, SaveGame)
+	UPROPERTY(Category = "Inventory", EditDefaultsOnly, SaveGame)
 	TMap<UBait, int> Baits;
 
 	UPROPERTY(Category = "Rod | Events")

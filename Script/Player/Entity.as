@@ -43,7 +43,7 @@ class AFishEntity : ACharacter
 		if (bInitialized)
 			return;
 
-		Character = Cast<AFishCharacter>(GetFishCharacterBase(0));
+		Character = Cast<AFishCharacter>(GetFishCharacterBase());
 		FishState = IsValid(Character) ? Cast<AFishPlayerState>(Character.PlayerState) : nullptr;
 
 		if (!IsValid(Character) || !IsValid(FishState))
