@@ -1,59 +1,59 @@
-UCLASS(Meta = (PrioritizeCategories = "Item", AutoExpandCategories="Logic"))
+UCLASS(Meta = (PrioritizeCategories = "Item", AutoExpandCategories = "Logic"))
 class UFishItem : UItem
 {
-	UPROPERTY(Category = "Fish", ExposeOnSpawn, SaveGame, Meta=(ShowOnlyInnerProperties))
+	UPROPERTY(Category = "Fish", ExposeOnSpawn, SaveGame, Meta = (ShowOnlyInnerProperties))
 	FFishItemData FishData;
 
 	UFUNCTION(Category = "Fish | Info", BlueprintPure)
-	int GetRecommendedLevel()
+	int GetRecommendedLevel() property
 	{
 		return FishData.RecommendedLevel;
 	}
 
 	UFUNCTION(Category = "Fish | Info", BlueprintPure)
-	float GetExperienceValue()
+	float GetExperienceValue() property
 	{
 		return FishData.ExperienceValue;
 	}
 
 	UFUNCTION(Category = "Fish | Info", BlueprintPure)
-	int GetVendorValue()
+	int GetVendorValue() property
 	{
 		return FishData.VendorValue;
 	}
 
 	UFUNCTION(Category = "Fish | Info", BlueprintPure)
-	EFishType GetFishType()
+	EFishType GetFishType() property
 	{
 		return FishData.FishType;
 	}
 
 	UFUNCTION(Category = "Fish | Info", BlueprintPure)
-	EFishRarity GetRarity()
+	EFishRarity GetRarity() property
 	{
 		return FishData.Rarity;
 	}
 
 	UFUNCTION(Category = "Fish | Info", BlueprintPure)
-	TArray<UBait> GetPreferredBaits()
+	TArray<UBait> GetPreferredBaits() property
 	{
 		return FishData.PreferredBaits;
 	}
 
 	UFUNCTION(Category = "Fish | Info", BlueprintPure)
-	float GetCatchRate()
+	float GetCatchRate() property
 	{
 		return FishData.CatchChance;
 	}
 
 	UFUNCTION(Category = "Fish | Info", BlueprintPure)
-	bool GetIsMoochable()
+	bool GetIsMoochable() property
 	{
 		return FishData.IsMoochable;
 	}
 
 	UFUNCTION(Category = "Fish | Info", BlueprintPure)
-	FVector2D GetSizeSpan()
+	FVector2D GetSizeSpan() property
 	{
 		return FishData.SizeSpan;
 	}

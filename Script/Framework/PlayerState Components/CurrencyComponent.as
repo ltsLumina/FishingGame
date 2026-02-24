@@ -5,6 +5,21 @@ class UCurrencyComponent : UFishComponentBase
 	TMap<ECurrency, int> Currencies;
 	default Currencies.Add(ECurrency::Money, 0);
 
+	void PostInitialize(AFishCharacter InCharacter, AFishPlayerState InPlayerState,
+						AFishController InController) override
+	{
+		Super::PostInitialize(InCharacter, InPlayerState, InController);
+		
+		UWorkshopComponent Workshop = Gameplay::GetActorOfClass(AHarbour).GetComponent(UWorkshopComponent);
+		Workshop.HarbourDeliveryCompleted.AddUFunction(this, n"DeliveryCompleted");
+	}
+
+	UFUNCTION(NotBlueprintCallable)
+	private void DeliveryCompleted(FWorkshopProduct Product, float Value)
+	{
+		GainCurrency(ECurrency::Money, Value);
+	}
+
 	UFUNCTION(BlueprintPure)
 	int GetMoney() property
 	{
@@ -40,12 +55,14 @@ class UCurrencyComponent : UFishComponentBase
 		else throw("Could not find entry by that currency type!");
 	}
 
-    void GainCurrency(ECurrency Currency, int Amount)
+    void GainCurrency(ECurrency Currency, float Amount)
 	{
+		int Floored = Math::FloorToInt(Amount);
+		
         int Value;
 		if (Currencies.Find(Currency, Value))
 		{
-			Value = Math::Max(0, Value + Amount);
+			Value = Math::Max(0, Value + Floored);
             Currencies.Add(Currency, Value);
 		}
 		else throw("Could not find entry by that currency type!");
@@ -95,10 +112,7 @@ class UCurrencyComponent : UFishComponentBase
 		return false;
 	}
 
-	void PostInitialize(AFishCharacter InCharacter, AFishPlayerState InPlayerState, AFishController InController) override
-	{
-		Super::PostInitialize(InCharacter, InPlayerState, InController);
-	}
+//#region Save/Load
 
 	bool SaveCurrencies()
 	{
@@ -123,9 +137,11 @@ class UCurrencyComponent : UFishComponentBase
 
 		return ELoadResult::Success;
 	}
+//#endregion
 };
 
 enum ECurrency
 {
-	Money
+	Money,
+	Harbour,
 }

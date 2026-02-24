@@ -3,10 +3,16 @@ class UItem : UPrimaryDataAsset
 	UPROPERTY(Category = "Item", ExposeOnSpawn, SaveGame, Meta = (ShowOnlyInnerProperties))
 	FItemData BaseData;
 
-	FGuid GUID = Guid::NewGuid();
+	UPROPERTY(Category = "Item | Workshop", Meta = ())
+	bool IsWorkshopProduct;
+
+	UPROPERTY(Category = "Item | Workshop", Meta = (EditCondition="IsWorkshopProduct", EditConditionHides))
+	FWorkshopProductItemData WorkshopData;
 
 	UPROPERTY(Category = "Item | Widget")
 	TSubclassOf<UUserWidget> TooltipWidget;
+
+	FGuid GUID = Guid::NewGuid();
 
 	// #region Helpers
 	UFUNCTION(Category = "Item | Info", BlueprintPure)
@@ -47,6 +53,12 @@ class UItem : UPrimaryDataAsset
 	// #endregion
 }
 
+struct FWorkshopProductItemData
+{
+	UPROPERTY()
+	int Value;
+}
+
 class UConsumableItem : UItem
 {
 	UFUNCTION(Category = "Item")
@@ -66,6 +78,16 @@ class UConsumableItem : UItem
 		UInventoryComponent InventoryComponent = UInventoryComponent::Get(Gameplay::GetPlayerCharacter(0).PlayerState);
 		InventoryComponent.RemoveItemByGUID(GUID);
 	}
+}
+
+mixin UConsumableItem AsConsumableItem(UItem Item)
+{
+	return Cast<UConsumableItem>(Item);
+}
+
+mixin UFishItem AsFishItem(UItem Item)
+{
+	return Cast<UFishItem>(Item);
 }
 
 USTRUCT(Meta = (HiddenByDefault))
