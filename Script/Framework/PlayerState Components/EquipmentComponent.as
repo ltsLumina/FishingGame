@@ -35,10 +35,9 @@ class UEquipmentComponent : UFishComponentBase
 
 	default bWaitForOwningActorInitialized = true;
 
-	void PostInitialize(AFishCharacter InCharacter, AFishPlayerState InPlayerState,
-						float InInitializationTime) override
+	void PostInitialize(AFishCharacter InCharacter, AFishPlayerState InPlayerState, AFishController InController) override
 	{
-		Super::PostInitialize(InCharacter, InPlayerState, InInitializationTime);
+		Super::PostInitialize(InCharacter, InPlayerState, InController);
 
 		OnRodEquipped.AddUFunction(this, n"HandleRodEquipped");
 		OnRodUnequipped.AddUFunction(this, n"HandleRodUnequipped");

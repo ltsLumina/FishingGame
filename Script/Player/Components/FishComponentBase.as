@@ -1,15 +1,15 @@
-event void FOnInitialized(AFishCharacter InCharacter, AFishPlayerState InPlayerState, float InInitializationTime);
+event void FOnInitialized(AFishCharacter InCharacter, AFishPlayerState InPlayerState, AFishController Controller);
 
 UCLASS(Abstract)
 class UFishComponentBase : UActorComponent
 {
-	UPROPERTY(Category = "Component", BlueprintReadOnly, EditDefaultsOnly)
+	UPROPERTY(Category = "Initialization", BlueprintReadOnly, EditDefaultsOnly)
 	EFishComponentType ComponentType;
 
-	UPROPERTY(Category = "Component", BlueprintHidden, EditDefaultsOnly, meta = (Units = "s", UIMin = "0.01", UIMax = "1.0", AdvancedDisplay))
+	UPROPERTY(Category = "Initialization", BlueprintHidden, EditDefaultsOnly, AdvancedDisplay, Meta = (Units = "s", UIMin = "0.01", UIMax = "1.0"))
 	float RetryDelay = 0.1f;
 
-	UPROPERTY(Category = "Component", BlueprintHidden, EditDefaultsOnly, meta = (AdvancedDisplay))
+	UPROPERTY(Category = "Initialization", BlueprintHidden, EditDefaultsOnly, AdvancedDisplay)
 	int MaxTries = 50;
 
 	UPROPERTY(Category = "Initialization", BlueprintReadOnly, NotVisible)
@@ -28,15 +28,22 @@ class UFishComponentBase : UActorComponent
 	 * Will always be valid after initialization.
 	 * @note May be null during BeginPlay depending on ComponentType.
 	 */
-	UPROPERTY(Category = "Fish Component", BlueprintReadOnly, NotVisible, DisplayName = "Character")
+	UPROPERTY(Category = "Fish Component", BlueprintReadOnly, NotVisible, DisplayName = "Character", Keywords = "Fish Component")
 	AFishCharacter Character;
 
 	/**
 	 * Will always be valid after initialization.
 	 * @note May be null during BeginPlay depending on ComponentType.
 	 */
-	UPROPERTY(Category = "Fish Component", BlueprintReadOnly, NotVisible, DisplayName = "Player State")
+	UPROPERTY(Category = "Fish Component", BlueprintReadOnly, NotVisible, DisplayName = "Player State", Keywords = "Fish Component")
 	AFishPlayerState PlayerState;
+
+	/**
+	 * Will always be valid after initialization.
+	 * @note May be null during BeginPlay depending on ComponentType.
+	 */
+	UPROPERTY(Category = "Fish Component", BlueprintReadOnly, NotVisible, DisplayName = "Controller", Keywords = "Fish Component")
+	AFishController Controller;
 
 	UPROPERTY(Category = "Events", EditAnywhere, NotVisible)
 	FOnInitialized OnInitialized;
@@ -64,7 +71,8 @@ class UFishComponentBase : UActorComponent
 				PlayerState = Cast<AFishPlayerState>(GetOwner());
 				if (IsValid(PlayerState))
 				{
-					Character = Cast<AFishCharacter>(PlayerState.GetPawn());
+					Character = Cast<AFishCharacter>(PlayerState.Pawn);
+					Controller = GetFishControllerBase();
 				}
 				break;
 
@@ -72,6 +80,16 @@ class UFishComponentBase : UActorComponent
 				Character = Cast<AFishCharacter>(GetOwner());
 				if (IsValid(Character))
 				{
+					PlayerState = Cast<AFishPlayerState>(Character.PlayerState);
+					Controller = Cast<AFishController>(Character.Controller);
+				}
+				break;
+
+			case EFishComponentType::Controller:
+				Controller = GetFishControllerBase();
+				if (IsValid(Controller))
+				{
+					Character = Cast<AFishCharacter>(Controller.ControlledPawn);
 					PlayerState = Cast<AFishPlayerState>(Character.PlayerState);
 				}
 				break;
@@ -87,7 +105,7 @@ class UFishComponentBase : UActorComponent
 				return;
 			}
 
-			PrintError(f"FishComponentBase: ({GetName()}) timed out! \nFailed to initialize: Character or PlayerState is null after multiple attempts.");
+			PrintError(f"FishComponentBase: ({GetName()}) timed out! \nFailed to initialize: Character, PlayerState, or Controller is null after multiple attempts.");
 			return;
 		}
 
@@ -102,28 +120,29 @@ class UFishComponentBase : UActorComponent
 		bInitialized = true;
 		InitializationTime = Tries * RetryDelay;
 
-		PostInitialize(Character, PlayerState, InitializationTime);
-		ReceivePostInitialize(Character, PlayerState, InitializationTime);
-		OnInitialized.Broadcast(Character, PlayerState, InitializationTime);
+		PostInitialize(Character, PlayerState, Controller);
+		ReceivePostInitialize(Character, PlayerState, Controller);
+		OnInitialized.Broadcast(Character, PlayerState, Controller);
 	}
 
 	/**
 	 * Called after the component has been initialized and BeginPlay has run successfully.
-	 * References to Character and State are guaranteed to be valid here.
-	 * @note Tick is not enabled in BeginPlay by default. Calling to Super will enable it.
+	 * References to Character, PlayerState, and Controller are all guaranteed to be valid here.
+	 * @note Component Tick is enabled by default. Call to super to enable/disable it.
 	 */
-	void PostInitialize(AFishCharacter InCharacter, AFishPlayerState InPlayerState, float InInitializationTime)
+	void PostInitialize(AFishCharacter InCharacter, AFishPlayerState InPlayerState, AFishController InController)
 	{
 		SetComponentTickEnabled(true);
 	}
 
 	UFUNCTION(BlueprintEvent, DisplayName = "Post Initialize")
-	void ReceivePostInitialize(AFishCharacter InCharacter, AFishPlayerState InPlayerState, float InInitializationTime)
+	void ReceivePostInitialize(AFishCharacter InCharacter, AFishPlayerState InPlayerState, AFishController InController)
 	{}
 };
 
 enum EFishComponentType
 {
 	PlayerState,
-	Character
+	Character,
+	Controller
 }

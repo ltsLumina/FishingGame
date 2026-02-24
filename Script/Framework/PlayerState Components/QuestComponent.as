@@ -53,10 +53,9 @@ class UQuestComponent : UFishComponentBase
 	UPROPERTY(Category = "Events")
 	FOnQuestCompleted OnQuestCompleted;
 
-	void PostInitialize(AFishCharacter InCharacter, AFishPlayerState InPlayerState,
-						float InInitializationTime) override
+	void PostInitialize(AFishCharacter InCharacter, AFishPlayerState InPlayerState, AFishController InController) override
 	{
-		Super::PostInitialize(InCharacter, InPlayerState, InInitializationTime);
+		Super::PostInitialize(InCharacter, InPlayerState, InController);
 
 		InPlayerState.InventoryComponent.OnInventoryChanged.AddUFunction(this, n"HandleInventoryChanged");
 		Cast<AFishController>(Gameplay::GetPlayerController(0)).OnInteract.AddUFunction(this, n"HandleNPCInteract"); // TODO: null on client

@@ -39,16 +39,11 @@ class AFishPlayerState : APlayerState
 	UPROPERTY(Category = "Components", BlueprintReadOnly, NotVisible)
 	UCurrencyComponent CurrencyComponent;
 
-	UPROPERTY(Category = "Components", BlueprintReadOnly, NotVisible)
-	UMinigameComponent MinigameComponent;
-
 	UPROPERTY(Category = "Player Info | Title")
 	FOnTitleUnlocked OnTitleUnlocked;
 
 	UPROPERTY(Category = "Player Info | Title")
 	FOnTitleChanged OnTitleChanged;
-
-	AFishCharacter Character;
 
 	UFUNCTION(BlueprintOverride)
 	void ConstructionScript()
@@ -62,28 +57,103 @@ class AFishPlayerState : APlayerState
 		GamblingComponent = UGamblingComponent::Get(this);
 		TokenComponent = UTokenComponent::Get(this);
 		CurrencyComponent = UCurrencyComponent::Get(this);
-		MinigameComponent = UMinigameComponent::Get(this);
 	}
+
+//#region Initialization
+
+	UPROPERTY(Category = "Initialization", BlueprintHidden, EditDefaultsOnly, meta = (Units = "s", UIMin = "0.01", UIMax = "1.0", AdvancedDisplay))
+	float RetryDelay = 0.1f;
+
+	UPROPERTY(Category = "Initialization", BlueprintHidden, EditDefaultsOnly, meta = (AdvancedDisplay))
+	int MaxTries = 50;
+
+	UPROPERTY(Category = "Initialization", BlueprintReadOnly, NotVisible)
+	bool bInitialized = false;
+
+	/**
+	 * Will always be valid after initialization.
+	 * Unlike FishComponentBase, this reference will always point to the local player's FishCharacter.
+	 */
+	UPROPERTY(Category = "Fish Entity", BlueprintReadOnly, NotVisible, DisplayName = "Character")
+	AFishCharacter Character;
+
+	/**
+	 * Will always be valid after initialization.
+	 * Unlike FishComponentBase, this reference will always point to the local player's FishPlayerState.
+	 */
+	UPROPERTY(Category = "Fish Entity", BlueprintReadOnly, NotVisible, DisplayName = "Controller")
+	AFishController Controller;
 
 	UFUNCTION(BlueprintOverride)
 	void BeginPlay()
 	{
+		SetActorTickEnabled(false);
+
+		Initialize();
+	}
+
+	int Tries = 0;
+	float InitializationTime = 0.0f;
+
+	UFUNCTION(NotBlueprintCallable)
+	private void Initialize()
+	{
+		if (bInitialized)
+			return;
+
+		Character = Cast<AFishCharacter>(GetPawn());
+		Controller = Cast<AFishController>(Character.Controller);
+
+		if (!IsValid(Character) || !IsValid(Controller))
+		{
+			if (Tries < MaxTries)
+			{
+				Tries++;
+				System::SetTimer(this, n"Initialize", RetryDelay, false);
+				return;
+			}
+
+			PrintError(f"PlayerState: ({GetName()}) timed out! \nFailed to initialize: Character or Controller is null after multiple attempts.");
+			return;
+		}
+
+		// both refs are valid here
+		bInitialized = true;
+		InitializationTime = Tries * RetryDelay;
+
+		PostInitialize(Character, Controller);
+		ReceivePostInitialize(Character, Controller);
+
+		System::ClearTimer(this, "Initialize");
+	}
+
+//#endregion
+
+	/**
+	 * Called after the component has been initialized and BeginPlay has run successfully.
+	 * References to Character, PlayerState, and Controller are all guaranteed to be valid here.
+	 * @note Tick is enabled by default. Call to Super to enable/disable it.
+	 */
+	void PostInitialize(AFishCharacter InCharacter, AFishController InController)
+	{
+		SetActorTickEnabled(true);
+
 #if EDITOR
 		ResetPlayerState();
 #endif
 		TryLoadPlayerState();
 
-		System::SetTimer(this, n"Init", 0.2f, false);
-
-		BP_BeginPlay();
-	}
-
-	UFUNCTION(NotBlueprintCallable)
-	private void Init()
-	{
-		Character = Cast<AFishCharacter>(GetPawn());
 		Character.FishingComponent.OnFishCaught.AddUFunction(this, n"OnFishCaught");
 	}
+
+	/**
+	 * Called after the component has been initialized and BeginPlay has run successfully.
+	 * References to Character, PlayerState, and Controller are all guaranteed to be valid here.
+	 * Components are also guaranteed to be initialized at this point.
+	 */
+	UFUNCTION(BlueprintEvent, DisplayName = "Post Initialize")
+	void ReceivePostInitialize(AFishCharacter InCharacter, AFishController InController)
+	{}
 
 	UFUNCTION()
 	void OnFishCaught(AFish Fish, UBait Bait, UFishingHoleComponent FishingHole)
@@ -118,10 +188,6 @@ class AFishPlayerState : APlayerState
 			}
 		}
 	}
-
-	UFUNCTION(BlueprintEvent, DisplayName = "Begin Play")
-	void BP_BeginPlay()
-	{}
 
 	UFUNCTION()
 	void TryLoadPlayerState()

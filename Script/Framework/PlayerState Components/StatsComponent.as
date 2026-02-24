@@ -33,10 +33,9 @@ class UStatsComponent : UFishComponentBase
 	UPROPERTY(Category = "Events")
 	FOnModifierExpired OnModifierExpired;
 
-	void PostInitialize(AFishCharacter InCharacter, AFishPlayerState InPlayerState,
-						float InInitializationTime) override
+	void PostInitialize(AFishCharacter InCharacter, AFishPlayerState InPlayerState, AFishController InController) override
 	{
-		Super::PostInitialize(InCharacter, InPlayerState, InInitializationTime);
+		Super::PostInitialize(InCharacter, InPlayerState, InController);
 
 		PlayerState.EquipmentComponent.OnRodUnequipped.AddUFunction(this, n"RodUnequipped");
 		PlayerState.EquipmentComponent.OnRodEquipped.AddUFunction(this, n"RodEquipped");

@@ -77,10 +77,9 @@ class UExperienceComponent : UFishComponentBase
 	}
 //#endregion
 
-	void PostInitialize(AFishCharacter InCharacter, AFishPlayerState InPlayerState,
-						float InInitializationTime) override
+	void PostInitialize(AFishCharacter InCharacter, AFishPlayerState InPlayerState, AFishController InController) override
 	{
-		Super::PostInitialize(InCharacter, InPlayerState, InInitializationTime);
+		Super::PostInitialize(InCharacter, InPlayerState, InController);
 
 		InCharacter.FishingComponent.OnFishCaught.AddUFunction(this, n"OnFishCaught");
 	}

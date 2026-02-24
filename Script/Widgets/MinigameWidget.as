@@ -31,11 +31,11 @@ class UMinigameWidget : UFishWidget
 	}
 
 	float MaxHP;
-	void PostInitialize(AFishCharacter InCharacter, AFishPlayerState InFishState) override
+	void PostInitialize(AFishCharacter InCharacter, AFishPlayerState InPlayerState, AFishController InController) override
 	{
-		Super::PostInitialize(InCharacter, InFishState);
+		Super::PostInitialize(InCharacter, InPlayerState, InController);
 
-		MinigameComponent = UMinigameComponent::Get(PlayerState);
+		MinigameComponent = UMinigameComponent::Get(InController);
 
 		TargetPos = GetRandomPos();
 

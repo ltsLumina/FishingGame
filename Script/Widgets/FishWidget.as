@@ -5,15 +5,22 @@ class UFishWidgetBase : UUserWidget
 	 * The fish character that owns this widget.
 	 * Will always point to the local player's character on the local machine, and be null on remote clients.
 	 */
-	UPROPERTY(Category = "Fish Widget", BlueprintReadOnly, NotVisible)
+	UPROPERTY(Category = "Fish Widget", BlueprintReadOnly, NotVisible, DisplayName = "Character", Keywords = "Fish Component")
 	AFishCharacter Character;
 
 	/**
 	 * The fish player state that owns this widget.
 	 * Will always point to the local player's state on the local machine, and be null on remote clients.
 	 */
-	UPROPERTY(Category = "Fish Widget", BlueprintReadOnly, NotVisible)
+	UPROPERTY(Category = "Fish Widget", BlueprintReadOnly, NotVisible, DisplayName = "Player State", Keywords = "Fish Component")
 	AFishPlayerState PlayerState;
+
+	/**
+	 * The fish player state that owns this widget.
+	 * Will always point to the local player's state on the local machine, and be null on remote clients.
+	 */
+	UPROPERTY(Category = "Fish Widget", BlueprintReadOnly, NotVisible, DisplayName = "Controller", Keywords = "Fish Component")
+	AFishController Controller;
 
 	UPROPERTY(Category = "Initialization", BlueprintHidden, EditDefaultsOnly, meta = (Units = "s", UIMin = "0.01", UIMax = "1.0", AdvancedDisplay))
 	float RetryDelay = 0.1f;
@@ -49,15 +56,19 @@ class UFishWidgetBase : UUserWidget
 
 		bool bHasOwningPlayerPawn = IsValid(GetOwningPlayerPawn());
 		if (bHasOwningPlayerPawn)
+		{
+			Controller = Cast<AFishController>(GetOwningPlayer());
 			Character = Cast<AFishCharacter>(GetOwningPlayerPawn());
+		}
 		else
 		{
 			Character = GetFishCharacterBase();
+			Controller = GetFishControllerBase();
 			if (!MuteWarnings && Tries < 1)
-				PrintWarning(f"UFishWidget: ({GetName()}) OwningPlayerPawn is null, defaulting to GetFishCharacterBase(0). \nMake sure to set the Owning Player when creating the widget.");
+				PrintWarning(f"UFishWidget: ({GetName()}) OwningPlayerPawn is null, defaulting to GetFishCharacterBase(). \nMake sure to set the Owning Player when creating the widget.");
 		}
 
-		if (IsValid(Character))
+		if (IsValid(Character) && IsValid(Controller))
 			PlayerState = Cast<AFishPlayerState>(Character.PlayerState);
 
 		if (!IsValid(Character) || !IsValid(PlayerState))
@@ -70,15 +81,15 @@ class UFishWidgetBase : UUserWidget
 			}
 
 			if (!MuteWarnings)
-				PrintError(f"UFishWidget: ({GetName()}) timed out! \nFailed to initialize: Character or FishState is null after multiple attempts.");
+				PrintError(f"UFishWidget: ({GetName()}) timed out! \nFailed to initialize: Character, PlayerState, or Controller is null after multiple attempts.");
 			return;
 		}
 
 		bInitialized = true;
 		InitializationTime = Tries * RetryDelay;
 
-		ReceivePostInitialize(Character, PlayerState);
-		PostInitialize(Character, PlayerState);
+		ReceivePostInitialize(Character, PlayerState, Controller);
+		PostInitialize(Character, PlayerState, Controller);
 
 		System::ClearTimer(this, "Initialize");
 	}
@@ -87,7 +98,7 @@ class UFishWidgetBase : UUserWidget
 	 * Called after the widget has been initialized and Construct has run successfully.
 	 * References to Character and FishState are guaranteed to be valid here.
 	 */
-	void PostInitialize(AFishCharacter InCharacter, AFishPlayerState InFishState)
+	void PostInitialize(AFishCharacter InCharacter, AFishPlayerState InPlayerState, AFishController InController)
 	{}
 
 	/**
@@ -95,7 +106,7 @@ class UFishWidgetBase : UUserWidget
 	 * References to Character and FishState are guaranteed to be valid here.
 	 */
 	UFUNCTION(BlueprintEvent, DisplayName = "Post Initialize")
-	void ReceivePostInitialize(AFishCharacter InCharacter, AFishPlayerState InFishState)
+	void ReceivePostInitialize(AFishCharacter InCharacter, AFishPlayerState InPlayerState, AFishController InController)
 	{}
 }
 
@@ -134,9 +145,9 @@ class UFishWidget : UFishWidgetBase
 
 	FOnWidgetFadeComplete OnFadeComplete;
 
-	void PostInitialize(AFishCharacter InCharacter, AFishPlayerState InFishState) override
+	void PostInitialize(AFishCharacter InCharacter, AFishPlayerState InPlayerState, AFishController InController) override
 	{
-		Super::PostInitialize(InCharacter, InFishState);
+		Super::PostInitialize(InCharacter, InPlayerState, InController);
 
 		IsFadingIn = true;
 

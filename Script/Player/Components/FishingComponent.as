@@ -145,12 +145,12 @@ class UFishingComponent : UFishComponentBase
 		return PlayerState.EquipmentComponent.Licences.HasTagExact(CurrentFishingHole.RequiredLicence);
 	}
 
-	void PostInitialize(AFishCharacter InCharacter, AFishPlayerState InPlayerState, float InInitializationTime) override
+	void PostInitialize(AFishCharacter InCharacter, AFishPlayerState InPlayerState, AFishController InController) override
 	{
 		TimeManager = Gameplay::GetActorOfClass(ATimeManager);
 		WeatherManager = Gameplay::GetActorOfClass(AWeatherManager);
 
-		Super::PostInitialize(InCharacter, InPlayerState, InInitializationTime);
+		Super::PostInitialize(InCharacter, InPlayerState, InController);
 	}
 
 	UFUNCTION(BlueprintOverride)

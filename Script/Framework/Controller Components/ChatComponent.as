@@ -1,6 +1,6 @@
 event void FOnChatModeChanged(EChatMode ChatMode);
 
-class UChatComponent : UActorComponent
+class UChatComponent : UFishComponentBase
 {
 	UPROPERTY(Category = "Chat", VisibleAnywhere, BlueprintReadOnly)
 	EChatMode ChatMode = EChatMode::Global;

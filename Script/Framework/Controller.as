@@ -8,14 +8,20 @@ enum ESelectionState
 	Deselected
 }
 
-UCLASS(Meta=(PrioritizeCategories="Interaction"))
+UCLASS(Meta = (PrioritizeCategories = "Interaction"))
 class AFishController : APlayerController
 {
+	UPROPERTY(Category = "Components", BlueprintReadOnly, NotVisible)
+	UChatComponent ChatComponent;
+
+	UPROPERTY(Category = "Components", BlueprintReadOnly, NotVisible)
+	UMinigameComponent MinigameComponent;
+
 	UPROPERTY(Category = "Interaction", EditDefaultsOnly)
-    float ClickCooldown = 0.15f;
-	
+	float ClickCooldown = 0.15f;
+
 	UPROPERTY(Category = "Interaction", VisibleInstanceOnly)
-    bool CanClick = true;
+	bool CanClick = true;
 
 	UPROPERTY(Category = "Interaction", VisibleInstanceOnly)
 	bool IsAnythingSelected;
@@ -37,6 +43,103 @@ class AFishController : APlayerController
 
 	UPROPERTY(Category = "Interaction | Events")
 	FOnEndDialogue OnEndDialogue;
+
+	UFUNCTION(BlueprintOverride)
+	void ConstructionScript()
+	{
+		ChatComponent = UChatComponent::Get(this);
+		MinigameComponent = UMinigameComponent::Get(this);
+	}
+
+//#region Initialization
+
+	UPROPERTY(Category = "Initialization", BlueprintHidden, EditDefaultsOnly, meta = (Units = "s", UIMin = "0.01", UIMax = "1.0", AdvancedDisplay))
+	float RetryDelay = 0.1f;
+
+	UPROPERTY(Category = "Initialization", BlueprintHidden, EditDefaultsOnly, meta = (AdvancedDisplay))
+	int MaxTries = 50;
+
+	UPROPERTY(Category = "Initialization", BlueprintReadOnly, NotVisible)
+	bool bInitialized = false;
+	
+	/**
+	 * Will always be valid after initialization.
+	 * Unlike FishComponentBase, this reference will always point to the local player's FishCharacter.
+	 */
+	UPROPERTY(Category = "Fish Entity", BlueprintReadOnly, NotVisible, DisplayName = "Character")
+	AFishCharacter Character;
+
+	/**
+	 * Will always be valid after initialization.
+	 * Unlike FishComponentBase, this reference will always point to the local player's FishPlayerState.
+	 */
+	UPROPERTY(Category = "Fish Entity", BlueprintReadOnly, NotVisible, DisplayName = "Player State")
+	AFishPlayerState FishState;
+
+	UFUNCTION(BlueprintOverride)
+	void BeginPlay()
+	{
+		SetActorTickEnabled(false);
+
+		Initialize();
+	}
+
+	int Tries = 0;
+	float InitializationTime = 0.0f;
+
+	UFUNCTION(NotBlueprintCallable)
+	private void Initialize()
+	{
+		if (bInitialized)
+			return;
+
+		Character = Cast<AFishCharacter>(ControlledPawn);
+		FishState = IsValid(Character) ? Cast<AFishPlayerState>(Character.PlayerState) : nullptr;
+
+		if (!IsValid(Character) || !IsValid(FishState))
+		{
+			if (Tries < MaxTries)
+			{
+				Tries++;
+				System::SetTimer(this, n"Initialize", RetryDelay, false);
+				return;
+			}
+
+			PrintError(f"FishEntity: ({GetName()}) timed out! \nFailed to initialize: Character or PlayerState is null after multiple attempts.");
+			return;
+		}
+
+		// both refs are valid here
+		bInitialized = true;
+		InitializationTime = Tries * RetryDelay;
+
+		PostInitialize(Character, FishState);
+		ReceivePostInitialize(Character, FishState);
+
+		System::ClearTimer(this, "Initialize");
+	}
+
+	/**
+	 * Called after the component has been initialized and BeginPlay has run successfully.
+	 * References to Character, PlayerState, and Controller are all guaranteed to be valid here.
+	 * @note Tick is not enabled in BeginPlay by default. Calling to Super will enable it.
+	 */
+	void PostInitialize(AFishCharacter InCharacter, AFishPlayerState InPlayerState)
+	{
+		SetActorTickEnabled(true);
+	}
+
+	/**
+	 * Called after the component has been initialized and BeginPlay has run successfully.
+	 * References to Character, PlayerState, and Controller are all guaranteed to be valid here.
+	 * Components are also guaranteed to be initialized at this point.
+	 * @note Tick is not enabled in BeginPlay by default. Calling to Super will enable it.
+	 */
+	UFUNCTION(BlueprintEvent, DisplayName = "Post Initialize")
+	void ReceivePostInitialize(AFishCharacter InCharacter, AFishPlayerState InPlayerState)
+	{}
+
+//#endregion
 
 	UFUNCTION()
 	void AnyKey(FKey PressedKey)
@@ -82,9 +185,10 @@ class AFishController : APlayerController
 	UFUNCTION()
 	void Click()
 	{
-        if (!CanClick) return;
-        CanClick = false;
-        System::SetTimer(this, n"ResetClick", ClickCooldown, false);
+		if (!CanClick)
+			return;
+		CanClick = false;
+		System::SetTimer(this, n"ResetClick", ClickCooldown, false);
 
 		FHitResult Hit;
 		GetHitResultUnderCursorByChannel(ETraceTypeQuery::TraceTypeQuery3, false, Hit); // TraceTypeQuery3 = Selection
@@ -103,9 +207,9 @@ class AFishController : APlayerController
 				{
 					HitNPC.ToggleSelection(this);
 					PreviousNPC = SelectedNPC;
-					
+
 					SelectedNPC = HitNPC;
-                    IsAnythingSelected = true;
+					IsAnythingSelected = true;
 
 					// Record interaction time
 					InteractHistory.Add(SelectedNPC, TimeManager::GetGameTime());
@@ -113,42 +217,45 @@ class AFishController : APlayerController
 			}
 			else // Clicked on something that's not an NPC (global deselect)
 			{
-                if (SelectedNPC == nullptr) return;
+				if (SelectedNPC == nullptr)
+					return;
 				DeselectNPC(SelectedNPC);
 			}
 		}
-        else // Clicked on nothing (global deselect)
-        {
-            if (SelectedNPC == nullptr) return;
+		else // Clicked on nothing (global deselect)
+		{
+			if (SelectedNPC == nullptr)
+				return;
 
-            SelectedNPC.Deselect(this);
-            DeselectCurrentSelected();
-        }
+			SelectedNPC.Deselect(this);
+			DeselectCurrentSelected();
+		}
 	}
 
-    UFUNCTION(NotBlueprintCallable)
-    private void ResetClick()
-    {
-        CanClick = true;
-    }
+	UFUNCTION(NotBlueprintCallable)
+	private void ResetClick()
+	{
+		CanClick = true;
+	}
 
 	UFUNCTION()
 	void SelectNPC(AFishNPC NPC)
 	{
-        NPC.Select(this);
-        SelectedNPC = NPC;
-        IsAnythingSelected = true;
+		NPC.Select(this);
+		SelectedNPC = NPC;
+		IsAnythingSelected = true;
 	}
 
-    UFUNCTION()
-    void DeselectNPC(AFishNPC NPC)
-    {
-        if (NPC == nullptr) return;
+	UFUNCTION()
+	void DeselectNPC(AFishNPC NPC)
+	{
+		if (NPC == nullptr)
+			return;
 
-        NPC.Deselect(this);
-        SelectedNPC = nullptr;
-        IsAnythingSelected = false;
-    }
+		NPC.Deselect(this);
+		SelectedNPC = nullptr;
+		IsAnythingSelected = false;
+	}
 
 	UFUNCTION()
 	void DeselectCurrentSelected()

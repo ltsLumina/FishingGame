@@ -178,7 +178,7 @@ class AFish : AActor
 	UFUNCTION(BlueprintOverride)
 	void BeginPlay()
 	{
-		System::SetTimerForNextTick(this, "Foo");
+		System::SetTimer(this, n"Foo", 0.2f, false); // bug: fails to call on low frame rate
 	}
 
 	UFUNCTION(NotBlueprintCallable)

@@ -26,6 +26,13 @@ class AFishEntity : ACharacter
 	UPROPERTY(Category = "Fish Entity", BlueprintReadOnly, NotVisible, DisplayName = "Player State")
 	AFishPlayerState FishState;
 
+	/**
+	 * Will always be valid after initialization.
+	 * Unlike FishComponentBase, this reference will always point to the local player's FishPlayerState.
+	 */
+	UPROPERTY(Category = "Fish Entity", BlueprintReadOnly, NotVisible, DisplayName = "Controller")
+	AFishController FishController;
+
 	UFUNCTION(BlueprintOverride)
 	void BeginPlay()
 	{
@@ -43,7 +50,8 @@ class AFishEntity : ACharacter
 		if (bInitialized)
 			return;
 
-		Character = Cast<AFishCharacter>(GetFishCharacterBase());
+		FishController = Cast<AFishController>(GetFishControllerBase());
+		Character = Cast<AFishCharacter>(FishController.ControlledPawn);
 		FishState = IsValid(Character) ? Cast<AFishPlayerState>(Character.PlayerState) : nullptr;
 
 		if (!IsValid(Character) || !IsValid(FishState))
@@ -63,8 +71,8 @@ class AFishEntity : ACharacter
 		bInitialized = true;
 		InitializationTime = Tries * RetryDelay;
 
-		PostInitialize(Character, FishState, InitializationTime);
-		ReceivePostInitialize(Character, FishState, InitializationTime);
+		PostInitialize(Character, FishState, FishController);
+		ReceivePostInitialize(Character, FishState, FishController);
 
 		System::ClearTimer(this, "Initialize");
 
@@ -75,21 +83,21 @@ class AFishEntity : ACharacter
 
 	/**
 	 * Called after the component has been initialized and BeginPlay has run successfully.
-	 * References to Character and State are guaranteed to be valid here.
+	 * References to Character, PlayerState, and Controller are all guaranteed to be valid here.
 	 * @note Tick is not enabled in BeginPlay by default. Calling to Super will enable it.
 	 */
-	void PostInitialize(AFishCharacter InCharacter, AFishPlayerState InPlayerState, float InInitializationTime)
+	void PostInitialize(AFishCharacter InCharacter, AFishPlayerState InPlayerState, AFishController InController)
 	{
 		SetActorTickEnabled(true);
 	}
 
 	/**
 	 * Called after the component has been initialized and BeginPlay has run successfully.
-	 * References to Character and State are guaranteed to be valid here.
+	 * References to Character, PlayerState, and Controller are all guaranteed to be valid here.
 	 * Components are also guaranteed to be initialized at this point.
 	 * @note Tick is not enabled in BeginPlay by default. Calling to Super will enable it.
 	 */
 	UFUNCTION(BlueprintEvent, DisplayName = "Post Initialize")
-	void ReceivePostInitialize(AFishCharacter InCharacter, AFishPlayerState InPlayerState, float InInitializationTime)
+	void ReceivePostInitialize(AFishCharacter InCharacter, AFishPlayerState InPlayerState, AFishController InController)
 	{}
 };
