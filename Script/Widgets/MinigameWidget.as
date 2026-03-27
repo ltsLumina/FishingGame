@@ -39,11 +39,9 @@ class UMinigameWidget : UFishWidget
 
 		TargetPos = GetRandomPos();
 
+		InterpSpeed = Data.FishItem.FishData.Behaviour.Speed;
+
 		MaxHP = MinigameComponent.FishHealth;
-
-		InterpSpeed = Data.FishItem.FishData.Behaviour.InterpSpeed;
-
-		Data.FishItem.FishData.Behaviour.Execute();
 	}
 
 	FVector2D GetRandomPos()
