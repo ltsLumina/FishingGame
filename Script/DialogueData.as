@@ -5,6 +5,12 @@ event void FOnStoryEndEvent(UStory Story);
 
 class UStory : UPrimaryDataAsset
 {
+	/**
+	 * Used if the speaker field is empty.
+	 */
+	UPROPERTY(Category = "Options")
+	FText DefaultSpeakerName;
+	
 	UPROPERTY()
 	TMap<FName, FEntry> Entries;
 }
@@ -34,6 +40,8 @@ class UStorySubsystem : UScriptGameInstanceSubsystem
 	UFUNCTION()
 	AStoryRuntime BeginStory(UStory Story)
 	{
+		ThrowIf(Story == nullptr, f"Selected story is nullptr!");
+
 		if (IsValid(Runtime) && Runtime.IsInitialized)
 		{
 			PrintWarning("A story is already running! Ending it and starting the new one.");
@@ -101,6 +109,7 @@ class AStoryRuntime : AActor
 		IsInitialized = false;
 	}
 
+	UFUNCTION(BlueprintPure)
 	bool GetCurrentEntry(FEntry&out Entry)
 	{
 		if (!IsInitialized)

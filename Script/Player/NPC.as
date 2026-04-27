@@ -58,7 +58,10 @@ class AFishNPC : AFishEntity
 	bool HasDialogue = false;
 
 	UPROPERTY(Category="NPC | Menu", Meta=(EditCondition="HasDialogue"))
-    TArray<FText> DialogueEntries;
+	UStory InitialStory;
+
+	//UPROPERTY(Category="NPC | Menu", Meta=(EditCondition="HasDialogue"))
+    //TArray<FText> DialogueEntries;
 	
 
 	default bReplicates = false;
@@ -207,7 +210,7 @@ class AFishNPC : AFishEntity
 	{
 		IsSelected = false;
 		OnDeselected();
-		InController.OnInteract.Broadcast(this, ESelectionState::Deselected);
+		//InController.OnInteract.Broadcast(this, ESelectionState::Deselected);
 	}
 
 	UFUNCTION(BlueprintEvent)

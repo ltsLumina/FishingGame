@@ -145,10 +145,11 @@ class UFishWidget : UFishWidgetBase
 
 	FOnWidgetFadeComplete OnFadeComplete;
 
-	void PostInitialize(AFishCharacter InCharacter, AFishPlayerState InPlayerState, AFishController InController) override
+	UFUNCTION(BlueprintOverride)
+	void Construct()
 	{
-		Super::PostInitialize(InCharacter, InPlayerState, InController);
-
+		Super::Construct();
+		
 		IsFadingIn = true;
 
 		OnVisibilityChanged.AddUFunction(this, n"HandleVisibilityChanged");
