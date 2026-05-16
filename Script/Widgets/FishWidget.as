@@ -80,8 +80,8 @@ class UFishWidgetBase : UUserWidget
 				return;
 			}
 
-			if (!MuteWarnings)
-				PrintError(f"UFishWidget: ({GetName()}) timed out! \nFailed to initialize: Character, PlayerState, or Controller is null after multiple attempts.");
+			//if (!MuteWarnings)
+				//PrintError(f"UFishWidget: ({GetName()}) timed out! \nFailed to initialize: Character, PlayerState, or Controller is null after multiple attempts.");
 			return;
 		}
 

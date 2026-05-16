@@ -63,7 +63,7 @@ class AFishEntity : ACharacter
 				return;
 			}
 
-			PrintError(f"FishEntity: ({GetName()}) timed out! \nFailed to initialize: Character or PlayerState is null after multiple attempts.");
+			//PrintError(f"FishEntity: ({GetName()}) timed out! \nFailed to initialize: Character or PlayerState is null after multiple attempts.");
 			return;
 		}
 
@@ -77,7 +77,7 @@ class AFishEntity : ACharacter
 		System::ClearTimer(this, "Initialize");
 
 #if EDITOR
-		Print(f"FishEntity: ({GetActorLabel()}) initialized successfully in {InitializationTime} seconds.", 3.0f, FLinearColor::Green);
+		//Print(f"FishEntity: ({GetActorLabel()}) initialized successfully in {InitializationTime} seconds.", 3.0f, FLinearColor::Green);
 #endif
 	}
 

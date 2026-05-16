@@ -77,6 +77,7 @@ class AStoryRuntime : AActor
 	int StoryIndex;
 
 	bool IsInitialized;
+	bool bSkipNextIncrement;
 
 	UPROPERTY()
 	FOnStoryBeginEvent StoryBegin;
@@ -98,7 +99,7 @@ class AStoryRuntime : AActor
 	{
 		if (!IsInitialized)
 			return;
-		Print(f"storyindex: {StoryIndex}", 0);
+		//Print(f"storyindex: {StoryIndex}", 0);
 	}
 
 	UFUNCTION(NotBlueprintCallable)
@@ -107,6 +108,7 @@ class AStoryRuntime : AActor
 		//Story = nullptr;
 		StoryIndex = -1;
 		IsInitialized = false;
+		bSkipNextIncrement = false;
 	}
 
 	UFUNCTION(BlueprintPure)
@@ -128,7 +130,7 @@ class AStoryRuntime : AActor
 		{
 			auto foo = Keys[StoryIndex];
 			FEntry entry;
-			auto found = Entries.Find(foo, entry);
+			bool found = Entries.Find(foo, entry);
 
 			if (found)
 			{
@@ -153,10 +155,11 @@ class AStoryRuntime : AActor
 	bool StoryOver;
 
 	UFUNCTION()
-	FText Continue()
+	FText Continue(bool bShouldEnd = false, bool WasChoice = false)
 	{
-		if (StoryOver)
+		if (StoryOver || bShouldEnd)
 		{
+			bSkipNextIncrement = false;
 			StoryEnd.Broadcast(Story);
 			return FText();
 		}
@@ -174,7 +177,8 @@ class AStoryRuntime : AActor
 			if (Entry.IsEnd)
 			{
 				StoryOver = true;
-				StoryContinue.Broadcast(Story);
+				//StoryContinue.Broadcast(Story);
+				Continue(StoryOver);
 				return Entry.CurrentLine;
 			}
 
@@ -188,7 +192,7 @@ class AStoryRuntime : AActor
 	}
 
 	UFUNCTION(Meta = (ReturnDisplayName = "Continued", DisplayName = "Continue if You Can"))
-	bool ContinueIfYouCan(FText&out CurrentLine)
+	bool ContinueIfYouCan(FText&out CurrentLine, bool WasChoice)
 	{
 		FEntry Entry;
 
@@ -200,7 +204,7 @@ class AStoryRuntime : AActor
 				return false;
 			}
 
-			FText Text = Continue();
+			FText Text = Continue(false, true);
 			CurrentLine = Text;
 			return true;
 		}
@@ -225,6 +229,7 @@ class AStoryRuntime : AActor
 
 			auto JumpTo = Entry.Choices[Choice].JumpTo;
 			Jump(JumpTo);
+			bSkipNextIncrement = true;
 
 			StoryMakeChoice.Broadcast(Story, FChoice(ChoiceText));
 		}
